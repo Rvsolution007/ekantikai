@@ -19,6 +19,7 @@ class Customer extends Model
         'pause_reason',
         'detected_language',
         'last_activity_at',
+        'last_greeted_at',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class Customer extends Model
         'global_asked' => 'array',
         'bot_enabled' => 'boolean',
         'last_activity_at' => 'datetime',
+        'last_greeted_at' => 'datetime',
     ];
 
     public function admin(): BelongsTo

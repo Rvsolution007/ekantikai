@@ -44,7 +44,14 @@ class MessageProcessorService
     {
         // Step 1: Check for casual message
         if ($this->isCasualMessage($message)) {
-            return $this->handleCasualMessage($message);
+            // Only send greeting for first-time users or after 24 hours of inactivity
+            if ($this->shouldSendGreeting()) {
+                // Mark that we've sent greeting
+                $this->customer->update(['last_greeted_at' => now()]);
+                return $this->handleCasualMessage($message);
+            }
+            // For regular casual messages (hi, ok, etc.), continue to workflow
+            // Don't reply with greeting again
         }
 
         // Step 2: Check for catalogue/product intent
@@ -233,6 +240,29 @@ class MessageProcessorService
             if (preg_match($pattern, $message)) {
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if we should send greeting message
+     * Only for first-time users or after 24 hours of inactivity
+     */
+    protected function shouldSendGreeting(): bool
+    {
+        // Check if customer has last_greeted_at field
+        $lastGreeted = $this->customer->last_greeted_at;
+
+        // Never greeted before = first time user
+        if (empty($lastGreeted)) {
+            return true;
+        }
+
+        // Greeted more than 24 hours ago
+        $lastGreetedAt = \Carbon\Carbon::parse($lastGreeted);
+        if ($lastGreetedAt->diffInHours(now()) >= 24) {
+            return true;
         }
 
         return false;

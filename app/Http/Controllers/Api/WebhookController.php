@@ -54,6 +54,19 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'ignored', 'reason' => 'self message']);
             }
 
+            // DEDUPLICATION: Skip if message already processed (using message ID cache)
+            $cacheKey = 'processed_msg_' . ($messageData['messageId'] ?? md5($messageData['phone'] . $messageData['content'] . $messageData['timestamp']));
+            if (\Cache::has($cacheKey)) {
+                return response()->json(['status' => 'ignored', 'reason' => 'duplicate message']);
+            }
+            // Mark as processed for 60 seconds
+            \Cache::put($cacheKey, true, 60);
+
+            // Skip if message matches bot's greeting patterns (self-reply prevention)
+            if ($this->isBotMessage($messageData['content'])) {
+                return response()->json(['status' => 'ignored', 'reason' => 'bot message pattern detected']);
+            }
+
             // Get or create customer
             $customer = $this->getOrCreateCustomer($tenant->id, $messageData['phone'], $messageData['name']);
 
@@ -450,5 +463,33 @@ class WebhookController extends Controller
         $phone = preg_replace('/@.*$/', '', $jid);
         // Remove non-digits
         return preg_replace('/[^0-9]/', '', $phone);
+    }
+
+    /**
+     * Check if message is from bot (to prevent self-reply)
+     */
+    protected function isBotMessage(string $message): bool
+    {
+        // Bot's typical greeting patterns
+        $botPatterns = [
+            'Hello! 🙏 How can I help you?',
+            'Namaste! 🙏',
+            'How can I help you?',
+            'What product are you looking for?',
+            'Main aapki kya madad kar sakta hoon?',
+            'Aapko kaunsa product chahiye?',
+            'Thank you! 🙏 Let me know if you need anything else.',
+            'Dhanyavaad! 🙏',
+            'Our team will contact you soon.',
+            'I have collected all the information.',
+        ];
+
+        foreach ($botPatterns as $pattern) {
+            if (str_contains($message, $pattern)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
