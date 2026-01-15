@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Drawflow Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css">
+    <style>
+        #drawflow {
+            width: 100%;
+            height: 600px;
+            background: #1a1a2e;
+        }
+
+        /* Simple node styling that WORKS */
+        .drawflow .drawflow-node {
+            background: #262640;
+            border: 1px solid #6366f1;
+            border-radius: 8px;
+            min-width: 140px;
+        }
+
+        .drawflow .drawflow-node .input,
+        .drawflow .drawflow-node .output {
+            width: 14px;
+            height: 14px;
+            background: #1a1a2e;
+            border: 2px solid #6366f1;
+        }
+
+        .drawflow .connection .main-path {
+            stroke: #6366f1;
+            stroke-width: 3;
+        }
+
+        .node-content {
+            padding: 10px;
+            color: white;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body style="margin:0; background:#0d0d14;">
+    <h2 style="color:white; padding:10px;">Drawflow Connection Test - Click output (right) drag to input (left)</h2>
+    <div id="drawflow"></div>
+
+    <script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
+    <script>
+        const container = document.getElementById('drawflow');
+        const editor = new Drawflow(container);
+        editor.start();
+
+        // Add two simple nodes
+        const node1 = editor.addNode(
+            'start',    // name
+            0,          // inputs
+            1,          // outputs  
+            100,        // x
+            150,        // y
+            'start',    // class
+            {},         // data
+            '<div class="node-content">START</div>'
+        );
+
+        const node2 = editor.addNode(
+            'question', // name
+            1,          // inputs
+            1,          // outputs
+            400,        // x
+            150,        // y
+            'question', // class
+            {},         // data
+            '<div class="node-content">QUESTION</div>'
+        );
+
+        console.log('Nodes added:', node1, node2);
+        console.log('Try connecting output of START to input of QUESTION');
+    </script>
+</body>
+
+</html>
