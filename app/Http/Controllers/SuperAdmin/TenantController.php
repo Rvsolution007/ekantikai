@@ -32,7 +32,7 @@ class TenantController extends Controller
             $query->where('is_active', $request->status === 'active');
         }
 
-        $admins = $query->latest()->paginate(15);
+        $tenants = $query->latest()->paginate(15);
 
         $stats = [
             'total' => Admin::count(),
@@ -41,7 +41,7 @@ class TenantController extends Controller
             'paid' => Admin::whereIn('subscription_plan', ['basic', 'pro', 'enterprise'])->count(),
         ];
 
-        return view('superadmin.tenants.index', compact('admins', 'stats'));
+        return view('superadmin.tenants.index', compact('tenants', 'stats'));
     }
 
     public function create()
@@ -75,13 +75,13 @@ class TenantController extends Controller
         ]);
 
         // Add initial credits if specified
-        if ($request->initial_credits && $admin->credits) {
-            $admin->credits->addCredits($request->initial_credits);
+        if ($request->initial_credits && $tenant->credits) {
+            $tenant->credits->addCredits($request->initial_credits);
         }
 
         // Create Tenant Admin
         SuperAdmin::create([
-            'admin_id' => $admin->id,
+            'admin_id' => $tenant->id,
             'name' => $request->name,
             'email' => $request->admin_email,
             'password' => Hash::make($request->admin_password),
