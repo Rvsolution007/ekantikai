@@ -23,6 +23,32 @@
             <div class="bg-green-500/20 text-green-400 px-4 py-3 rounded-xl">{{ session('success') }}</div>
         @endif
 
+        <!-- AI Status Test -->
+        <div class="glass rounded-2xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">AI Model Status</h2>
+                    <p class="text-gray-400 text-sm">Test if AI model is responding correctly</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="aiStatus" class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full bg-gray-500"></div>
+                        <span class="text-gray-400">Not Tested</span>
+                    </div>
+                    <button type="button" onclick="testAIModel()" 
+                            class="px-4 py-2 bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Test AI Model
+                    </button>
+                </div>
+            </div>
+            <div id="aiTestResult" class="hidden mt-4 p-4 rounded-xl bg-black/30">
+                <p class="text-sm text-gray-300" id="aiTestMessage"></p>
+            </div>
+        </div>
+
         <form action="{{ route('superadmin.ai-config.update') }}" method="POST" class="space-y-6">
             @csrf
 
@@ -100,8 +126,12 @@
                         <label class="block text-sm font-medium text-gray-300 mb-2">Private Key (JSON) <span class="text-red-400">*</span></label>
                         <textarea name="vertex_private_key" rows="4"
                                   class="w-full input-dark px-4 py-3 rounded-xl text-white font-mono text-sm"
-                                  placeholder="Paste your private_key value from the JSON key file (starts with -----BEGIN PRIVATE KEY-----)">{{ $vertexPrivateKey ? '••••••••••••••••' : '' }}</textarea>
-                        <p class="text-xs text-gray-500 mt-1">Leave blank to keep existing key. Only paste the private_key value from your service account JSON.</p>
+                                  placeholder="Paste your private_key value from the JSON key file (starts with -----BEGIN PRIVATE KEY-----)"></textarea>
+                        @if($vertexPrivateKey)
+                            <p class="text-xs text-green-400 mt-1">✅ Private key is configured. Leave blank to keep existing key.</p>
+                        @else
+                            <p class="text-xs text-red-400 mt-1">⚠️ Private key not configured. Paste the private_key value from your service account JSON.</p>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -136,4 +166,58 @@
             </div>
         </form>
     </div>
+
+    @push('scripts')
+        <script>
+            async function testAIModel() {
+                const statusDiv = document.getElementById('aiStatus');
+                const resultDiv = document.getElementById('aiTestResult');
+                const messageP = document.getElementById('aiTestMessage');
+                
+                // Show loading
+                statusDiv.innerHTML = `
+                    <svg class="w-4 h-4 animate-spin text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span class="text-yellow-400">Testing...</span>
+                `;
+                resultDiv.classList.add('hidden');
+                
+                try {
+                    const response = await fetch('{{ route("superadmin.ai-config.test") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        statusDiv.innerHTML = `
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="text-green-400">✅ Working</span>
+                        `;
+                        resultDiv.classList.remove('hidden');
+                        messageP.innerHTML = `<strong class="text-green-400">AI Response:</strong><br><span class="text-gray-300">${data.response}</span>`;
+                    } else {
+                        statusDiv.innerHTML = `
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <span class="text-red-400">❌ Error</span>
+                        `;
+                        resultDiv.classList.remove('hidden');
+                        messageP.innerHTML = `<strong class="text-red-400">Error:</strong><br><span class="text-gray-300">${data.error}</span>`;
+                    }
+                } catch (error) {
+                    statusDiv.innerHTML = `
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <span class="text-red-400">❌ Error</span>
+                    `;
+                    resultDiv.classList.remove('hidden');
+                    messageP.innerHTML = `<strong class="text-red-400">Connection Error:</strong><br><span class="text-gray-300">${error.message}</span>`;
+                }
+            }
+        </script>
+    @endpush
 @endsection

@@ -189,6 +189,7 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::get('/ai-config', [AIConfigController::class, 'index'])->name('ai-config.index');
     Route::post('/ai-config', [AIConfigController::class, 'update'])->name('ai-config.update');
     Route::get('/ai-config/dashboard', [AIConfigController::class, 'dashboard'])->name('ai-config.dashboard');
+    Route::post('/ai-config/test', [AIConfigController::class, 'testAI'])->name('ai-config.test');
     Route::get('/api/ai-config', [AIConfigController::class, 'apiConfig'])->name('ai-config.api');
     Route::get('/api/ai-usage', [AIConfigController::class, 'apiUsage'])->name('ai-config.usage');
 

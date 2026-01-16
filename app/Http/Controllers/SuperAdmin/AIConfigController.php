@@ -93,6 +93,36 @@ class AIConfigController extends Controller
     }
 
     /**
+     * Test AI Model
+     */
+    public function testAI()
+    {
+        try {
+            $geminiService = new \App\Services\AI\GeminiService();
+
+            // Send a simple test prompt
+            $response = $geminiService->generateContent('Say "Hello! AI is working correctly." in exactly those words.');
+
+            if ($response) {
+                return response()->json([
+                    'success' => true,
+                    'response' => $response,
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'AI returned empty response. Check your Vertex AI configuration.',
+                ]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Get AI usage dashboard
      */
     public function dashboard()
