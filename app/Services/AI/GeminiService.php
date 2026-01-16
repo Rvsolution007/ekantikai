@@ -5,29 +5,114 @@ namespace App\Services\AI;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class GeminiService
 {
-    protected string $apiKey;
     protected string $model;
-    protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+    protected string $region;
+    protected string $projectId;
+    protected string $serviceEmail;
+    protected string $privateKey;
+    protected bool $useVertexAI = true;
 
     public function __construct()
     {
-        $this->apiKey = Setting::getValue('gemini_api_key', config('services.gemini.api_key', ''));
-        $this->model = Setting::getValue('gemini_model', 'gemini-2.5-flash');
+        $this->model = Setting::getValue('global_ai_model', 'gemini-2.0-flash');
+        $this->region = Setting::getValue('vertex_region', 'asia-south1');
+        $this->projectId = Setting::getValue('vertex_project_id', '');
+        $this->serviceEmail = Setting::getValue('vertex_service_email', '');
+        $this->privateKey = Setting::getValue('vertex_private_key', '');
+
+        // Check if Vertex AI is configured
+        $this->useVertexAI = !empty($this->projectId) && !empty($this->serviceEmail) && !empty($this->privateKey);
     }
 
     /**
-     * Generate content using Gemini
+     * Get access token for Vertex AI using Service Account JWT
+     */
+    protected function getAccessToken(): string
+    {
+        // Cache the token for 50 minutes (tokens are valid for 60 minutes)
+        return Cache::remember('vertex_ai_access_token', 3000, function () {
+            $now = time();
+            $exp = $now + 3600; // Token expires in 1 hour
+
+            // Create JWT header
+            $header = [
+                'alg' => 'RS256',
+                'typ' => 'JWT',
+            ];
+
+            // Create JWT payload
+            $payload = [
+                'iss' => $this->serviceEmail,
+                'scope' => 'https://www.googleapis.com/auth/cloud-platform',
+                'aud' => 'https://oauth2.googleapis.com/token',
+                'iat' => $now,
+                'exp' => $exp,
+            ];
+
+            // Base64url encode
+            $base64Header = rtrim(strtr(base64_encode(json_encode($header)), '+/', '-_'), '=');
+            $base64Payload = rtrim(strtr(base64_encode(json_encode($payload)), '+/', '-_'), '=');
+
+            // Create signature
+            $signatureInput = $base64Header . '.' . $base64Payload;
+
+            // Clean up the private key
+            $privateKey = $this->privateKey;
+            if (!str_contains($privateKey, '-----BEGIN')) {
+                // Key might be escaped, unescape it
+                $privateKey = str_replace('\\n', "\n", $privateKey);
+            }
+
+            $signature = '';
+            $key = openssl_pkey_get_private($privateKey);
+            if (!$key) {
+                throw new \Exception('Invalid private key: ' . openssl_error_string());
+            }
+
+            openssl_sign($signatureInput, $signature, $key, OPENSSL_ALGO_SHA256);
+            $base64Signature = rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
+
+            $jwt = $base64Header . '.' . $base64Payload . '.' . $base64Signature;
+
+            // Exchange JWT for access token
+            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $jwt,
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Failed to get Vertex AI access token', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                throw new \Exception('Failed to get access token: ' . $response->body());
+            }
+
+            return $response->json()['access_token'];
+        });
+    }
+
+    /**
+     * Generate content using Gemini via Vertex AI
      */
     public function generateContent(string $prompt, array $context = []): ?string
     {
-        if (empty($this->apiKey)) {
-            throw new \Exception('Gemini API key is not configured');
+        if (!$this->useVertexAI) {
+            throw new \Exception('Vertex AI is not configured. Please set up Service Account in SuperAdmin AI Config.');
         }
 
-        $url = "{$this->baseUrl}/models/{$this->model}:generateContent?key={$this->apiKey}";
+        // Build Vertex AI endpoint URL
+        $url = sprintf(
+            'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent',
+            $this->region,
+            $this->projectId,
+            $this->region,
+            $this->model
+        );
 
         $contents = [];
 
@@ -74,22 +159,38 @@ class GeminiService
         ];
 
         try {
-            $response = Http::timeout(30)->post($url, $payload);
+            $accessToken = $this->getAccessToken();
+
+            $response = Http::timeout(60)
+                ->withToken($accessToken)
+                ->post($url, $payload);
 
             if ($response->failed()) {
-                Log::error('Gemini API Error', [
+                Log::error('Vertex AI Gemini Error', [
                     'status' => $response->status(),
                     'body' => $response->body(),
+                    'url' => $url,
                 ]);
 
-                return null;
+                // If token expired, clear cache and retry
+                if ($response->status() === 401) {
+                    Cache::forget('vertex_ai_access_token');
+                    $accessToken = $this->getAccessToken();
+                    $response = Http::timeout(60)->withToken($accessToken)->post($url, $payload);
+
+                    if ($response->failed()) {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
             }
 
             $data = $response->json();
 
             return $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
         } catch (\Exception $e) {
-            Log::error('Gemini API Exception', [
+            Log::error('Vertex AI Gemini Exception', [
                 'error' => $e->getMessage(),
             ]);
 

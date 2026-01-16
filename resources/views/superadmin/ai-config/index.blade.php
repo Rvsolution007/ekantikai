@@ -62,23 +62,61 @@
                 </select>
             </div>
 
-            <!-- API Keys -->
+            <!-- Google Cloud Service Account Configuration -->
             <div class="glass rounded-2xl p-6">
-                <h2 class="text-lg font-semibold text-white mb-4">API Keys</h2>
-                <p class="text-gray-400 text-sm mb-4">Leave blank to keep existing keys. Keys are stored encrypted.</p>
+                <h2 class="text-lg font-semibold text-white mb-2">Google Cloud Service Account (Vertex AI)</h2>
+                <p class="text-gray-400 text-sm mb-4">Configure Google Cloud Service Account for Vertex AI Gemini access. This is the recommended method for production.</p>
                 
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Google Gemini API Key</label>
-                        <input type="password" name="gemini_api_key" 
-                               class="w-full input-dark px-4 py-3 rounded-xl text-white"
-                               placeholder="••••••••••••••••">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Region <span class="text-red-400">*</span></label>
+                            <select name="vertex_region" class="w-full input-dark px-4 py-3 rounded-xl text-white">
+                                <option value="">Select Region</option>
+                                <option value="asia-south1" {{ ($vertexRegion ?? '') === 'asia-south1' ? 'selected' : '' }}>Asia Pacific (Mumbai) - asia-south1</option>
+                                <option value="asia-southeast1" {{ ($vertexRegion ?? '') === 'asia-southeast1' ? 'selected' : '' }}>Asia Pacific (Singapore) - asia-southeast1</option>
+                                <option value="us-central1" {{ ($vertexRegion ?? '') === 'us-central1' ? 'selected' : '' }}>US Central (Iowa) - us-central1</option>
+                                <option value="us-east1" {{ ($vertexRegion ?? '') === 'us-east1' ? 'selected' : '' }}>US East (South Carolina) - us-east1</option>
+                                <option value="europe-west1" {{ ($vertexRegion ?? '') === 'europe-west1' ? 'selected' : '' }}>Europe (Belgium) - europe-west1</option>
+                                <option value="europe-west4" {{ ($vertexRegion ?? '') === 'europe-west4' ? 'selected' : '' }}>Europe (Netherlands) - europe-west4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Project ID <span class="text-red-400">*</span></label>
+                            <input type="text" name="vertex_project_id" value="{{ $vertexProjectId ?? '' }}"
+                                   class="w-full input-dark px-4 py-3 rounded-xl text-white"
+                                   placeholder="your-gcp-project-id">
+                        </div>
                     </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Service Account Email <span class="text-red-400">*</span></label>
+                        <input type="text" name="vertex_service_email" value="{{ $vertexServiceEmail ?? '' }}"
+                               class="w-full input-dark px-4 py-3 rounded-xl text-white"
+                               placeholder="your-service@your-project.iam.gserviceaccount.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Private Key (JSON) <span class="text-red-400">*</span></label>
+                        <textarea name="vertex_private_key" rows="4"
+                                  class="w-full input-dark px-4 py-3 rounded-xl text-white font-mono text-sm"
+                                  placeholder="Paste your private_key value from the JSON key file (starts with -----BEGIN PRIVATE KEY-----)">{{ $vertexPrivateKey ? '••••••••••••••••' : '' }}</textarea>
+                        <p class="text-xs text-gray-500 mt-1">Leave blank to keep existing key. Only paste the private_key value from your service account JSON.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other API Keys (Optional) -->
+            <div class="glass rounded-2xl p-6">
+                <h2 class="text-lg font-semibold text-white mb-4">Other API Keys (Optional)</h2>
+                <p class="text-gray-400 text-sm mb-4">For OpenAI and DeepSeek providers. Leave blank to keep existing keys.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">OpenAI API Key</label>
                         <input type="password" name="openai_api_key" 
                                class="w-full input-dark px-4 py-3 rounded-xl text-white"
-                               placeholder="••••••••••••••••">
+                               placeholder="sk-••••••••••••••••">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">DeepSeek API Key</label>

@@ -183,7 +183,7 @@
             </div>
         </div>
 
-        <!-- Gemini AI -->
+        <!-- AI Configuration Link -->
         <div class="glass rounded-2xl overflow-hidden">
             <div class="p-6 border-b border-white/10">
                 <div class="flex items-center space-x-3">
@@ -195,25 +195,22 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-white">Default Gemini AI</h3>
-                        <p class="text-gray-400 text-sm">Shared Gemini API for tenants without custom setup</p>
+                        <h3 class="text-lg font-semibold text-white">AI Configuration</h3>
+                        <p class="text-gray-400 text-sm">Configure Vertex AI with Google Cloud Service Account</p>
                     </div>
                 </div>
             </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Gemini API Key</label>
-                    <input type="password" name="gemini_api_key" placeholder="Enter Gemini API key"
-                        class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Default Model</label>
-                    <select name="gemini_model" class="input-dark w-full px-4 py-3 rounded-xl text-white">
-                        <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Fastest)</option>
-                        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Best Quality)</option>
-                    </select>
-                </div>
+            <div class="p-6">
+                <a href="{{ route('superadmin.ai-config.index') }}"
+                    class="btn-primary px-6 py-3 rounded-xl text-white font-medium inline-flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Open AI Configuration</span>
+                </a>
             </div>
         </div>
 

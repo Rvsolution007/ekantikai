@@ -16,7 +16,7 @@ class AIConfigController extends Controller
     public function index()
     {
         $currentProvider = Setting::getValue('global_ai_provider', 'google');
-        $currentModel = Setting::getValue('global_ai_model', 'gemini-2.5-flash');
+        $currentModel = Setting::getValue('global_ai_model', 'gemini-2.0-flash');
 
         $providers = AiUsageLog::getProviders();
         $models = $this->getAllModels();
@@ -25,13 +25,23 @@ class AIConfigController extends Controller
         $totalUsage = AiUsageLog::getTokenStatsForAdmin(0, 'month'); // Global
         $adminUsage = $this->getUsageByAdmin('month');
 
+        // Get Vertex AI settings
+        $vertexRegion = Setting::getValue('vertex_region', '');
+        $vertexProjectId = Setting::getValue('vertex_project_id', '');
+        $vertexServiceEmail = Setting::getValue('vertex_service_email', '');
+        $vertexPrivateKey = Setting::getValue('vertex_private_key', '');
+
         return view('superadmin.ai-config.index', compact(
             'currentProvider',
             'currentModel',
             'providers',
             'models',
             'totalUsage',
-            'adminUsage'
+            'adminUsage',
+            'vertexRegion',
+            'vertexProjectId',
+            'vertexServiceEmail',
+            'vertexPrivateKey'
         ));
     }
 
@@ -43,7 +53,10 @@ class AIConfigController extends Controller
         $validated = $request->validate([
             'provider' => 'required|in:google,openai,deepseek',
             'model' => 'required|string',
-            'gemini_api_key' => 'nullable|string',
+            'vertex_region' => 'nullable|string',
+            'vertex_project_id' => 'nullable|string',
+            'vertex_service_email' => 'nullable|email',
+            'vertex_private_key' => 'nullable|string',
             'openai_api_key' => 'nullable|string',
             'deepseek_api_key' => 'nullable|string',
         ]);
@@ -52,10 +65,22 @@ class AIConfigController extends Controller
         Setting::setValue('global_ai_provider', $validated['provider']);
         Setting::setValue('global_ai_model', $validated['model']);
 
-        // Update API keys (only if provided)
-        if (!empty($validated['gemini_api_key'])) {
-            Setting::setValue('gemini_api_key', $validated['gemini_api_key'], 'ai', 'encrypted');
+        // Update Vertex AI settings
+        if (!empty($validated['vertex_region'])) {
+            Setting::setValue('vertex_region', $validated['vertex_region'], 'ai');
         }
+        if (!empty($validated['vertex_project_id'])) {
+            Setting::setValue('vertex_project_id', $validated['vertex_project_id'], 'ai');
+        }
+        if (!empty($validated['vertex_service_email'])) {
+            Setting::setValue('vertex_service_email', $validated['vertex_service_email'], 'ai');
+        }
+        // Only update private key if it's not placeholder
+        if (!empty($validated['vertex_private_key']) && !str_contains($validated['vertex_private_key'], '••••')) {
+            Setting::setValue('vertex_private_key', $validated['vertex_private_key'], 'ai', 'encrypted');
+        }
+
+        // Update other API keys (only if provided)
         if (!empty($validated['openai_api_key'])) {
             Setting::setValue('openai_api_key', $validated['openai_api_key'], 'ai', 'encrypted');
         }
