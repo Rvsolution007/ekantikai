@@ -5,11 +5,12 @@
 @section('content')
     <div class="space-y-6">
         <!-- Header -->
-        <div class="flex justify-between items-center">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-white">AI Configuration</h1>
                 <p class="text-gray-400">Global AI provider and model settings</p>
-        <div class="flex gap-3">
+            </div>
+            <div class="flex gap-3">
                 <a href="{{ route('superadmin.ai-config.playground') }}" 
                    class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-colors flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
