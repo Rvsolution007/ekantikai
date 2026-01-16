@@ -138,4 +138,74 @@ class CatalogueFieldController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Sync fields from Questionnaire (Workflow) Product Questions
+     */
+    public function syncFromQuestionnaire()
+    {
+        $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id;
+
+        if (!$adminId) {
+            return back()->with('error', 'Tenant not found.');
+        }
+
+        // Get all questionnaire fields for this tenant
+        $questionnaireFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->ordered()
+            ->get();
+
+        if ($questionnaireFields->isEmpty()) {
+            return back()->with('error', 'No workflow fields found. Please create product questions in Workflow first.');
+        }
+
+        $synced = 0;
+        $skipped = 0;
+        $maxOrder = CatalogueField::where('admin_id', $adminId)->max('sort_order') ?? 0;
+
+        foreach ($questionnaireFields as $qField) {
+            $fieldKey = CatalogueField::generateFieldKey($qField->field_name);
+
+            // Check if already exists
+            $exists = CatalogueField::where('admin_id', $adminId)
+                ->where('field_key', $fieldKey)
+                ->exists();
+
+            if ($exists) {
+                $skipped++;
+                continue;
+            }
+
+            // Map questionnaire field type to catalogue field type
+            $fieldType = 'text';
+            if ($qField->field_type === 'number') {
+                $fieldType = 'number';
+            } elseif ($qField->options_source === 'manual' && !empty($qField->options_manual)) {
+                $fieldType = 'select';
+            }
+
+            // Create catalogue field
+            CatalogueField::create([
+                'admin_id' => $adminId,
+                'field_name' => $qField->display_name ?: $qField->field_name,
+                'field_key' => $fieldKey,
+                'field_type' => $fieldType,
+                'is_unique' => $qField->is_unique_field ?? false,
+                'is_required' => $qField->is_required ?? false,
+                'sort_order' => ++$maxOrder,
+                'options' => $qField->options_manual ?? null,
+            ]);
+
+            $synced++;
+        }
+
+        $message = "Synced {$synced} fields from Workflow.";
+        if ($skipped > 0) {
+            $message .= " Skipped {$skipped} existing fields.";
+        }
+
+        return back()->with('success', $message);
+    }
 }

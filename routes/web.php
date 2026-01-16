@@ -98,6 +98,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/catalogue-fields/{field}', [CatalogueFieldController::class, 'update'])->name('catalogue-fields.update');
         Route::delete('/catalogue-fields/{field}', [CatalogueFieldController::class, 'destroy'])->name('catalogue-fields.destroy');
         Route::post('/catalogue-fields/reorder', [CatalogueFieldController::class, 'reorder'])->name('catalogue-fields.reorder');
+        Route::post('/catalogue-fields/sync', [CatalogueFieldController::class, 'syncFromQuestionnaire'])->name('catalogue-fields.sync');
 
 
         // Followups
