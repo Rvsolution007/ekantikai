@@ -38,10 +38,22 @@ class WebhookController extends Controller
         try {
             $data = $request->all();
 
-            Log::info('Webhook received', [
+            // DEBUG: Log ALL incoming webhook data for troubleshooting
+            Log::channel('daily')->info('=== WEBHOOK CALL RECEIVED ===', [
                 'instance' => $instanceName,
-                'event' => $data['event'] ?? 'unknown'
+                'ip' => $request->ip(),
+                'event' => $data['event'] ?? 'unknown',
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'raw_data' => json_encode($data),
             ]);
+
+            // Also write to a dedicated webhook log file
+            file_put_contents(
+                storage_path('logs/webhook_debug.log'),
+                date('Y-m-d H:i:s') . " | Instance: {$instanceName} | Event: " . ($data['event'] ?? 'unknown') . " | IP: " . $request->ip() . "\n",
+                FILE_APPEND
+            );
 
             // Get event type
             $event = $data['event'] ?? null;

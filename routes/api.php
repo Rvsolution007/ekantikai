@@ -31,3 +31,17 @@ Route::get('/webhook/whatsapp', function (Request $request) {
 Route::get('/webhook/whatsapp/{instanceName}', function (Request $request) {
     return response($request->query('hub_challenge', 'OK'));
 });
+
+// Webhook test/ping endpoint - to verify webhook is accessible
+Route::any('/webhook/test', function (Request $request) {
+    $logEntry = date('Y-m-d H:i:s') . " | TEST PING | Method: " . $request->method() . " | IP: " . $request->ip() . "\n";
+    file_put_contents(storage_path('logs/webhook_debug.log'), $logEntry, FILE_APPEND);
+
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'Webhook endpoint is accessible',
+        'timestamp' => now()->toIso8601String(),
+        'ip' => $request->ip(),
+        'method' => $request->method(),
+    ]);
+});
