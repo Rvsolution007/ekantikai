@@ -422,9 +422,12 @@ class WebhookController extends Controller
         WhatsappChat::create([
             'admin_id' => $adminId,
             'customer_id' => $customerId,
+            'whatsapp_user_id' => $customerId, // Use customer ID as whatsapp_user_id
+            'number' => $metadata['phone'] ?? null,
             'role' => $role,
             'content' => $content,
             'whatsapp_message_id' => $metadata['whatsappMessageId'] ?? $metadata['messageId'] ?? null,
+            'message_id' => $metadata['messageId'] ?? null,
             'is_reply' => $metadata['isReply'] ?? false,
             'reply_to_message_id' => $metadata['replyToMessageId'] ?? null,
             'reply_to_content' => $metadata['replyToContent'] ?? null,
