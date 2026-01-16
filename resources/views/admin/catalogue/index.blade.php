@@ -210,6 +210,30 @@
                     </div>
                 @endforeach
 
+                <!-- Divider -->
+                <div class="border-t border-gray-700 my-2"></div>
+
+                <!-- Product Images -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                        📷 Product Images
+                    </label>
+                    <input type="file" name="images[]" multiple accept="image/*"
+                        class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-500 file:text-white hover:file:bg-blue-600">
+                    <p class="text-xs text-gray-500 mt-1">Select multiple images for this product</p>
+                </div>
+
+                <!-- Video URL -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                        🎬 Video URL (Optional)
+                    </label>
+                    <input type="url" name="video_url"
+                        class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder="https://youtube.com/watch?v=... or direct video link">
+                    <p class="text-xs text-gray-500 mt-1">YouTube, Vimeo or direct video link</p>
+                </div>
+
                 <div class="flex space-x-3 pt-4">
                     <button type="button" @click="show = false"
                         class="flex-1 px-4 py-3 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-colors">

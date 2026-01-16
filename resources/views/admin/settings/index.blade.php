@@ -5,8 +5,8 @@
 
 @section('content')
 
-        <form action="{{ route('admin.settings.update') }}" method="POST" class="space-y-6">
-            @csrf
+    <form action="{{ route('admin.settings.update') }}" method="POST" class="space-y-6">
+        @csrf
 
         <!-- WhatsApp Settings (Evolution API) -->
         <div class="glass rounded-2xl overflow-hidden">
@@ -50,36 +50,38 @@
 
                     <div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">
-                            Evolution API URL <span class="text-red-400">*</span>
-                        </label>
-                        <input type="url" name="whatsapp_api_url" value="{{ $settings['whatsapp_api_url'] ?? '' }}"
-                            class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
-                            placeholder="https://your-vps-ip:8080" required>
-                        <p class="text-xs text-gray-500 mt-1">Your Hostinger VPS Evolution API URL (e.g.,
-                            https://evolution.yourdomain.com)</p>
-                    </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                Evolution API URL <span class="text-red-400">*</span>
+                            </label>
+                            <input type="url" name="whatsapp_api_url" value="{{ $settings['whatsapp_api_url'] ?? '' }}"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
+                                placeholder="https://your-vps-ip:8080" required>
+                            <p class="text-xs text-gray-500 mt-1">Your Hostinger VPS Evolution API URL (e.g.,
+                                https://evolution.yourdomain.com)</p>
+                        </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">
-                            API Key <span class="text-red-400">*</span>
-                        </label>
-                        <input type="password" name="whatsapp_api_key" value="{{ $settings['whatsapp_api_key'] ?? '' }}"
-                            class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
-                            placeholder="Your Evolution API Global Key" required>
-                        <p class="text-xs text-gray-500 mt-1">AUTHENTICATION_API_KEY from your Evolution API .env file</p>
-                    </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                API Key <span class="text-red-400">*</span>
+                            </label>
+                            <input type="password" name="whatsapp_api_key" value="{{ $settings['whatsapp_api_key'] ?? '' }}"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
+                                placeholder="Your Evolution API Global Key" required>
+                            <p class="text-xs text-gray-500 mt-1">AUTHENTICATION_API_KEY from your Evolution API .env file
+                            </p>
+                        </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">
-                            Instance Name <span class="text-red-400">*</span>
-                        </label>
-                        <input type="text" name="whatsapp_instance" value="{{ $settings['whatsapp_instance'] ?? '' }}"
-                            class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
-                            placeholder="datsun" required>
-                        <p class="text-xs text-gray-500 mt-1">The WhatsApp instance name you created in Evolution API</p>
-                    </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                Instance Name <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" name="whatsapp_instance" value="{{ $settings['whatsapp_instance'] ?? '' }}"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
+                                placeholder="datsun" required>
+                            <p class="text-xs text-gray-500 mt-1">The WhatsApp instance name you created in Evolution API
+                            </p>
+                        </div>
 
                     </div>
 
@@ -135,17 +137,18 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Response Tone</label>
                         <select name="ai_tone" class="input-dark w-full px-4 py-3 rounded-xl text-white">
-                            <option value="professional">Professional</option>
-                            <option value="friendly">Friendly</option>
-                            <option value="casual">Casual</option>
+                            <option value="professional" {{ ($settings['ai_tone'] ?? 'friendly') == 'professional' ? 'selected' : '' }}>Professional</option>
+                            <option value="friendly" {{ ($settings['ai_tone'] ?? 'friendly') == 'friendly' ? 'selected' : '' }}>Friendly</option>
+                            <option value="casual" {{ ($settings['ai_tone'] ?? 'friendly') == 'casual' ? 'selected' : '' }}>
+                                Casual</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Max Response Length</label>
                         <select name="ai_max_length" class="input-dark w-full px-4 py-3 rounded-xl text-white">
-                            <option value="short">Short (50 words)</option>
-                            <option value="medium">Medium (100 words)</option>
-                            <option value="long">Long (200 words)</option>
+                            <option value="short" {{ ($settings['ai_max_length'] ?? 'medium') == 'short' ? 'selected' : '' }}>Short (50 words)</option>
+                            <option value="medium" {{ ($settings['ai_max_length'] ?? 'medium') == 'medium' ? 'selected' : '' }}>Medium (100 words)</option>
+                            <option value="long" {{ ($settings['ai_max_length'] ?? 'medium') == 'long' ? 'selected' : '' }}>Long (200 words)</option>
                         </select>
                     </div>
                 </div>
@@ -193,6 +196,40 @@
             </div>
         </div>
 
+        <!-- Bot Control Settings -->
+        <div class="glass rounded-2xl overflow-hidden">
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Bot Control</h3>
+                        <p class="text-gray-400 text-sm">Control bot via WhatsApp commands</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Bot Control WhatsApp Number</label>
+                    <input type="text" name="bot_control_number" value="{{ $settings['bot_control_number'] ?? '' }}"
+                        class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
+                        placeholder="919876543210">
+                    <p class="text-gray-500 text-xs mt-2">
+                        <strong>How it works:</strong> Send a message from this number to your bot's WhatsApp with format:
+                        <br><code class="bg-gray-800 px-2 py-1 rounded">919876543210 stop</code> - Stop bot for that
+                        customer
+                        <br><code class="bg-gray-800 px-2 py-1 rounded">919876543210 start</code> - Resume bot for that
+                        customer
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Lead Settings -->
         <div class="glass rounded-2xl overflow-hidden">
             <div class="p-6 border-b border-white/10">
@@ -217,11 +254,54 @@
                         min="1" max="720" class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
                         placeholder="24">
                     <p class="text-gray-500 text-xs mt-2">
-                        If a user responds after this many hours, a new lead will be created.
+                        If a user responds after this many hours, a <strong>new lead</strong> will be created.
                         If they respond within this time, the existing lead will be updated.
-                        <br><strong>Example:</strong> If set to 24 hours, and a user messages you,
-                        then messages again after 10 hours → same lead.
-                        But if they message after 30 hours → new lead.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Followup Settings -->
+        <div class="glass rounded-2xl overflow-hidden">
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Followup Settings</h3>
+                        <p class="text-gray-400 text-sm">Automatic followup message timing</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Followup Delay (Minutes)</label>
+                    <div class="flex items-center gap-4">
+                        <input type="number" name="followup_delay_minutes"
+                            value="{{ $settings['followup_delay_minutes'] ?? 60 }}" min="5" max="10080"
+                            class="w-32 input-dark px-4 py-3 rounded-xl text-white placeholder-gray-500">
+                        <div class="flex gap-2">
+                            <button type="button"
+                                onclick="document.querySelector('input[name=followup_delay_minutes]').value = 30"
+                                class="px-3 py-2 bg-gray-600/20 text-gray-400 rounded-lg hover:bg-gray-600/40 text-sm">30m</button>
+                            <button type="button"
+                                onclick="document.querySelector('input[name=followup_delay_minutes]').value = 60"
+                                class="px-3 py-2 bg-gray-600/20 text-gray-400 rounded-lg hover:bg-gray-600/40 text-sm">1h</button>
+                            <button type="button"
+                                onclick="document.querySelector('input[name=followup_delay_minutes]').value = 1440"
+                                class="px-3 py-2 bg-gray-600/20 text-gray-400 rounded-lg hover:bg-gray-600/40 text-sm">24h</button>
+                        </div>
+                    </div>
+                    <p class="text-gray-500 text-xs mt-2">
+                        If customer doesn't respond within this time, automatic followup message will be sent from your
+                        templates.
+                        <a href="{{ route('admin.followup-templates.index') }}"
+                            class="text-primary-400 hover:underline">Manage Templates →</a>
                     </p>
                 </div>
             </div>
@@ -234,7 +314,7 @@
             </button>
         </div>
 
-        </form>
+    </form>
     </div>
 
     @push('scripts')

@@ -34,7 +34,7 @@ class QuestionTemplateController extends Controller
         // Group by field and language
         $templatesByField = $templates->groupBy('field_name');
 
-        return view('admin.questionnaire.templates.index', [
+        return view('admin.workflow.templates.index', [
             'fields' => $allFields,
             'templatesByField' => $templatesByField,
             'languages' => $this->getLanguages(),
@@ -53,7 +53,7 @@ class QuestionTemplateController extends Controller
             ->get()
             ->keyBy('language');
 
-        return view('admin.questionnaire.templates.edit', [
+        return view('admin.workflow.templates.edit', [
             'fieldName' => $fieldName,
             'templates' => $templates,
             'languages' => $this->getLanguages(),
@@ -92,7 +92,7 @@ class QuestionTemplateController extends Controller
             );
         }
 
-        return redirect()->route('admin.questionnaire.templates.index')
+        return redirect()->route('admin.workflow.templates.index')
             ->with('success', 'Templates saved successfully');
     }
 

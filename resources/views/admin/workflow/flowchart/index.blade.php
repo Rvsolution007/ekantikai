@@ -209,7 +209,7 @@
         <div class="glass rounded-2xl p-4 mb-4">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <a href="{{ route('admin.questionnaire.fields.index') }}"
+                    <a href="{{ route('admin.workflow.fields.index') }}"
                         class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -394,6 +394,44 @@
                         <p class="text-xs text-gray-500 mt-1">Required fields must be answered before proceeding</p>
                     </div>
 
+                    <!-- Ask Digit - Only visible for Optional questions -->
+                    <div class="mb-4" id="ask-digit-wrapper" style="display: none;">
+                        <label class="block text-sm text-gray-400 mb-2">Ask Digit (How many times to ask)</label>
+                        <input type="number" id="node-ask-digit" min="1" max="10" value="1"
+                            class="w-full px-3 py-2 rounded-lg text-white text-sm bg-dark-300 border border-white/10">
+                        <p class="text-xs text-gray-500 mt-1">Bot will ask this optional question this many times during
+                            conversation (spread across different messages)</p>
+                    </div>
+
+                    <!-- Unique Field Checkbox - For product questions -->
+                    <div class="mb-4" id="unique-field-wrapper" style="display: none;">
+                        <label
+                            class="flex items-center gap-3 cursor-pointer p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                            <input type="checkbox" id="node-unique-field"
+                                class="w-5 h-5 rounded border-gray-600 text-yellow-500 focus:ring-yellow-500">
+                            <div>
+                                <span class="text-yellow-400 font-medium text-sm">🔑 Unique Field</span>
+                                <p class="text-xs text-gray-500">This field uniquely identifies each product (e.g., Model
+                                    Number)</p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Lead Status Connection - For connecting question completion to lead status -->
+                    <div class="mb-4" id="lead-status-wrapper" style="display: none;">
+                        <label class="block text-sm text-gray-400 mb-2">🎯 Lead Status Connection</label>
+                        <select id="node-lead-status"
+                            class="w-full px-3 py-2 rounded-lg text-white text-sm bg-dark-300 border border-white/10 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            <option value="">-- No status change --</option>
+                            @foreach($leadStatuses ?? [] as $status)
+                                <option value="{{ $status->id }}" style="color: {{ $status->color }}">
+                                    {{ $status->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">When this question is answered, move lead to this status</p>
+                    </div>
+
                     <button onclick="flowchartEditor.deleteNode()"
                         class="w-full px-4 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm">
                         Delete Node
@@ -501,6 +539,23 @@
 
                             // Also update the label input
                             document.getElementById('node-label').value = displayName;
+
+                            // Show/hide fields based on question type
+                            const uniqueFieldWrapper = document.getElementById('unique-field-wrapper');
+                            const isRequiredWrapper = document.getElementById('is-required-wrapper');
+                            const askDigitWrapper = document.getElementById('ask-digit-wrapper');
+
+                            if (questionType === 'product') {
+                                // Product Questions: Show Unique Field, Hide Required
+                                uniqueFieldWrapper.style.display = 'block';
+                                isRequiredWrapper.style.display = 'none';
+                                askDigitWrapper.style.display = 'none';
+                            } else {
+                                // Global Questions: Show Required, Hide Unique Field
+                                uniqueFieldWrapper.style.display = 'none';
+                                isRequiredWrapper.style.display = 'block';
+                                // Ask Digit shown based on Required selection
+                            }
                         }
                     }
                 });
@@ -517,7 +572,69 @@
                             is_required: isRequired
                         });
 
+                        // Show/hide Ask Digit field based on required/optional
+                        const askDigitWrapper = document.getElementById('ask-digit-wrapper');
+                        if (!isRequired) {
+                            askDigitWrapper.style.display = 'block';
+                        } else {
+                            askDigitWrapper.style.display = 'none';
+                        }
+
                         console.log('Node is_required updated:', isRequired);
+                    }
+                });
+
+                // Ask Digit input change
+                document.getElementById('node-ask-digit').addEventListener('input', (e) => {
+                    if (this.selectedNode) {
+                        const askDigit = parseInt(e.target.value) || 1;
+                        const nodeInfo = this.editor.getNodeFromId(this.selectedNode);
+                        const currentData = nodeInfo.data || {};
+
+                        this.editor.updateNodeDataFromId(this.selectedNode, {
+                            ...currentData,
+                            config: {
+                                ...currentData.config,
+                                ask_digit: askDigit
+                            }
+                        });
+                        console.log('Ask digit updated:', askDigit);
+                    }
+                });
+
+                // Unique Field checkbox change
+                document.getElementById('node-unique-field').addEventListener('change', (e) => {
+                    if (this.selectedNode) {
+                        const isUnique = e.target.checked;
+                        const nodeInfo = this.editor.getNodeFromId(this.selectedNode);
+                        const currentData = nodeInfo.data || {};
+
+                        this.editor.updateNodeDataFromId(this.selectedNode, {
+                            ...currentData,
+                            config: {
+                                ...currentData.config,
+                                is_unique_field: isUnique
+                            }
+                        });
+                        console.log('Unique field updated:', isUnique);
+                    }
+                });
+
+                // Lead Status dropdown change
+                document.getElementById('node-lead-status').addEventListener('change', (e) => {
+                    if (this.selectedNode) {
+                        const leadStatusId = e.target.value || null;
+                        const nodeInfo = this.editor.getNodeFromId(this.selectedNode);
+                        const currentData = nodeInfo.data || {};
+
+                        this.editor.updateNodeDataFromId(this.selectedNode, {
+                            ...currentData,
+                            config: {
+                                ...currentData.config,
+                                lead_status_id: leadStatusId
+                            }
+                        });
+                        console.log('Lead status updated:', leadStatusId);
                     }
                 });
 
@@ -570,7 +687,7 @@
 
             async loadFlow() {
                 try {
-                    const response = await fetch('{{ route("admin.questionnaire.flowchart.data") }}');
+                    const response = await fetch('{{ route("admin.workflow.flowchart.data") }}');
                     const data = await response.json();
 
                     console.log('Loaded data:', data);
@@ -579,16 +696,34 @@
                         // Map database IDs to new drawflow IDs
                         const idMap = {};
 
-                        // Add nodes
+                        // Add nodes with full data
                         data.nodes.forEach(node => {
+                            // Prepare full node data for addNode
+                            const nodeData = {
+                                label: node.data?.label || node.type,
+                                dbId: node.id,
+                                config: node.data?.config || {},
+                                is_required: node.data?.isRequired !== undefined ? node.data.isRequired : true,
+                            };
+
+                            // Merge config with top-level fields for backward compatibility
+                            if (node.data?.config) {
+                                nodeData.config = {
+                                    ...node.data.config,
+                                    ask_digit: node.data.askDigit || node.data.config?.ask_digit || 1,
+                                    is_unique_field: node.data.isUniqueField || node.data.config?.is_unique_field || false,
+                                    lead_status_id: node.data.config?.lead_status_id || null,
+                                };
+                            }
+
                             const newId = this.addNode(
                                 node.type,
                                 node.position?.x || 100,
                                 node.position?.y || 100,
-                                { label: node.data?.label || node.type, dbId: node.id }
+                                nodeData
                             );
                             idMap[node.id] = newId;
-                            console.log(`Node ${node.id} -> Drawflow ${newId}`);
+                            console.log(`Node ${node.id} -> Drawflow ${newId}`, nodeData);
                         });
 
                         console.log('ID Map:', idMap);
@@ -663,31 +798,68 @@
                 badge.textContent = nodeInfo.name.toUpperCase();
                 badge.className = `px-3 py-1 rounded-full text-xs font-medium bg-primary-500/20 text-primary-400`;
 
-                // Show/hide Display Name dropdown based on node type
+                // Get all wrappers
                 const displayNameWrapper = document.getElementById('display-name-wrapper');
                 const displayNameSelect = document.getElementById('node-display-name');
                 const isRequiredWrapper = document.getElementById('is-required-wrapper');
                 const isRequiredSelect = document.getElementById('node-is-required');
+                const askDigitWrapper = document.getElementById('ask-digit-wrapper');
+                const askDigitInput = document.getElementById('node-ask-digit');
+                const uniqueFieldWrapper = document.getElementById('unique-field-wrapper');
+                const uniqueFieldCheck = document.getElementById('node-unique-field');
+                const leadStatusWrapper = document.getElementById('lead-status-wrapper');
+                const leadStatusSelect = document.getElementById('node-lead-status');
 
                 if (nodeInfo.name === 'question') {
                     displayNameWrapper.style.display = 'block';
-                    isRequiredWrapper.style.display = 'block';
+                    leadStatusWrapper.style.display = 'block';
 
                     // Restore saved question selection if exists
                     const config = nodeInfo.data?.config || {};
                     if (config.question_type && config.question_id) {
                         const savedValue = `${config.question_type}_${config.question_id}`;
                         displayNameSelect.value = savedValue;
+
+                        // Product Questions: Show Unique Field, Hide Required
+                        // Global Questions: Show Required/Optional, Hide Unique Field
+                        if (config.question_type === 'product') {
+                            // Product Questions - show Unique Field, hide Required
+                            uniqueFieldWrapper.style.display = 'block';
+                            uniqueFieldCheck.checked = config.is_unique_field || false;
+                            isRequiredWrapper.style.display = 'none';
+                            askDigitWrapper.style.display = 'none';
+                        } else {
+                            // Global Questions - show Required/Optional with Ask Digit
+                            uniqueFieldWrapper.style.display = 'none';
+                            isRequiredWrapper.style.display = 'block';
+
+                            // Restore is_required value (default to true/required)
+                            const isRequired = nodeInfo.data?.is_required !== undefined ? nodeInfo.data.is_required : true;
+                            isRequiredSelect.value = isRequired ? '1' : '0';
+
+                            // Show Ask Digit only for optional global questions
+                            if (!isRequired) {
+                                askDigitWrapper.style.display = 'block';
+                                askDigitInput.value = config.ask_digit || 1;
+                            } else {
+                                askDigitWrapper.style.display = 'none';
+                            }
+                        }
                     } else {
                         displayNameSelect.value = '';
+                        uniqueFieldWrapper.style.display = 'none';
+                        isRequiredWrapper.style.display = 'none';
+                        askDigitWrapper.style.display = 'none';
                     }
 
-                    // Restore is_required value (default to true/required)
-                    const isRequired = nodeInfo.data?.is_required !== undefined ? nodeInfo.data.is_required : true;
-                    isRequiredSelect.value = isRequired ? '1' : '0';
+                    // Restore lead status
+                    leadStatusSelect.value = config.lead_status_id || '';
                 } else {
                     displayNameWrapper.style.display = 'none';
                     isRequiredWrapper.style.display = 'none';
+                    askDigitWrapper.style.display = 'none';
+                    uniqueFieldWrapper.style.display = 'none';
+                    leadStatusWrapper.style.display = 'none';
                     displayNameSelect.value = '';
                 }
             },
@@ -732,7 +904,11 @@
                             id: id, // Use drawflow internal ID
                             type: node.name,
                             position: { x: node.pos_x, y: node.pos_y },
-                            data: { label: node.data?.label || node.name, config: node.data?.config || {} }
+                            data: {
+                                label: node.data?.label || node.name,
+                                config: node.data?.config || {},
+                                is_required: node.data?.is_required !== undefined ? node.data.is_required : true
+                            }
                         });
 
                         Object.entries(node.outputs || {}).forEach(([outputKey, output]) => {
@@ -747,7 +923,7 @@
                         });
                     });
 
-                    const response = await fetch('{{ route("admin.questionnaire.flowchart.save-all") }}', {
+                    const response = await fetch('{{ route("admin.workflow.flowchart.save-all") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

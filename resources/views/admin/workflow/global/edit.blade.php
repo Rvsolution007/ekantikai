@@ -8,7 +8,7 @@
     <div class="glass rounded-2xl p-6 mb-6">
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div class="flex items-center gap-4">
-                <a href="{{ route('admin.questionnaire.global.index') }}" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                <a href="{{ route('admin.workflow.global.index') }}" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    <form action="{{ route('admin.questionnaire.global.update', $question) }}" method="POST">
+    <form action="{{ route('admin.workflow.global.update', $question) }}" method="POST">
         @csrf
         @method('PUT')
         
@@ -108,7 +108,7 @@
                         </svg>
                         Save Changes
                     </button>
-                    <a href="{{ route('admin.questionnaire.global.index') }}" class="py-3 rounded-xl text-gray-400 hover:text-white font-medium text-center bg-white/5 hover:bg-white/10 transition-colors">
+                    <a href="{{ route('admin.workflow.global.index') }}" class="py-3 rounded-xl text-gray-400 hover:text-white font-medium text-center bg-white/5 hover:bg-white/10 transition-colors">
                         Cancel
                     </a>
                 </div>

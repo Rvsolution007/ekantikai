@@ -24,8 +24,11 @@ class SettingController extends Controller
             'whatsapp_instance' => $admin->whatsapp_instance ?? '',
             // Lead settings
             'lead_timeout_hours' => $admin->lead_timeout_hours ?? 24,
-            // These can remain global or also be moved to admin
+            // AI settings (global for now)
             'ai_system_prompt' => Setting::getValue('ai_system_prompt', ''),
+            'ai_tone' => Setting::getValue('ai_tone', 'friendly'),
+            'ai_max_length' => Setting::getValue('ai_max_length', 'medium'),
+            // Business settings
             'business_name' => $admin->company_name ?? '',
             'business_email' => $admin->email ?? '',
             'business_hours' => Setting::getValue('business_hours', ''),
@@ -64,7 +67,7 @@ class SettingController extends Controller
         ]);
 
         // Other settings can remain global
-        $globalSettings = ['ai_system_prompt', 'business_hours'];
+        $globalSettings = ['ai_system_prompt', 'business_hours', 'ai_tone', 'ai_max_length'];
         foreach ($globalSettings as $key) {
             $value = $request->input($key);
             if ($value !== null) {

@@ -5,16 +5,19 @@ use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Auth\SuperAdminLoginController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LeadController;
+use App\Http\Controllers\Admin\LeadStatusController;
 use App\Http\Controllers\Admin\WhatsappUserController;
 use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\CatalogueController;
 use App\Http\Controllers\Admin\CatalogueFieldController;
 use App\Http\Controllers\Admin\CatalogueImportController;
 use App\Http\Controllers\Admin\FollowupController;
+use App\Http\Controllers\Admin\FollowupTemplateController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\CreditController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\TenantController;
+use App\Http\Controllers\SuperAdmin\AIConfigController;
 
 
 /*
@@ -64,6 +67,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
         Route::get('/leads/export/csv', [LeadController::class, 'export'])->name('leads.export');
 
+        // Lead Statuses (Kanban)
+        Route::resource('lead-status', LeadStatusController::class);
+        Route::get('/lead-status-kanban', [LeadStatusController::class, 'kanban'])->name('lead-status.kanban');
+        Route::post('/lead-status/reorder', [LeadStatusController::class, 'reorder'])->name('lead-status.reorder');
+        Route::post('/lead-status/move-lead', [LeadStatusController::class, 'moveLead'])->name('lead-status.move-lead');
+        Route::get('/api/lead-statuses', [LeadStatusController::class, 'apiList'])->name('lead-status.api-list');
+
         // WhatsApp Users
         Route::resource('users', WhatsappUserController::class);
         Route::post('/users/{user}/toggle-bot', [WhatsappUserController::class, 'toggleBot'])->name('users.toggle-bot');
@@ -95,6 +105,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/followups/{followup}/complete', [FollowupController::class, 'markComplete'])->name('followups.complete');
         Route::post('/followups/{followup}/reschedule', [FollowupController::class, 'reschedule'])->name('followups.reschedule');
 
+        // Followup Templates
+        Route::resource('followup-templates', FollowupTemplateController::class);
+        Route::post('/followup-templates/{followupTemplate}/toggle', [FollowupTemplateController::class, 'toggle'])->name('followup-templates.toggle');
+        Route::post('/followup-templates/reorder', [FollowupTemplateController::class, 'reorder'])->name('followup-templates.reorder');
+        Route::get('/followup-templates/{followupTemplate}/preview', [FollowupTemplateController::class, 'preview'])->name('followup-templates.preview');
+        Route::post('/followup-templates/{followupTemplate}/duplicate', [FollowupTemplateController::class, 'duplicate'])->name('followup-templates.duplicate');
+        Route::get('/api/followup-fields', [FollowupTemplateController::class, 'getFields'])->name('followup-templates.fields');
+
         // Credits
         Route::get('/credits', [CreditController::class, 'index'])->name('credits.index');
         Route::post('/credits/{credit}/add', [CreditController::class, 'addCredits'])->name('credits.add');
@@ -106,9 +124,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/settings/get-qr', [SettingController::class, 'getQrCode'])->name('settings.get-qr');
         Route::post('/settings/disconnect', [SettingController::class, 'disconnect'])->name('settings.disconnect');
 
-        // Questionnaire Builder Routes
-        Route::prefix('questionnaire')->name('questionnaire.')->group(function () {
-            // Questionnaire Fields
+        // Workflow Builder Routes
+        Route::prefix('workflow')->name('workflow.')->group(function () {
+            // Workflow Landing Page
+            Route::get('/', function () {
+                return view('admin.workflow.index');
+            })->name('index');
+
+            // Workflow Fields (Product Questions)
             Route::get('/fields', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'index'])->name('fields.index');
             Route::get('/fields/create', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'create'])->name('fields.create');
             Route::post('/fields', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'store'])->name('fields.store');
@@ -117,6 +140,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/fields/{field}', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'destroy'])->name('fields.destroy');
             Route::post('/fields/reorder', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'reorder'])->name('fields.reorder');
             Route::post('/fields/{field}/toggle-unique', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'toggleUniqueKey'])->name('fields.toggle-unique');
+            Route::post('/fields/{field}/toggle-unique-field', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'toggleUniqueField'])->name('fields.toggle-unique-field');
 
             // Global Questions
             Route::get('/global', [\App\Http\Controllers\Admin\GlobalQuestionController::class, 'index'])->name('global.index');
@@ -160,6 +184,13 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::patch('/tenants/{tenant}/toggle-status', [TenantController::class, 'toggleStatus'])->name('tenants.toggle-status');
     Route::post('/tenants/{tenant}/reset-password', [TenantController::class, 'resetPassword'])->name('tenants.reset-password');
 
+    // AI Configuration (Point 9 - Super Admin)
+    Route::get('/ai-config', [AIConfigController::class, 'index'])->name('ai-config.index');
+    Route::post('/ai-config', [AIConfigController::class, 'update'])->name('ai-config.update');
+    Route::get('/ai-config/dashboard', [AIConfigController::class, 'dashboard'])->name('ai-config.dashboard');
+    Route::get('/api/ai-config', [AIConfigController::class, 'apiConfig'])->name('ai-config.api');
+    Route::get('/api/ai-usage', [AIConfigController::class, 'apiUsage'])->name('ai-config.usage');
+
     // Payments
     Route::get('/payments', function () {
         return view('superadmin.payments.index', [
@@ -179,3 +210,4 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
         return view('superadmin.settings.index');
     })->name('settings.index');
 });
+

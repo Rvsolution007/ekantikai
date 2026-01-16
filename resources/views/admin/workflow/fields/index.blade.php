@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Questionnaire Fields')
+@section('title', 'Workflow Fields')
 
 @section('content')
     <div class="p-4 lg:p-6">
@@ -16,11 +16,11 @@
                                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
                         </div>
-                        Questionnaire Fields
+                        Workflow Fields
                     </h1>
                     <p class="text-gray-400 mt-1">Configure fields for the product inquiry flow</p>
                 </div>
-                <a href="{{ route('admin.questionnaire.fields.create') }}"
+                <a href="{{ route('admin.workflow.fields.create') }}"
                     class="btn-primary px-6 py-3 rounded-xl text-white font-medium flex items-center gap-2 w-fit">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -70,13 +70,12 @@
             <div class="glass-light rounded-xl p-4 stat-card">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <span class="text-xl">🏷️</span>
                     </div>
                     <div>
-                        <div class="text-2xl font-bold text-white">{{ $fields->where('is_required', true)->count() }}</div>
-                        <div class="text-sm text-gray-400">Required</div>
+                        <div class="text-2xl font-bold text-white">{{ $fields->where('is_unique_field', true)->count() }}
+                        </div>
+                        <div class="text-sm text-gray-400">Unique Fields</div>
                     </div>
                 </div>
             </div>
@@ -133,7 +132,7 @@
                                 Type</th>
                             <th
                                 class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">
-                                Required</th>
+                                Unique Field</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                                 Unique Key</th>
                             <th
@@ -166,37 +165,45 @@
                                 </td>
                                 <td class="px-4 py-4">
                                     <span class="px-2.5 py-1 rounded-full text-xs font-medium
-                                                            @if($field->field_type == 'text') bg-blue-500/20 text-blue-400
-                                                            @elseif($field->field_type == 'select') bg-green-500/20 text-green-400
-                                                            @else bg-yellow-500/20 text-yellow-400
-                                                            @endif">
+                                                                                                    @if($field->field_type == 'text') bg-blue-500/20 text-blue-400
+                                                                                                    @elseif($field->field_type == 'select') bg-green-500/20 text-green-400
+                                                                                                    @else bg-yellow-500/20 text-yellow-400
+                                                                                                    @endif">
                                         {{ ucfirst($field->field_type) }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-4 text-center hidden lg:table-cell">
-                                    @if($field->is_required)
-                                        <svg class="w-5 h-5 text-green-400 mx-auto" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    @else
-                                        <svg class="w-5 h-5 text-gray-500 mx-auto" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
-                                        </svg>
-                                    @endif
+                                    <form action="{{ route('admin.workflow.fields.toggle-unique-field', $field) }}"
+                                        method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="w-10 h-10 rounded-xl transition-all flex items-center justify-center mx-auto
+                                                                                                        @if($field->is_unique_field) 
+                                                                                                            bg-gradient-to-br from-green-500 to-teal-500 shadow-lg shadow-green-500/25
+                                                                                                        @else 
+                                                                                                            bg-white/5 hover:bg-white/10 border border-white/10
+                                                                                                        @endif">
+                                            @if($field->is_unique_field)
+                                                <span class="text-white font-bold text-sm">🏷️</span>
+                                            @else
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M20 12H4" />
+                                                </svg>
+                                            @endif
+                                        </button>
+                                    </form>
                                 </td>
                                 <td class="px-4 py-4 text-center">
-                                    <form action="{{ route('admin.questionnaire.fields.toggle-unique', $field) }}" method="POST"
+                                    <form action="{{ route('admin.workflow.fields.toggle-unique', $field) }}" method="POST"
                                         class="inline">
                                         @csrf
                                         <button type="submit" class="w-10 h-10 rounded-xl transition-all flex items-center justify-center mx-auto
-                                                                @if($field->is_unique_key) 
-                                                                    bg-gradient-to-br from-yellow-500 to-orange-500 shadow-lg shadow-yellow-500/25
-                                                                @else 
-                                                                    bg-white/5 hover:bg-white/10 border border-white/10
-                                                                @endif">
+                                                                                                        @if($field->is_unique_key) 
+                                                                                                            bg-gradient-to-br from-yellow-500 to-orange-500 shadow-lg shadow-yellow-500/25
+                                                                                                        @else 
+                                                                                                            bg-white/5 hover:bg-white/10 border border-white/10
+                                                                                                        @endif">
                                             @if($field->is_unique_key)
                                                 <span class="text-white font-bold text-sm">🔑{{ $field->unique_key_order }}</span>
                                             @else
@@ -220,7 +227,7 @@
                                 </td>
                                 <td class="px-4 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="{{ route('admin.questionnaire.fields.edit', $field) }}"
+                                        <a href="{{ route('admin.workflow.fields.edit', $field) }}"
                                             class="w-9 h-9 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 flex items-center justify-center transition-colors">
                                             <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -228,7 +235,7 @@
                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
                                         </a>
-                                        <form action="{{ route('admin.questionnaire.fields.destroy', $field) }}" method="POST"
+                                        <form action="{{ route('admin.workflow.fields.destroy', $field) }}" method="POST"
                                             class="inline" onsubmit="return confirm('Delete this field?')">
                                             @csrf
                                             @method('DELETE')
@@ -257,7 +264,7 @@
                                         </div>
                                         <h3 class="text-white font-medium mb-2">No Fields Configured</h3>
                                         <p class="text-gray-400 mb-4">Start by adding your first questionnaire field</p>
-                                        <a href="{{ route('admin.questionnaire.fields.create') }}"
+                                        <a href="{{ route('admin.workflow.fields.create') }}"
                                             class="btn-primary px-4 py-2 rounded-lg text-white text-sm">
                                             Add First Field
                                         </a>
@@ -285,57 +292,7 @@
             </div>
         @endif
 
-        <!-- Navigation Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a href="{{ route('admin.questionnaire.global.index') }}"
-                class="glass-light rounded-xl p-5 hover:bg-white/10 transition-all group">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="font-medium text-white">Global Questions</h3>
-                        <p class="text-sm text-gray-400">City, Purpose of Purchase</p>
-                    </div>
-                </div>
-            </a>
-            <a href="{{ route('admin.questionnaire.templates.index') }}"
-                class="glass-light rounded-xl p-5 hover:bg-white/10 transition-all group">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="font-medium text-white">Question Templates</h3>
-                        <p class="text-sm text-gray-400">Multi-language texts</p>
-                    </div>
-                </div>
-            </a>
-            <a href="{{ route('admin.questionnaire.flowchart.index') }}"
-                class="glass-light rounded-xl p-5 hover:bg-white/10 transition-all group">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="font-medium text-white">Flowchart Builder</h3>
-                        <p class="text-sm text-gray-400">Visual flow design</p>
-                    </div>
-                </div>
-            </a>
-        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -352,7 +309,7 @@
                             .map(tr => tr.dataset.id)
                             .filter(id => id);
 
-                        fetch('{{ route("admin.questionnaire.fields.reorder") }}', {
+                        fetch('{{ route("admin.workflow.fields.reorder") }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',

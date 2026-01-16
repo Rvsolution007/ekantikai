@@ -16,6 +16,9 @@ class Customer extends Model
         'global_fields',
         'global_asked',
         'bot_enabled',
+        'bot_stopped_by_user',
+        'bot_stopped_at',
+        'bot_stop_reason',
         'pause_reason',
         'detected_language',
         'last_activity_at',
@@ -26,6 +29,8 @@ class Customer extends Model
         'global_fields' => 'array',
         'global_asked' => 'array',
         'bot_enabled' => 'boolean',
+        'bot_stopped_by_user' => 'boolean',
+        'bot_stopped_at' => 'datetime',
         'last_activity_at' => 'datetime',
         'last_greeted_at' => 'datetime',
     ];
@@ -97,6 +102,61 @@ class Customer extends Model
     }
 
     /**
+     * Stop bot for this customer via WhatsApp command
+     */
+    public function stopBot(string $reason = 'user_request'): void
+    {
+        $this->update([
+            'bot_enabled' => false,
+            'bot_stopped_by_user' => true,
+            'bot_stopped_at' => now(),
+            'bot_stop_reason' => $reason,
+        ]);
+
+        // Also stop bot for current lead
+        $currentLead = $this->currentLead();
+        if ($currentLead) {
+            $currentLead->update(['bot_active' => false]);
+        }
+    }
+
+    /**
+     * Start bot for this customer via WhatsApp command
+     */
+    public function startBot(): void
+    {
+        $this->update([
+            'bot_enabled' => true,
+            'bot_stopped_by_user' => false,
+            'bot_stopped_at' => null,
+            'bot_stop_reason' => null,
+        ]);
+
+        // Also start bot for current lead
+        $currentLead = $this->currentLead();
+        if ($currentLead) {
+            $currentLead->update(['bot_active' => true]);
+        }
+    }
+
+    /**
+     * Check if bot is stopped for this customer
+     */
+    public function isBotStopped(): bool
+    {
+        return !$this->bot_enabled || $this->bot_stopped_by_user;
+    }
+
+    /**
+     * Set detected language
+     */
+    public function setLanguage(string $language): void
+    {
+        $this->detected_language = $language;
+        $this->save();
+    }
+
+    /**
      * Get or create lead for this customer
      * Creates new lead if:
      * - No existing open lead exists
@@ -124,19 +184,25 @@ class Customer extends Model
             $hoursSinceLastActivity = $this->last_activity_at->diffInHours(now());
             if ($hoursSinceLastActivity > $timeoutHours) {
                 // Close the old lead and create new one
-                $existingLead->update(['status' => 'closed']);
+                $existingLead->update(['status' => 'closed', 'bot_active' => false]);
                 $shouldCreateNew = true;
             }
         }
 
         if ($shouldCreateNew) {
+            // Get default lead status for this admin
+            $defaultStatus = LeadStatus::getDefault($admin->id);
+
             $existingLead = Lead::create([
                 'admin_id' => $admin->id,
                 'customer_id' => $this->id,
                 'stage' => Lead::STAGE_NEW_LEAD,
                 'status' => 'open',
+                'lead_status_id' => $defaultStatus?->id,
+                'bot_active' => $this->bot_enabled && !$this->bot_stopped_by_user,
                 'lead_quality' => Lead::QUALITY_COLD,
                 'lead_score' => 0,
+                'detected_language' => $this->detected_language,
             ]);
         }
 

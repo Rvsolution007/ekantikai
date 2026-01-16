@@ -20,7 +20,7 @@ class QuestionnaireFieldController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return view('admin.questionnaire.fields.index', [
+        return view('admin.workflow.fields.index', [
             'fields' => $fields,
         ]);
     }
@@ -30,7 +30,7 @@ class QuestionnaireFieldController extends Controller
      */
     public function create()
     {
-        return view('admin.questionnaire.fields.create', [
+        return view('admin.workflow.fields.create', [
             'fieldTypes' => $this->getFieldTypes(),
             'optionsSources' => $this->getOptionsSources(),
         ]);
@@ -80,7 +80,7 @@ class QuestionnaireFieldController extends Controller
             'is_active' => true,
         ]);
 
-        return redirect()->route('admin.questionnaire.fields.index')
+        return redirect()->route('admin.workflow.fields.index')
             ->with('success', 'Field added successfully');
     }
 
@@ -91,7 +91,7 @@ class QuestionnaireFieldController extends Controller
     {
         $this->authorizeField($field);
 
-        return view('admin.questionnaire.fields.edit', [
+        return view('admin.workflow.fields.edit', [
             'field' => $field,
             'fieldTypes' => $this->getFieldTypes(),
             'optionsSources' => $this->getOptionsSources(),
@@ -120,7 +120,7 @@ class QuestionnaireFieldController extends Controller
 
         $field->update($validated);
 
-        return redirect()->route('admin.questionnaire.fields.index')
+        return redirect()->route('admin.workflow.fields.index')
             ->with('success', 'Field updated successfully');
     }
 
@@ -133,7 +133,7 @@ class QuestionnaireFieldController extends Controller
 
         $field->delete();
 
-        return redirect()->route('admin.questionnaire.fields.index')
+        return redirect()->route('admin.workflow.fields.index')
             ->with('success', 'Field deleted successfully');
     }
 
@@ -180,6 +180,19 @@ class QuestionnaireFieldController extends Controller
         $field->save();
 
         return back()->with('success', 'Unique key status updated');
+    }
+
+    /**
+     * Toggle unique field status (for identifying unique products like Model Number)
+     */
+    public function toggleUniqueField(QuestionnaireField $field)
+    {
+        $this->authorizeField($field);
+
+        $field->is_unique_field = !$field->is_unique_field;
+        $field->save();
+
+        return back()->with('success', 'Unique field status updated');
     }
 
     /**

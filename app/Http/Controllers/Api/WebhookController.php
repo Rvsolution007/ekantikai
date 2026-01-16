@@ -3,18 +3,33 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Catalogue;
 use App\Models\Customer;
 use App\Models\Admin;
+use App\Models\Lead;
+use App\Models\LeadStatus;
 use App\Models\WhatsappChat;
-use App\Services\ActionProcessorService;
 use App\Services\AIService;
+use App\Services\BotControlService;
+use App\Services\LanguageDetectionService;
 use App\Services\MessageProcessorService;
 use App\Services\QuestionnaireService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class WebhookController extends Controller
 {
+    protected BotControlService $botControlService;
+    protected LanguageDetectionService $languageService;
+
+    public function __construct()
+    {
+        $this->botControlService = new BotControlService();
+        $this->languageService = new LanguageDetectionService();
+    }
+
     /**
      * Handle incoming WhatsApp webhook from Evolution API
      */
@@ -54,46 +69,113 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'ignored', 'reason' => 'self message']);
             }
 
-            // DEDUPLICATION: Skip if message already processed (using message ID cache)
+            // DEDUPLICATION: Skip if message already processed
             $cacheKey = 'processed_msg_' . ($messageData['messageId'] ?? md5($messageData['phone'] . $messageData['content'] . $messageData['timestamp']));
-            if (\Cache::has($cacheKey)) {
+            if (Cache::has($cacheKey)) {
                 return response()->json(['status' => 'ignored', 'reason' => 'duplicate message']);
             }
-            // Mark as processed for 60 seconds
-            \Cache::put($cacheKey, true, 60);
+            Cache::put($cacheKey, true, 60);
 
             // Skip if message matches bot's greeting patterns (self-reply prevention)
             if ($this->isBotMessage($messageData['content'])) {
                 return response()->json(['status' => 'ignored', 'reason' => 'bot message pattern detected']);
             }
 
+            // CHECK BOT CONTROL COMMANDS (Point 2)
+            $controlResult = $this->botControlService->handleControlMessage(
+                $tenant,
+                $messageData['phone'],
+                $messageData['content']
+            );
+            if ($controlResult) {
+                // This is a control message, send confirmation
+                if ($controlResult['success']) {
+                    $this->sendResponse($tenant, $messageData['phone'], $controlResult['message']);
+                }
+                return response()->json([
+                    'status' => 'control_command',
+                    'result' => $controlResult
+                ]);
+            }
+
             // Get or create customer
             $customer = $this->getOrCreateCustomer($tenant->id, $messageData['phone'], $messageData['name']);
+
+            // CHECK IF BOT IS STOPPED (Point 2)
+            if ($customer->isBotStopped()) {
+                // Still save message to database but don't respond
+                $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
+                return response()->json(['status' => 'ignored', 'reason' => 'bot stopped for this user']);
+            }
 
             // Get or create lead based on timeout setting
             $lead = $customer->getOrCreateLead();
 
-            // Save incoming message
-            $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
-
-            // Check if bot is enabled
-            if (!$customer->bot_enabled) {
-                return response()->json(['status' => 'ignored', 'reason' => 'bot disabled']);
+            // CHECK IF BOT IS ACTIVE FOR THIS LEAD (Point 7)
+            if (!$lead->bot_active) {
+                $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
+                return response()->json(['status' => 'ignored', 'reason' => 'bot inactive for this lead']);
             }
 
-            // Process message with MessageProcessor (pass lead for data collection)
-            $processor = new MessageProcessorService($tenant, $customer, $lead);
-            $response = $processor->process($messageData['content']);
+            // Detect language (Point 8.4)
+            $detectedLanguage = $this->languageService->detect($messageData['content']);
+            $customer->setLanguage($detectedLanguage);
+            $lead->update(['detected_language' => $detectedLanguage]);
 
-            // Update customer's last activity (for lead timeout calculation)
+            // Save incoming message with reply info (Point 4 & 5)
+            $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
+
+            // PROCESS WITH AI (Point 8)
+            $aiService = new AIService();
+            $aiResponse = $aiService->processMessageEnhanced(
+                $tenant,
+                $customer,
+                $lead,
+                $messageData['content'],
+                [
+                    'reply_to_content' => $messageData['replyToContent'] ?? null,
+                ]
+            );
+
+            // Update lead from AI response (Point 8.5, 8.8)
+            if ($aiResponse['success']) {
+                $this->processAIResponse($tenant, $customer, $lead, $aiResponse);
+            }
+
+            // Update customer's last activity
             $customer->updateLastActivity();
 
-            // Send response if any
-            if (!empty($response['message'])) {
-                $this->sendResponse($tenant, $messageData['phone'], $response['message']);
+            // Get response message
+            $responseMessage = $aiResponse['response_message'] ?? '';
 
-                // Save bot response
-                $this->saveMessage($tenant->id, $customer->id, 'assistant', $response['message']);
+            // CHECK FOR CATALOGUE IMAGE (Point 12)
+            $catalogueMedia = null;
+            if (!empty($aiResponse['unique_field_mentioned'])) {
+                $catalogueMedia = $aiService->checkCatalogueForUniqueField(
+                    $tenant->id,
+                    $aiResponse['unique_field_mentioned']
+                );
+            }
+
+            // Send response if any
+            if (!empty($responseMessage)) {
+                // Send catalogue image first if available
+                if ($catalogueMedia && !empty($catalogueMedia['image_url'])) {
+                    $this->sendImageResponse($tenant, $messageData['phone'], $catalogueMedia['image_url']);
+                }
+
+                $this->sendResponse($tenant, $messageData['phone'], $responseMessage);
+
+                // Save bot response (Point 5)
+                $this->saveMessage($tenant->id, $customer->id, 'assistant', $responseMessage, [
+                    'ai_response' => true,
+                    'detected_language' => $detectedLanguage,
+                ]);
+            }
+
+            // CHECK IF ALL REQUIRED QUESTIONS COMPLETE (Point 7)
+            if ($aiResponse['all_required_complete'] ?? false) {
+                $lead->markBotComplete();
             }
 
             // Update lead score after processing
@@ -102,7 +184,8 @@ class WebhookController extends Controller
             return response()->json([
                 'status' => 'success',
                 'lead_id' => $lead->id,
-                'response' => $response
+                'detected_language' => $detectedLanguage,
+                'bot_active' => $lead->bot_active,
             ]);
 
         } catch (\Exception $e) {
@@ -119,25 +202,82 @@ class WebhookController extends Controller
     }
 
     /**
-     * Extract message data from webhook payload
+     * Process AI response and update lead/customer
+     */
+    protected function processAIResponse(Admin $tenant, Customer $customer, Lead $lead, array $aiResponse): void
+    {
+        // Update extracted data (Point 8.8)
+        if (!empty($aiResponse['extracted_data'])) {
+            foreach ($aiResponse['extracted_data'] as $key => $value) {
+                if ($value !== null) {
+                    $lead->addCollectedData($key, $value);
+                }
+            }
+        }
+
+        // Handle product confirmations (Point 8.3)
+        if (!empty($aiResponse['product_confirmations'])) {
+            foreach ($aiResponse['product_confirmations'] as $product) {
+                $lead->addProductConfirmation($product);
+            }
+        }
+
+        // Handle product actions (remove/update)
+        if (!empty($aiResponse['product_actions'])) {
+            $action = $aiResponse['product_actions'];
+            if ($action['action'] === 'remove' && isset($action['index'])) {
+                $lead->updateProductConfirmation($action['index'], null);
+            }
+        }
+
+        // Update lead status (Point 8.5)
+        if (!empty($aiResponse['lead_status_suggestion'])) {
+            $status = LeadStatus::where('admin_id', $tenant->id)
+                ->where('name', $aiResponse['lead_status_suggestion'])
+                ->first();
+            if ($status) {
+                $lead->updateLeadStatus($status->id);
+            }
+        }
+    }
+
+    /**
+     * Extract message data from webhook payload with reply detection (Point 4)
      */
     protected function extractMessageData(array $data): ?array
     {
-        // Evolution API v2 format
         $message = $data['data'] ?? $data;
 
         if (isset($message['key'])) {
-            // New message format
             $remoteJid = $message['key']['remoteJid'] ?? '';
             $phone = $this->cleanPhone($remoteJid);
+
+            $msgContent = $message['message'] ?? [];
+
+            // REPLY DETECTION (Point 4)
+            $replyToContent = null;
+            $replyToMessageId = null;
+
+            // Check for contextInfo in extendedTextMessage
+            if (isset($msgContent['extendedTextMessage']['contextInfo'])) {
+                $contextInfo = $msgContent['extendedTextMessage']['contextInfo'];
+                $replyToMessageId = $contextInfo['stanzaId'] ?? null;
+                $replyToContent = $contextInfo['quotedMessage']['conversation']
+                    ?? $contextInfo['quotedMessage']['extendedTextMessage']['text']
+                    ?? null;
+            }
 
             return [
                 'phone' => $phone,
                 'name' => $message['pushName'] ?? $phone,
-                'content' => $this->extractContent($message['message'] ?? []),
+                'content' => $this->extractContent($msgContent),
                 'fromMe' => $message['key']['fromMe'] ?? false,
                 'messageId' => $message['key']['id'] ?? null,
+                'whatsappMessageId' => $message['key']['id'] ?? null,
                 'timestamp' => $message['messageTimestamp'] ?? time(),
+                'isReply' => !empty($replyToMessageId),
+                'replyToMessageId' => $replyToMessageId,
+                'replyToContent' => $replyToContent,
             ];
         }
 
@@ -145,13 +285,28 @@ class WebhookController extends Controller
         if (isset($message['messages']) && is_array($message['messages'])) {
             $msg = $message['messages'][0] ?? null;
             if ($msg) {
+                $msgContent = $msg['message'] ?? [];
+
+                // Reply detection for legacy
+                $replyToContent = null;
+                $replyToMessageId = null;
+                if (isset($msgContent['extendedTextMessage']['contextInfo'])) {
+                    $contextInfo = $msgContent['extendedTextMessage']['contextInfo'];
+                    $replyToMessageId = $contextInfo['stanzaId'] ?? null;
+                    $replyToContent = $contextInfo['quotedMessage']['conversation'] ?? null;
+                }
+
                 return [
                     'phone' => $this->cleanPhone($msg['key']['remoteJid'] ?? ''),
                     'name' => $msg['pushName'] ?? '',
-                    'content' => $this->extractContent($msg['message'] ?? []),
+                    'content' => $this->extractContent($msgContent),
                     'fromMe' => $msg['key']['fromMe'] ?? false,
                     'messageId' => $msg['key']['id'] ?? null,
+                    'whatsappMessageId' => $msg['key']['id'] ?? null,
                     'timestamp' => $msg['messageTimestamp'] ?? time(),
+                    'isReply' => !empty($replyToMessageId),
+                    'replyToMessageId' => $replyToMessageId,
+                    'replyToContent' => $replyToContent,
                 ];
             }
         }
@@ -164,7 +319,6 @@ class WebhookController extends Controller
      */
     protected function extractContent(array $message): string
     {
-        // Text message
         if (isset($message['conversation'])) {
             return $message['conversation'];
         }
@@ -173,17 +327,14 @@ class WebhookController extends Controller
             return $message['extendedTextMessage']['text'];
         }
 
-        // Button response
         if (isset($message['buttonsResponseMessage']['selectedButtonId'])) {
             return $message['buttonsResponseMessage']['selectedButtonId'];
         }
 
-        // List response
         if (isset($message['listResponseMessage']['singleSelectReply']['selectedRowId'])) {
             return $message['listResponseMessage']['singleSelectReply']['selectedRowId'];
         }
 
-        // Image/Video/Document with caption
         foreach (['imageMessage', 'videoMessage', 'documentMessage'] as $type) {
             if (isset($message[$type]['caption'])) {
                 return $message[$type]['caption'];
@@ -198,7 +349,6 @@ class WebhookController extends Controller
      */
     protected function findTenantByInstance(string $instanceName): ?Admin
     {
-        // PRIMARY: Check admins table where instance is stored directly
         $admin = Admin::where('whatsapp_instance', $instanceName)
             ->where('is_active', true)
             ->first();
@@ -207,9 +357,8 @@ class WebhookController extends Controller
             return $admin;
         }
 
-        // SECONDARY: Check in whatsapp_instances table if exists
         if (\Schema::hasTable('whatsapp_instances')) {
-            $instance = \DB::table('whatsapp_instances')
+            $instance = DB::table('whatsapp_instances')
                 ->where('instance_name', $instanceName)
                 ->first();
 
@@ -218,7 +367,6 @@ class WebhookController extends Controller
             }
         }
 
-        // FALLBACK: Default to first active tenant
         Log::warning('Could not find tenant by instance name, using first active', [
             'instance' => $instanceName
         ]);
@@ -240,6 +388,7 @@ class WebhookController extends Controller
                 'phone' => $phone,
                 'name' => $name,
                 'bot_enabled' => true,
+                'bot_stopped_by_user' => false,
                 'detected_language' => 'hi',
                 'last_activity_at' => now(),
             ]);
@@ -254,175 +403,21 @@ class WebhookController extends Controller
     }
 
     /**
-     * Save chat message
+     * Save chat message with reply info (Point 4 & 5)
      */
     protected function saveMessage(int $adminId, int $customerId, string $role, string $content, array $metadata = []): void
     {
-        \DB::table('chat_messages')->insert([
+        WhatsappChat::create([
             'admin_id' => $adminId,
             'customer_id' => $customerId,
             'role' => $role,
             'content' => $content,
-            'message_id' => $metadata['messageId'] ?? null,
-            'metadata' => json_encode($metadata),
-            'created_at' => now(),
+            'whatsapp_message_id' => $metadata['whatsappMessageId'] ?? $metadata['messageId'] ?? null,
+            'is_reply' => $metadata['isReply'] ?? false,
+            'reply_to_message_id' => $metadata['replyToMessageId'] ?? null,
+            'reply_to_content' => $metadata['replyToContent'] ?? null,
+            'metadata' => $metadata,
         ]);
-    }
-
-    /**
-     * Process message and get response
-     */
-    protected function processMessage(Admin $tenant, Customer $customer, string $message): array
-    {
-        // Initialize questionnaire service
-        $questionnaireService = new QuestionnaireService($tenant->id, $customer);
-
-        // Check for casual message (hi, hello, thanks)
-        if ($this->isCasualMessage($message)) {
-            return [
-                'type' => 'casual',
-                'message' => $this->getCasualResponse($message, $customer->detected_language),
-                'action' => null
-            ];
-        }
-
-        // Get current state
-        $state = $customer->getOrCreateState();
-        $currentField = $state->current_field;
-
-        // If we're waiting for a field response
-        if ($currentField) {
-            // Process the response
-            $result = $questionnaireService->processResponse($currentField, $message);
-
-            // Get next question
-            $next = $questionnaireService->getNextQuestionSmart();
-
-            return [
-                'type' => $next['type'],
-                'message' => $next['question'],
-                'action' => $result,
-                'field' => $next['field']
-            ];
-        }
-
-        // Try to extract product/model from message (AI would do this)
-        $extracted = $this->simpleExtract($tenant->id, $message);
-
-        if ($extracted) {
-            // Save extracted values to state
-            foreach ($extracted as $field => $value) {
-                $questionnaireService->processResponse($field, $value);
-            }
-        }
-
-        // Get next question
-        $next = $questionnaireService->getNextQuestionSmart();
-
-        // Update current field in state
-        if ($next['field']) {
-            $state->current_field = $next['field'];
-            $state->save();
-        }
-
-        return [
-            'type' => $next['type'],
-            'message' => $next['question'],
-            'action' => null,
-            'field' => $next['field']
-        ];
-    }
-
-    /**
-     * Check if message is casual (greeting, thanks, etc.)
-     */
-    protected function isCasualMessage(string $message): bool
-    {
-        $message = strtolower(trim($message));
-        $casualPatterns = [
-            'hi',
-            'hello',
-            'hey',
-            'hii',
-            'hiii',
-            'namaste',
-            'namaskar',
-            'jai shree krishna',
-            'thanks',
-            'thank you',
-            'dhanyavaad',
-            'shukriya',
-            'ok',
-            'okay',
-            'thik hai',
-            'theek hai',
-            'good morning',
-            'good evening',
-            'good night',
-            '👋',
-            '🙏',
-            '😊'
-        ];
-
-        foreach ($casualPatterns as $pattern) {
-            if (str_contains($message, $pattern)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Get casual response
-     */
-    protected function getCasualResponse(string $message, string $language = 'hi'): string
-    {
-        $responses = [
-            'hi' => [
-                'hi' => 'Namaste! 🙏 Main Datsun Hardware ka AI assistant hoon. Aapko kya chahiye?',
-                'en' => 'Hello! 🙏 I am Datsun Hardware AI assistant. How can I help you?'
-            ],
-            'thanks' => [
-                'hi' => 'Dhanyavaad! 🙏 Kuch aur chahiye toh batayein.',
-                'en' => 'Thank you! 🙏 Let me know if you need anything else.'
-            ]
-        ];
-
-        $type = str_contains(strtolower($message), 'thank') ? 'thanks' : 'hi';
-        return $responses[$type][$language] ?? $responses[$type]['hi'];
-    }
-
-    /**
-     * Simple extraction without AI (fallback)
-     */
-    protected function simpleExtract(int $adminId, string $message): array
-    {
-        $extracted = [];
-        $message = strtolower($message);
-
-        // Get catalogue items for matching
-        $catalogues = \App\Models\Catalogue::where('admin_id', $adminId)->get();
-
-        foreach ($catalogues as $item) {
-            $category = strtolower($item->data['category'] ?? $item->category ?? '');
-            $model = strtolower($item->data['model_code'] ?? $item->model ?? '');
-
-            if ($category && str_contains($message, $category)) {
-                $extracted['category'] = $item->data['category'] ?? $item->category;
-            }
-
-            if ($model && str_contains($message, $model)) {
-                $extracted['model'] = $item->data['model_code'] ?? $item->model;
-            }
-        }
-
-        // Extract quantity
-        if (preg_match('/(\d+)\s*(pcs|pieces|piece|pc)/i', $message, $matches)) {
-            $extracted['qty'] = $matches[1];
-        }
-
-        return $extracted;
     }
 
     /**
@@ -455,13 +450,38 @@ class WebhookController extends Controller
     }
 
     /**
+     * Send image response via WhatsApp (Point 12)
+     */
+    protected function sendImageResponse(Admin $tenant, string $phone, string $imageUrl): void
+    {
+        try {
+            $instance = $tenant->whatsapp_instance;
+            if (empty($instance)) {
+                return;
+            }
+
+            $evolutionService = new \App\Services\WhatsApp\EvolutionApiService($tenant);
+            $evolutionService->sendMediaMessage($instance, $phone, $imageUrl, 'image');
+
+            Log::info('Bot image sent', [
+                'admin_id' => $tenant->id,
+                'phone' => $phone,
+                'image_url' => $imageUrl
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send WhatsApp image', [
+                'error' => $e->getMessage(),
+                'phone' => $phone,
+            ]);
+        }
+    }
+
+    /**
      * Clean phone number
      */
     protected function cleanPhone(string $jid): string
     {
-        // Remove @s.whatsapp.net or @c.us
         $phone = preg_replace('/@.*$/', '', $jid);
-        // Remove non-digits
         return preg_replace('/[^0-9]/', '', $phone);
     }
 
@@ -470,7 +490,6 @@ class WebhookController extends Controller
      */
     protected function isBotMessage(string $message): bool
     {
-        // Bot's typical greeting patterns
         $botPatterns = [
             'Hello! 🙏 How can I help you?',
             'Namaste! 🙏',

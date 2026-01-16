@@ -19,7 +19,7 @@ class GlobalQuestionController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return view('admin.questionnaire.global.index', [
+        return view('admin.workflow.global.index', [
             'questions' => $questions,
         ]);
     }
@@ -36,7 +36,7 @@ class GlobalQuestionController extends Controller
             ->ordered()
             ->pluck('display_name', 'field_name');
 
-        return view('admin.questionnaire.global.create', [
+        return view('admin.workflow.global.create', [
             'fields' => $fields,
         ]);
     }
@@ -82,7 +82,7 @@ class GlobalQuestionController extends Controller
             'is_active' => true,
         ]);
 
-        return redirect()->route('admin.questionnaire.global.index')
+        return redirect()->route('admin.workflow.global.index')
             ->with('success', 'Global question added successfully');
     }
 
@@ -100,7 +100,7 @@ class GlobalQuestionController extends Controller
             ->ordered()
             ->pluck('display_name', 'field_name');
 
-        return view('admin.questionnaire.global.edit', [
+        return view('admin.workflow.global.edit', [
             'question' => $question,
             'fields' => $fields,
         ]);
@@ -135,7 +135,7 @@ class GlobalQuestionController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('admin.questionnaire.global.index')
+        return redirect()->route('admin.workflow.global.index')
             ->with('success', 'Global question updated successfully');
     }
 
@@ -148,7 +148,7 @@ class GlobalQuestionController extends Controller
 
         $question->delete();
 
-        return redirect()->route('admin.questionnaire.global.index')
+        return redirect()->route('admin.workflow.global.index')
             ->with('success', 'Global question deleted successfully');
     }
 

@@ -29,9 +29,16 @@ class FlowchartController extends Controller
             ->orderBy('sort_order')
             ->get(['id', 'field_name', 'display_name']);
 
-        return view('admin.questionnaire.flowchart.index', [
+        // Get lead statuses for Lead Status dropdown in flowchart
+        $leadStatuses = \App\Models\LeadStatus::where('admin_id', $adminId)
+            ->active()
+            ->ordered()
+            ->get(['id', 'name', 'color']);
+
+        return view('admin.workflow.flowchart.index', [
             'productQuestions' => $productQuestions,
             'globalQuestions' => $globalQuestions,
+            'leadStatuses' => $leadStatuses,
         ]);
     }
 
@@ -249,15 +256,18 @@ class FlowchartController extends Controller
             // Create nodes
             foreach ($request->input('nodes') as $nodeData) {
                 $oldId = $nodeData['id'];
+                $config = $nodeData['data']['config'] ?? [];
 
                 $node = QuestionnaireNode::create([
                     'admin_id' => $adminId,
                     'node_type' => $nodeData['type'],
                     'label' => $nodeData['data']['label'] ?? 'Untitled',
-                    'config' => $nodeData['data']['config'] ?? [],
+                    'config' => $config,
                     'pos_x' => (int) ($nodeData['position']['x'] ?? 100),
                     'pos_y' => (int) ($nodeData['position']['y'] ?? 100),
                     'is_required' => $nodeData['data']['is_required'] ?? true, // Default to required
+                    'ask_digit' => $config['ask_digit'] ?? 1,
+                    'is_unique_field' => $config['is_unique_field'] ?? false,
                 ]);
 
                 $idMap[$oldId] = $node->id;

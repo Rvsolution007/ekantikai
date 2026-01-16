@@ -15,11 +15,14 @@ class Catalogue extends Model
         'category',
         'product_type',
         'model_code',
+        'unique_field_value',
         'sizes',
         'pack_per_size',
         'finishes',
         'material',
         'image_url',
+        'video_url',
+        'images',
         'base_price',
         'is_active',
     ];
@@ -28,6 +31,7 @@ class Catalogue extends Model
         'is_active' => 'boolean',
         'base_price' => 'decimal:2',
         'data' => 'array',
+        'images' => 'array',
     ];
 
     /**
@@ -38,7 +42,7 @@ class Catalogue extends Model
         return $this->belongsTo(Admin::class);
     }
 
-    // Product type constants (same as Product model)
+    // Product type constants
     const TYPE_CABINET = 'Cabinet handles';
     const TYPE_WARDROBE = 'Wardrobe handles';
     const TYPE_WARDROBE_PROFILE = 'Wardrobe profile handle';
@@ -89,6 +93,57 @@ class Catalogue extends Model
     }
 
     /**
+     * Find by unique field value (Point 12)
+     */
+    public static function findByUniqueField(int $adminId, string $value): ?self
+    {
+        return self::where('admin_id', $adminId)
+            ->where('unique_field_value', $value)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Get media for this catalogue item (Point 12)
+     */
+    public function getMedia(): array
+    {
+        $media = [];
+
+        if ($this->image_url) {
+            $media['primary_image'] = $this->image_url;
+        }
+
+        if ($this->images && is_array($this->images)) {
+            $media['additional_images'] = $this->images;
+        }
+
+        if ($this->video_url) {
+            $media['video'] = $this->video_url;
+        }
+
+        return $media;
+    }
+
+    /**
+     * Get all images (primary + additional)
+     */
+    public function getAllImages(): array
+    {
+        $images = [];
+
+        if ($this->image_url) {
+            $images[] = $this->image_url;
+        }
+
+        if ($this->images && is_array($this->images)) {
+            $images = array_merge($images, $this->images);
+        }
+
+        return $images;
+    }
+
+    /**
      * Get sizes as array
      */
     public function getSizesArrayAttribute(): array
@@ -135,6 +190,14 @@ class Catalogue extends Model
     }
 
     /**
+     * Scope for unique field value
+     */
+    public function scopeByUniqueField($query, string $value)
+    {
+        return $query->where('unique_field_value', $value);
+    }
+
+    /**
      * Get image URL or placeholder
      */
     public function getImageUrlOrPlaceholderAttribute(): string
@@ -143,5 +206,23 @@ class Catalogue extends Model
             return $this->image_url;
         }
         return 'https://via.placeholder.com/300x200?text=' . urlencode($this->product_type);
+    }
+
+    /**
+     * Get dynamic data value
+     */
+    public function getDataValue(string $key, $default = null)
+    {
+        return $this->data[$key] ?? $default;
+    }
+
+    /**
+     * Set dynamic data value
+     */
+    public function setDataValue(string $key, $value): void
+    {
+        $data = $this->data ?? [];
+        $data[$key] = $value;
+        $this->data = $data;
     }
 }

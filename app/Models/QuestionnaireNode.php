@@ -18,12 +18,15 @@ class QuestionnaireNode extends Model
         'questionnaire_field_id',
         'is_active',
         'is_required',
+        'ask_digit',
+        'is_unique_field',
     ];
 
     protected $casts = [
         'config' => 'array',
         'is_active' => 'boolean',
         'is_required' => 'boolean',
+        'is_unique_field' => 'boolean',
     ];
 
     // Node type constants
@@ -131,8 +134,63 @@ class QuestionnaireNode extends Model
                 'label' => $this->label,
                 'config' => $this->config ?? [],
                 'fieldId' => $this->questionnaire_field_id,
+                'isRequired' => $this->is_required,
+                'askDigit' => $this->ask_digit,
+                'isUniqueField' => $this->is_unique_field,
             ],
         ];
+    }
+
+    /**
+     * Check if this is an optional question
+     */
+    public function isOptional(): bool
+    {
+        return !$this->is_required && $this->node_type === self::TYPE_QUESTION;
+    }
+
+    /**
+     * Get ask digit value (how many times to ask optional question)
+     */
+    public function getAskDigit(): int
+    {
+        return $this->ask_digit ?? 0;
+    }
+
+    /**
+     * Check if should ask optional question to customer
+     */
+    public function shouldAskOptional(Customer $customer): bool
+    {
+        if (!$this->isOptional()) {
+            return true; // Required questions always asked
+        }
+
+        $askDigit = $this->getAskDigit();
+        if ($askDigit === 0) {
+            return true; // 0 means ask unlimited times until answered
+        }
+
+        // Check how many times this was asked
+        $askCount = CustomerQuestionAskCount::where('customer_id', $customer->id)
+            ->where('questionnaire_node_id', $this->id)
+            ->value('ask_count') ?? 0;
+
+        return $askCount < $askDigit;
+    }
+
+    /**
+     * Increment ask count for optional question
+     */
+    public function incrementAskCount(Customer $customer): void
+    {
+        CustomerQuestionAskCount::updateOrCreate(
+            [
+                'customer_id' => $customer->id,
+                'questionnaire_node_id' => $this->id,
+            ],
+            ['ask_count' => \DB::raw('ask_count + 1')]
+        );
     }
 
     /**

@@ -383,6 +383,15 @@
                 <p x-show="sidebarOpen"
                     class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 mb-2">System</p>
 
+                <a href="{{ route('superadmin.ai-config.index') }}"
+                    class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-gray-300 hover:text-white {{ request()->routeIs('superadmin.ai-config.*') ? 'active' : '' }}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span x-show="sidebarOpen">AI Config</span>
+                </a>
+
                 <a href="{{ route('superadmin.settings.index') }}"
                     class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-gray-300 hover:text-white {{ request()->routeIs('superadmin.settings.*') ? 'active' : '' }}">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

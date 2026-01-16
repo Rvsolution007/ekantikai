@@ -4,271 +4,398 @@
 @section('page-title', 'Lead Details')
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Lead Info Card -->
-    <div class="lg:col-span-1 space-y-6">
-        <!-- User Info -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <div class="flex items-center mb-4">
-                <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
-                    <span class="text-2xl font-bold text-primary-600">
-                        {{ substr($lead->contact_name ?? 'U', 0, 1) }}
-                    </span>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-semibold text-gray-800">
-                        {{ $lead->contact_name ?? 'Unknown User' }}
-                    </h3>
-                    <p class="text-gray-500">{{ $lead->contact_phone ?? '' }}</p>
-                </div>
-            </div>
-
-            <div class="space-y-3 border-t pt-4">
-                <div class="flex justify-between">
-                    <span class="text-gray-500">City</span>
-                    <span class="text-gray-800">{{ $lead->customer->global_fields['city'] ?? '-' }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Purpose</span>
-                    <span class="text-gray-800">{{ $lead->purpose_of_purchase ?? '-' }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Bot Status</span>
-                    <span class="px-2 py-1 text-xs rounded-full
-                        {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
-                        {{ ($lead->customer->bot_enabled ?? true) ? 'Enabled' : 'Disabled' }}
-                    </span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Products</span>
-                    <span class="text-gray-800">{{ count($lead->collected_data['products'] ?? []) }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Lead Stage -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h4 class="font-semibold text-gray-800 mb-4">Lead Stage</h4>
-            <div x-data="{ stage: '{{ $lead->stage }}' }">
-                <div class="space-y-2">
-                    @foreach(['New Lead', 'Qualified', 'Confirm', 'Lose'] as $stageOption)
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer transition-colors
-                        {{ $lead->stage === $stageOption ? 'border-primary-500 bg-primary-50' : 'hover:bg-gray-50' }}">
-                        <input type="radio" name="stage" value="{{ $stageOption }}" 
-                               {{ $lead->stage === $stageOption ? 'checked' : '' }}
-                               @change="updateStage('{{ $stageOption }}')"
-                               class="text-primary-600">
-                        <span class="ml-3 text-sm font-medium">{{ $stageOption }}</span>
-                    </label>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-
-        <!-- Lead Quality -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h4 class="font-semibold text-gray-800 mb-4">Lead Quality</h4>
+    <div class="p-4 lg:p-6">
+        <!-- Header with Back Button -->
+        <div class="glass rounded-2xl p-4 mb-6">
             <div class="flex items-center justify-between">
-                <span class="text-3xl">
-                    @if($lead->lead_quality === 'hot') 🔥
-                    @elseif($lead->lead_quality === 'warm') ☀️
-                    @elseif($lead->lead_quality === 'cold') ❄️
-                    @else ⚠️ @endif
-                </span>
-                <div class="text-right">
-                    <p class="text-2xl font-bold text-gray-800">{{ $lead->lead_score }}/100</p>
-                    <p class="text-sm text-gray-500">{{ ucfirst($lead->lead_quality) }}</p>
+                <div class="flex items-center gap-4">
+                    <a href="{{ route('admin.leads.index') }}"
+                        class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">{{ $lead->contact_name ?? 'Unknown Lead' }}</h1>
+                        <p class="text-gray-400">{{ $lead->contact_phone ?? '' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Lead Quality Badge -->
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
+                        @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                        @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                        @else bg-blue-500/20 border border-blue-500/30 @endif">
+                        <span class="text-xl">
+                            @if($lead->lead_quality === 'hot') 🔥
+                            @elseif($lead->lead_quality === 'warm') ☀️
+                            @else ❄️ @endif
+                        </span>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-white">{{ $lead->lead_score }}/100</div>
+                            <div class="text-xs text-gray-400">{{ ucfirst($lead->lead_quality) }}</div>
+                        </div>
+                    </div>
+                    <!-- Status Badge -->
+                    <div class="px-4 py-2 rounded-xl bg-primary-500/20 border border-primary-500/30">
+                        <span class="text-primary-300 font-medium">{{ $lead->stage ?? 'New Lead' }}</span>
+                    </div>
                 </div>
             </div>
-            <div class="mt-3 bg-gray-200 rounded-full h-2">
-                <div class="h-2 rounded-full
-                    @if($lead->lead_quality === 'hot') bg-red-500
-                    @elseif($lead->lead_quality === 'warm') bg-yellow-500
-                    @else bg-blue-500 @endif"
-                    style="width: {{ $lead->lead_score }}%"></div>
-            </div>
         </div>
-    </div>
 
-    <!-- Products & Chat -->
-    <div class="lg:col-span-2 space-y-6">
-        <!-- Products -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h4 class="font-semibold text-gray-800 mb-4">Selected Products</h4>
-            @if($lead->products->count() > 0)
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-left">Product</th>
-                            <th class="px-4 py-2 text-left">Model</th>
-                            <th class="px-4 py-2 text-left">Size</th>
-                            <th class="px-4 py-2 text-left">Finish</th>
-                            <th class="px-4 py-2 text-left">Qty</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        @foreach($lead->products as $product)
-                        <tr>
-                            <td class="px-4 py-2">{{ $product->product ?? '-' }}</td>
-                            <td class="px-4 py-2">{{ $product->model ?? '-' }}</td>
-                            <td class="px-4 py-2">{{ $product->size ?? '-' }}</td>
-                            <td class="px-4 py-2">{{ $product->finish ?? '-' }}</td>
-                            <td class="px-4 py-2">{{ $product->qty ?? '-' }}</td>
-                        </tr>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Contact Info Card -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div
+                            class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center">
+                            <span class="text-2xl font-bold text-white">
+                                {{ substr($lead->contact_name ?? 'U', 0, 1) }}
+                            </span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-white">{{ $lead->contact_name ?? 'Unknown' }}</h3>
+                            <p class="text-gray-400">{{ $lead->contact_phone }}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between py-3 border-b border-white/10">
+                            <span class="text-gray-400 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                City
+                            </span>
+                            <span class="text-white font-medium">{{ $lead->customer->global_fields['city'] ?? '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-3 border-b border-white/10">
+                            <span class="text-gray-400 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Purpose
+                            </span>
+                            <span class="text-white font-medium">{{ $lead->purpose_of_purchase ?? '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-3 border-b border-white/10">
+                            <span class="text-gray-400 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                Bot Status
+                            </span>
+                            <span
+                                class="px-2 py-1 text-xs rounded-full 
+                                {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between py-3">
+                            <span class="text-gray-400 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                                Products
+                            </span>
+                            <span class="px-2 py-1 text-sm rounded-full bg-primary-500/20 text-primary-300 font-medium">
+                                {{ count($lead->collected_data['products'] ?? []) }} items
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lead Stage Card -->
+                <div class="glass rounded-2xl p-6">
+                    <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        Lead Stage
+                    </h4>
+                    <div class="space-y-2">
+                        @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
+                                        <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
+                                                {{ $lead->stage === $stageOption
+                            ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
+                            : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
+                                            <span class="w-3 h-3 rounded-full mr-3 
+                                                @if($stageOption === 'New Lead') bg-yellow-500
+                                                @elseif($stageOption === 'Qualified') bg-blue-500
+                                                @elseif($stageOption === 'Confirm') bg-green-500
+                                                @else bg-red-500 @endif"></span>
+                                            <span class="font-medium">{{ $stageOption }}</span>
+                                            @if($lead->stage === $stageOption)
+                                                <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            @endif
+                                        </button>
                         @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @else
-            <p class="text-gray-500 text-center py-4">No products selected yet</p>
-            @endif
-        </div>
-
-        <!-- Collected Data from Workflow -->
-        @if(!empty($lead->collected_data))
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h4 class="font-semibold text-gray-800 mb-4">📋 Collected Information</h4>
-            
-            @php
-                $collectedData = $lead->collected_data;
-                $workflowQuestions = $collectedData['workflow_questions'] ?? [];
-                $globalQuestions = $collectedData['global_questions'] ?? [];
-                $products = $collectedData['products'] ?? [];
-            @endphp
-
-            <!-- Workflow Questions -->
-            @if(!empty($workflowQuestions))
-            <div class="mb-6">
-                <h5 class="text-sm font-semibold text-gray-700 mb-3">💬 Workflow Answers</h5>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    @foreach($workflowQuestions as $key => $value)
-                    <div class="bg-gray-50 rounded-lg p-3">
-                        <p class="text-xs text-gray-500 mb-1">{{ ucwords(str_replace('_', ' ', $key)) }}</p>
-                        <p class="text-sm font-medium text-gray-800">{{ $value }}</p>
                     </div>
-                    @endforeach
+                </div>
+
+                <!-- Notes Card -->
+                <div class="glass rounded-2xl p-6">
+                    <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Notes
+                    </h4>
+                    <form action="{{ route('admin.leads.update', $lead) }}" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <textarea name="notes" rows="4"
+                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                            placeholder="Add notes about this lead...">{{ $lead->notes }}</textarea>
+                        <button type="submit"
+                            class="mt-3 w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-medium">
+                            Save Notes
+                        </button>
+                    </form>
                 </div>
             </div>
-            @endif
 
-            <!-- Global Questions -->
-            @if(!empty($globalQuestions))
-            <div class="mb-6">
-                <h5 class="text-sm font-semibold text-gray-700 mb-3">🌐 Global Information</h5>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    @foreach($globalQuestions as $key => $value)
-                    <div class="bg-blue-50 rounded-lg p-3">
-                        <p class="text-xs text-blue-600 mb-1">{{ ucwords(str_replace('_', ' ', $key)) }}</p>
-                        <p class="text-sm font-medium text-gray-800">{{ $value }}</p>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            <!-- Products from Collected Data -->
-            @if(!empty($products))
-            <div>
-                <h5 class="text-sm font-semibold text-gray-700 mb-3">📦 Product Details</h5>
-                <div class="space-y-3">
-                    @foreach($products as $index => $product)
-                    <div class="bg-green-50 rounded-lg p-3">
-                        <p class="text-xs text-green-600 mb-2">Product {{ $index + 1 }}</p>
-                        <div class="grid grid-cols-2 gap-2 text-sm">
-                            @foreach($product as $field => $value)
+            <!-- Right Column -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Product Quotation Section -->
+                <div class="glass rounded-2xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-primary-600 to-purple-600 p-6">
+                        <div class="flex items-center justify-between">
                             <div>
-                                <span class="text-gray-500">{{ ucwords(str_replace('_', ' ', $field)) }}:</span>
-                                <span class="font-medium text-gray-800">{{ $value }}</span>
+                                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Product Quotation
+                                </h3>
+                                <p class="text-white/70 text-sm mt-1">Items requested by
+                                    {{ $lead->contact_name ?? 'customer' }}</p>
                             </div>
+                            <div class="text-right">
+                                <p class="text-white/70 text-sm">Date</p>
+                                <p class="text-white font-medium">{{ $lead->created_at->format('M d, Y') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    @php
+                        $products = $lead->collected_data['products'] ?? [];
+                    @endphp
+
+                    @if(count($products) > 0)
+                        <div class="p-6">
+                            <!-- Quotation Table -->
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="border-b border-white/10">
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">#</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
+                                                Product Details</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">Qty
+                                            </th>
+                                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
+                                                Specifications</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-white/5">
+                                        @foreach($products as $index => $product)
+                                            <tr class="hover:bg-white/5 transition-colors">
+                                                <td class="px-4 py-4">
+                                                    <span
+                                                        class="w-8 h-8 rounded-lg bg-primary-500/20 text-primary-400 flex items-center justify-center text-sm font-medium">
+                                                        {{ $index + 1 }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-4">
+                                                    <div>
+                                                        <p class="text-white font-medium">
+                                                            {{ $product['category'] ?? $product['model'] ?? 'Product' }}</p>
+                                                        <p class="text-gray-400 text-sm">{{ $product['model'] ?? '' }}</p>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-4 text-center">
+                                                    <span
+                                                        class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
+                                                        {{ $product['qty'] ?? $product['quantity'] ?? 1 }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-4 text-right">
+                                                    <div class="flex flex-wrap gap-2 justify-end">
+                                                        @foreach($product as $key => $value)
+                                                            @if(!in_array($key, ['category', 'model', 'qty', 'quantity']))
+                                                                <span class="px-2 py-1 bg-white/5 rounded-lg text-xs text-gray-300">
+                                                                    {{ ucfirst($key) }}: {{ $value }}
+                                                                </span>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Summary Footer -->
+                            <div class="mt-6 p-4 bg-white/5 rounded-xl flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                                        <span class="text-lg">📦</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-white font-medium">Total Items</p>
+                                        <p class="text-gray-400 text-sm">{{ count($products) }} product(s) selected</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-2xl font-bold text-white">
+                                        {{ array_sum(array_map(fn($p) => intval($p['qty'] ?? $p['quantity'] ?? 1), $products)) }}
+                                    </p>
+                                    <p class="text-gray-400 text-sm">Total Quantity</p>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="p-12 text-center">
+                            <div class="w-16 h-16 mx-auto rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+                                <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                            </div>
+                            <h3 class="text-white font-medium mb-2">No Products Yet</h3>
+                            <p class="text-gray-400">Products will appear here once the customer selects them</p>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Global Information -->
+                @php
+                    $globalQuestions = $lead->collected_data['global_questions'] ?? [];
+                @endphp
+                @if(!empty($globalQuestions))
+                    <div class="glass rounded-2xl p-6">
+                        <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-lg">🌐</span>
+                            Customer Information
+                        </h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            @foreach($globalQuestions as $key => $value)
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">{{ ucwords(str_replace('_', ' ', $key)) }}</p>
+                                    <p class="text-white font-medium">{{ $value }}</p>
+                                </div>
                             @endforeach
                         </div>
                     </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-        </div>
-        @endif
+                @endif
 
-        <!-- Chat History -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h4 class="font-semibold text-gray-800 mb-4">Chat History</h4>
-            <div class="max-h-96 overflow-y-auto space-y-3" id="chat-container">
-                @forelse($chats as $chat)
-                @php
-                    // Handle both Eloquent models and stdClass objects
-                    $role = is_object($chat) ? ($chat->role ?? 'bot') : 'bot';
-                    $content = is_object($chat) ? ($chat->content ?? $chat->message ?? '') : '';
-                    $createdAt = is_object($chat) ? ($chat->created_at ?? now()) : now();
-                    
-                    // Convert string to Carbon if needed
-                    if (is_string($createdAt)) {
-                        $createdAt = \Carbon\Carbon::parse($createdAt);
-                    }
-                @endphp
-                <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
-                    <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg
-                        {{ $role === 'user' ? 'bg-gray-100 text-gray-800' : 'bg-primary-500 text-white' }}">
-                        <p class="text-sm">{{ $content }}</p>
-                        <p class="text-xs {{ $role === 'user' ? 'text-gray-500' : 'text-primary-100' }} mt-1">
-                            {{ $createdAt->format('M d, h:i A') }}
-                        </p>
+                <!-- Chat History -->
+                <div class="glass rounded-2xl p-6">
+                    <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Chat History
+                    </h4>
+
+                    <div class="max-h-80 overflow-y-auto space-y-3 mb-4" id="chat-container">
+                        @forelse($chats as $chat)
+                                        @php
+                                            $role = is_object($chat) ? ($chat->role ?? 'bot') : 'bot';
+                                            $content = is_object($chat) ? ($chat->content ?? $chat->message ?? '') : '';
+                                            $createdAt = is_object($chat) ? ($chat->created_at ?? now()) : now();
+                                            if (is_string($createdAt)) {
+                                                $createdAt = \Carbon\Carbon::parse($createdAt);
+                                            }
+                                        @endphp
+                                        <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
+                                            <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
+                                                {{ $role === 'user'
+                            ? 'bg-white/10 text-white rounded-bl-none'
+                            : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
+                                                <p class="text-sm">{{ $content }}</p>
+                                                <p class="text-xs {{ $role === 'user' ? 'text-gray-400' : 'text-white/70' }} mt-1">
+                                                    {{ $createdAt->format('M d, h:i A') }}
+                                                </p>
+                                            </div>
+                                        </div>
+                        @empty
+                            <div class="text-center py-8">
+                                <div class="w-12 h-12 mx-auto rounded-xl bg-white/5 flex items-center justify-center mb-3">
+                                    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                    </svg>
+                                </div>
+                                <p class="text-gray-400">No messages yet</p>
+                            </div>
+                        @endforelse
                     </div>
+
+                    <!-- Quick Reply -->
+                    @if($lead->customer)
+                        <form action="{{ route('admin.chats.send', $lead->customer) }}" method="POST" class="flex gap-2">
+                            @csrf
+                            <input type="text" name="message" placeholder="Type a message..."
+                                class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <button type="submit"
+                                class="px-6 py-3 bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-xl hover:opacity-90 transition-opacity font-medium flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                                Send
+                            </button>
+                        </form>
+                    @endif
                 </div>
-                @empty
-                <p class="text-gray-500 text-center py-4">No messages yet</p>
-                @endforelse
             </div>
-
-            <!-- Quick Reply -->
-            @if($lead->customer)
-            <form action="{{ route('admin.chats.send', $lead->customer) }}" method="POST" class="mt-4 flex gap-2">
-                @csrf
-                <input type="text" name="message" placeholder="Type a message..." 
-                       class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500">
-                <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                    Send
-                </button>
-            </form>
-            @endif
-        </div>
-
-        <!-- Notes -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h4 class="font-semibold text-gray-800 mb-4">Notes</h4>
-            <form action="{{ route('admin.leads.update', $lead) }}" method="POST">
-                @csrf
-                @method('PUT')
-                <textarea name="notes" rows="3" 
-                          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
-                          placeholder="Add notes about this lead...">{{ $lead->notes }}</textarea>
-                <button type="submit" class="mt-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                    Save Notes
-                </button>
-            </form>
         </div>
     </div>
-</div>
 
-@push('scripts')
-<script>
-    function updateStage(stage) {
-        fetch('{{ route("admin.leads.update-stage", $lead) }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ stage: stage })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
+    @push('scripts')
+        <script>
+            function updateStage(stage) {
+                fetch('{{ route("admin.leads.update-stage", $lead) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ stage: stage })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        }
+                    });
             }
-        });
-    }
-</script>
-@endpush
+
+            // Auto scroll chat to bottom
+            document.addEventListener('DOMContentLoaded', function () {
+                const chatContainer = document.getElementById('chat-container');
+                if (chatContainer) {
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+            });
+        </script>
+    @endpush
 @endsection

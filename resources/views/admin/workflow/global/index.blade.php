@@ -20,7 +20,7 @@
                     </h1>
                     <p class="text-gray-400 mt-1">Questions asked once per customer (City, Purpose, etc.)</p>
                 </div>
-                <a href="{{ route('admin.questionnaire.global.create') }}"
+                <a href="{{ route('admin.workflow.global.create') }}"
                     class="btn-primary px-6 py-3 rounded-xl text-white font-medium flex items-center gap-2 w-fit">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -45,8 +45,9 @@
                 @foreach($questions as $question)
                     <div class="glass-light rounded-2xl p-5 hover:bg-white/10 transition-all stat-card">
                         <div class="flex justify-between items-start mb-4">
-                            <div class="w-12 h-12 rounded-xl flex items-center justify-center
-                                        @if($question->question_type == 'select') bg-green-500/20 @else bg-blue-500/20 @endif">
+                            <div
+                                class="w-12 h-12 rounded-xl flex items-center justify-center
+                                                    @if($question->question_type == 'select') bg-green-500/20 @else bg-blue-500/20 @endif">
                                 @if($question->question_type == 'select')
                                     <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -60,15 +61,15 @@
                                 @endif
                             </div>
                             <div class="flex gap-2">
-                                <a href="{{ route('admin.questionnaire.global.edit', $question) }}"
+                                <a href="{{ route('admin.workflow.global.edit', $question) }}"
                                     class="w-8 h-8 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 flex items-center justify-center transition-colors">
                                     <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                 </a>
-                                <form action="{{ route('admin.questionnaire.global.destroy', $question) }}" method="POST"
-                                    class="inline" onsubmit="return confirm('Delete?')">
+                                <form action="{{ route('admin.workflow.global.destroy', $question) }}" method="POST" class="inline"
+                                    onsubmit="return confirm('Delete?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
@@ -88,9 +89,9 @@
 
                         <div class="flex flex-wrap gap-2 mt-4">
                             <span class="px-2.5 py-1 rounded-full text-xs font-medium
-                                        @if($question->trigger_position == 'before_fields') bg-blue-500/20 text-blue-400
-                                        @else bg-green-500/20 text-green-400
-                                        @endif">
+                                                    @if($question->trigger_position == 'before_fields') bg-blue-500/20 text-blue-400
+                                                    @else bg-green-500/20 text-green-400
+                                                    @endif">
                                 {{ $question->trigger_position == 'before_fields' ? '↑ Before Fields' : '↓ After Fields' }}
                             </span>
                             @if($question->trigger_field)
@@ -135,7 +136,7 @@
                 <p class="text-gray-400 mb-6">Add questions that will be asked once per customer</p>
 
                 <div class="flex flex-wrap justify-center gap-3 mb-6">
-                    <form action="{{ route('admin.questionnaire.global.store') }}" method="POST" class="inline">
+                    <form action="{{ route('admin.workflow.global.store') }}" method="POST" class="inline">
                         @csrf
                         <input type="hidden" name="question_name" value="city">
                         <input type="hidden" name="display_name" value="City">
@@ -148,7 +149,7 @@
                             <span class="block text-xs text-gray-400">Customer location</span>
                         </button>
                     </form>
-                    <form action="{{ route('admin.questionnaire.global.store') }}" method="POST" class="inline">
+                    <form action="{{ route('admin.workflow.global.store') }}" method="POST" class="inline">
                         @csrf
                         <input type="hidden" name="question_name" value="purpose_of_purchase">
                         <input type="hidden" name="display_name" value="Purpose of Purchase">
@@ -164,7 +165,7 @@
                     </form>
                 </div>
 
-                <a href="{{ route('admin.questionnaire.global.create') }}"
+                <a href="{{ route('admin.workflow.global.create') }}"
                     class="btn-primary px-6 py-2 rounded-xl text-white font-medium inline-flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -176,7 +177,7 @@
 
         <!-- Back Link -->
         <div class="text-center">
-            <a href="{{ route('admin.questionnaire.fields.index') }}"
+            <a href="{{ route('admin.workflow.fields.index') }}"
                 class="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />

@@ -82,6 +82,38 @@
             </div>
         </div>
 
+        <!-- View Toggle & Actions -->
+        <div class="flex justify-between items-center">
+            <div class="flex gap-2">
+                <a href="{{ route('admin.leads.index') }}"
+                    class="px-4 py-2 bg-primary-500/20 text-primary-400 rounded-xl flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                    List
+                </a>
+                <a href="{{ route('admin.lead-status.kanban') }}"
+                    class="px-4 py-2 bg-gray-500/20 text-gray-400 hover:bg-purple-500/20 hover:text-purple-400 rounded-xl flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                    </svg>
+                    Kanban
+                </a>
+            </div>
+            <a href="{{ route('admin.lead-status.index') }}"
+                class="px-4 py-2 text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Manage Statuses
+            </a>
+        </div>
+
         <!-- Filters -->
         <div class="glass rounded-xl p-4">
             <form action="{{ route('admin.leads.index') }}" method="GET" class="flex flex-wrap gap-4 items-center">
@@ -137,18 +169,19 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1 text-xs font-medium rounded-lg
-                                            {{ $lead->stage === 'New Lead' ? 'bg-green-500/20 text-green-400' : '' }}
-                                            {{ $lead->stage === 'Qualified' ? 'bg-yellow-500/20 text-yellow-400' : '' }}
-                                            {{ $lead->stage === 'Confirm' ? 'bg-purple-500/20 text-purple-400' : '' }}
-                                            {{ $lead->stage === 'Lose' ? 'bg-red-500/20 text-red-400' : '' }}">
+                                                    {{ $lead->stage === 'New Lead' ? 'bg-green-500/20 text-green-400' : '' }}
+                                                    {{ $lead->stage === 'Qualified' ? 'bg-yellow-500/20 text-yellow-400' : '' }}
+                                                    {{ $lead->stage === 'Confirm' ? 'bg-purple-500/20 text-purple-400' : '' }}
+                                                    {{ $lead->stage === 'Lose' ? 'bg-red-500/20 text-red-400' : '' }}">
                                     {{ $lead->stage }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="px-3 py-1 text-xs font-medium rounded-lg
-                                            {{ $lead->lead_quality === 'hot' ? 'bg-red-500/20 text-red-400' : '' }}
-                                            {{ $lead->lead_quality === 'warm' ? 'bg-orange-500/20 text-orange-400' : '' }}
-                                            {{ $lead->lead_quality === 'cold' ? 'bg-blue-500/20 text-blue-400' : '' }}">
+                                <span
+                                    class="px-3 py-1 text-xs font-medium rounded-lg
+                                                    {{ $lead->lead_quality === 'hot' ? 'bg-red-500/20 text-red-400' : '' }}
+                                                    {{ $lead->lead_quality === 'warm' ? 'bg-orange-500/20 text-orange-400' : '' }}
+                                                    {{ $lead->lead_quality === 'cold' ? 'bg-blue-500/20 text-blue-400' : '' }}">
                                     {{ ucfirst($lead->lead_quality ?? 'N/A') }}
                                 </span>
                             </td>

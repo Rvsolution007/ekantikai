@@ -16,6 +16,7 @@ class QuestionnaireField extends Model
         'sort_order',
         'is_unique_key',
         'unique_key_order',
+        'is_unique_field', // For identifying unique products like Model Number
         'options_source',
         'options_manual',
         'catalogue_field',
@@ -26,6 +27,7 @@ class QuestionnaireField extends Model
     protected $casts = [
         'is_required' => 'boolean',
         'is_unique_key' => 'boolean',
+        'is_unique_field' => 'boolean',
         'options_manual' => 'array',
         'validation_rules' => 'array',
         'is_active' => 'boolean',

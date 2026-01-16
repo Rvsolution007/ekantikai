@@ -14,7 +14,10 @@ class Lead extends Model
         'whatsapp_user_id',
         'customer_id',
         'stage',
+        'lead_status_id',
         'status',
+        'bot_active',
+        'completed_all_questions',
         'purpose_of_purchase',
         'purpose_asked',
         'city_asked',
@@ -25,14 +28,19 @@ class Lead extends Model
         'lead_quality',
         'notes',
         'collected_data',
+        'product_confirmations',
+        'detected_language',
     ];
 
     protected $casts = [
         'purpose_asked' => 'boolean',
         'city_asked' => 'boolean',
+        'bot_active' => 'boolean',
+        'completed_all_questions' => 'boolean',
         'confirmed_at' => 'datetime',
         'sheet_exported_at' => 'datetime',
         'collected_data' => 'array',
+        'product_confirmations' => 'array',
     ];
 
     // Stage constants
@@ -69,6 +77,14 @@ class Lead extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Get custom lead status
+     */
+    public function leadStatus()
+    {
+        return $this->belongsTo(LeadStatus::class);
     }
 
     /**
@@ -113,6 +129,126 @@ class Lead extends Model
 
         $this->collected_data = $data;
         $this->save();
+    }
+
+    /**
+     * Add product confirmation from AI extraction
+     */
+    public function addProductConfirmation(array $productData): void
+    {
+        $confirmations = $this->product_confirmations ?? [];
+        $confirmations[] = array_merge($productData, [
+            'confirmed_at' => now()->toIso8601String(),
+        ]);
+        $this->product_confirmations = $confirmations;
+        $this->save();
+    }
+
+    /**
+     * Update product confirmation (modify existing or remove)
+     */
+    public function updateProductConfirmation(int $index, ?array $productData): void
+    {
+        $confirmations = $this->product_confirmations ?? [];
+
+        if ($productData === null) {
+            // Remove the confirmation
+            unset($confirmations[$index]);
+            $confirmations = array_values($confirmations);
+        } else {
+            // Update the confirmation
+            $confirmations[$index] = array_merge($confirmations[$index] ?? [], $productData, [
+                'updated_at' => now()->toIso8601String(),
+            ]);
+        }
+
+        $this->product_confirmations = $confirmations;
+        $this->save();
+    }
+
+    /**
+     * Get product confirmations for AI context
+     */
+    public function getProductConfirmationsForAI(): array
+    {
+        return $this->product_confirmations ?? [];
+    }
+
+    /**
+     * Update lead from AI response
+     */
+    public function updateFromAI(array $aiData): void
+    {
+        $updates = [];
+
+        // Update stage if provided
+        if (isset($aiData['stage']) && $aiData['stage']) {
+            $updates['stage'] = $aiData['stage'];
+        }
+
+        // Update lead status if provided
+        if (isset($aiData['lead_status_id'])) {
+            $updates['lead_status_id'] = $aiData['lead_status_id'];
+        }
+
+        // Update detected language
+        if (isset($aiData['language'])) {
+            $updates['detected_language'] = $aiData['language'];
+        }
+
+        // Add extracted data
+        if (isset($aiData['extracted_data']) && is_array($aiData['extracted_data'])) {
+            foreach ($aiData['extracted_data'] as $key => $value) {
+                $this->addCollectedData($key, $value);
+            }
+        }
+
+        // Add product confirmations
+        if (isset($aiData['product_confirmations']) && is_array($aiData['product_confirmations'])) {
+            foreach ($aiData['product_confirmations'] as $product) {
+                $this->addProductConfirmation($product);
+            }
+        }
+
+        if (!empty($updates)) {
+            $this->update($updates);
+        }
+
+        // Recalculate score
+        $this->calculateScore();
+    }
+
+    /**
+     * Mark bot as completed (all required questions answered)
+     */
+    public function markBotComplete(): void
+    {
+        $this->update([
+            'completed_all_questions' => true,
+            'bot_active' => false,
+        ]);
+    }
+
+    /**
+     * Check if all required questions have been answered
+     */
+    public function checkRequiredQuestionsComplete(): bool
+    {
+        $requiredNodes = QuestionnaireNode::where('admin_id', $this->admin_id)
+            ->where('is_required', true)
+            ->where('is_active', true)
+            ->get();
+
+        $collectedData = $this->collected_data['global_questions'] ?? [];
+
+        foreach ($requiredNodes as $node) {
+            $field = $node->questionnaireField;
+            if ($field && !isset($collectedData[$field->field_name])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -170,6 +306,14 @@ class Lead extends Model
     }
 
     /**
+     * Update lead status (custom status)
+     */
+    public function updateLeadStatus(int $statusId): void
+    {
+        $this->update(['lead_status_id' => $statusId]);
+    }
+
+    /**
      * Calculate and update lead score
      */
     public function calculateScore(): void
@@ -198,10 +342,14 @@ class Lead extends Model
             $score += 10;
         }
 
-        // City specified
-        if ($this->whatsappUser->city) {
+        // City specified (from customer or whatsappUser)
+        if ($this->customer?->getGlobalField('city') || $this->whatsappUser?->city) {
             $score += 10;
         }
+
+        // Product confirmations from AI
+        $confirmationCount = count($this->product_confirmations ?? []);
+        $score += min($confirmationCount * 5, 20);
 
         // Determine quality
         $quality = self::QUALITY_COLD;
@@ -246,4 +394,29 @@ class Lead extends Model
             default => 'gray',
         };
     }
+
+    /**
+     * Get bot active badge for display
+     */
+    public function getBotActiveBadgeAttribute(): string
+    {
+        return $this->bot_active ? 'Active' : 'Inactive';
+    }
+
+    /**
+     * Scope for leads with active bot
+     */
+    public function scopeBotActive($query)
+    {
+        return $query->where('bot_active', true);
+    }
+
+    /**
+     * Scope for open leads
+     */
+    public function scopeOpen($query)
+    {
+        return $query->where('status', 'open');
+    }
 }
+

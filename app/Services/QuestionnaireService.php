@@ -406,13 +406,22 @@ class QuestionnaireService
         switch ($currentNode->node_type) {
             case \App\Models\QuestionnaireNode::TYPE_QUESTION:
                 $config = $currentNode->config ?? [];
+
+                // Get ask_digit from node or config (for optional questions)
+                $askDigit = $currentNode->ask_digit ?? $config['ask_digit'] ?? 1;
+                $isRequired = $currentNode->is_required ?? ($config['is_required'] ?? true);
+                $leadStatusId = $config['lead_status_id'] ?? null;
+
                 return [
                     'type' => 'flowchart',
                     'node_id' => $currentNode->id,
                     'field' => $config['field_name'] ?? 'field_' . $currentNode->id,
                     'question' => $config['question_text'] ?? $this->getQuestionText($config['field_name'] ?? '', $language),
                     'options' => $config['options'] ?? [],
-                    'is_required' => $config['is_required'] ?? false,
+                    'is_required' => $isRequired,
+                    'ask_digit' => $askDigit, // How many times to ask optional question
+                    'lead_status_id' => $leadStatusId, // Status to set after answering
+                    'is_unique_field' => $currentNode->is_unique_field ?? ($config['is_unique_field'] ?? false),
                 ];
 
             case \App\Models\QuestionnaireNode::TYPE_CONDITION:
@@ -503,6 +512,12 @@ class QuestionnaireService
             // Also save to linked QuestionnaireField if exists for sync
             if ($currentNode->questionnaire_field_id) {
                 $this->state->setCompletedField($fieldName, $answer);
+            }
+
+            // Update lead status if configured
+            $leadStatusId = $config['lead_status_id'] ?? null;
+            if ($leadStatusId && $this->lead) {
+                $this->lead->update(['lead_status_id' => $leadStatusId]);
             }
         }
 

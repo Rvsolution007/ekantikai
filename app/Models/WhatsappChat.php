@@ -10,11 +10,17 @@ class WhatsappChat extends Model
     use HasFactory;
 
     protected $fillable = [
+        'admin_id',
+        'customer_id',
         'whatsapp_user_id',
         'number',
         'role',
         'content',
         'message_id',
+        'whatsapp_message_id',
+        'is_reply',
+        'reply_to_message_id',
+        'reply_to_content',
         'quoted_message_id',
         'quoted_message_text',
         'media_type',
@@ -24,12 +30,29 @@ class WhatsappChat extends Model
 
     protected $casts = [
         'metadata' => 'array',
+        'is_reply' => 'boolean',
     ];
 
     // Role constants
     const ROLE_USER = 'user';
     const ROLE_ASSISTANT = 'assistant';
     const ROLE_SYSTEM = 'system';
+
+    /**
+     * Get the admin (tenant)
+     */
+    public function admin()
+    {
+        return $this->belongsTo(Admin::class);
+    }
+
+    /**
+     * Get the customer
+     */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
 
     /**
      * Get the WhatsApp user
@@ -52,7 +75,15 @@ class WhatsappChat extends Model
      */
     public function isReply(): bool
     {
-        return !empty($this->quoted_message_id);
+        return $this->is_reply || !empty($this->reply_to_message_id) || !empty($this->quoted_message_id);
+    }
+
+    /**
+     * Get the replied-to message content
+     */
+    public function getRepliedContent(): ?string
+    {
+        return $this->reply_to_content ?? $this->quoted_message_text;
     }
 
     /**
@@ -60,11 +91,14 @@ class WhatsappChat extends Model
      */
     public function quotedMessage()
     {
-        if (!$this->quoted_message_id) {
+        $messageId = $this->reply_to_message_id ?? $this->quoted_message_id;
+        if (!$messageId) {
             return null;
         }
 
-        return self::where('message_id', $this->quoted_message_id)->first();
+        return self::where('whatsapp_message_id', $messageId)
+            ->orWhere('message_id', $messageId)
+            ->first();
     }
 
     /**
@@ -103,5 +137,33 @@ class WhatsappChat extends Model
     public function scopeForNumber($query, string $number)
     {
         return $query->where('number', $number);
+    }
+
+    /**
+     * Scope for customer messages
+     */
+    public function scopeForCustomer($query, int $customerId)
+    {
+        return $query->where('customer_id', $customerId);
+    }
+
+    /**
+     * Get recent conversation for AI context
+     */
+    public static function getRecentConversation(int $customerId, int $limit = 5): array
+    {
+        return self::where('customer_id', $customerId)
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->map(function ($chat) {
+                return [
+                    'role' => $chat->role,
+                    'content' => $chat->content,
+                ];
+            })
+            ->values()
+            ->toArray();
     }
 }
