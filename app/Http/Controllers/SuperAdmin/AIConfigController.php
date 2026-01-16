@@ -322,4 +322,69 @@ class AIConfigController extends Controller
 
         return response()->json($stats);
     }
+
+    /**
+     * AI Playground page
+     */
+    public function playground()
+    {
+        $provider = Setting::getValue('global_ai_provider', 'vertex');
+        $model = Setting::getValue('global_ai_model', 'gemini-2.0-flash');
+
+        // Check if AI is working by doing a quick test
+        $aiWorking = false;
+        try {
+            $aiService = new \App\Services\AIService();
+            $response = $aiService->callAI("You are a helpful assistant. Respond briefly.", "Say 'OK' only");
+            $aiWorking = !empty($response);
+        } catch (\Exception $e) {
+            $aiWorking = false;
+        }
+
+        // Determine actual provider being used
+        $vertexPrivateKey = Setting::getValue('vertex_private_key', '');
+        $vertexProjectId = Setting::getValue('vertex_project_id', '');
+        if (!empty($vertexPrivateKey) && !empty($vertexProjectId)) {
+            $provider = 'Vertex AI';
+        }
+
+        return view('superadmin.ai-config.playground', compact('provider', 'model', 'aiWorking'));
+    }
+
+    /**
+     * Handle playground chat message
+     */
+    public function playgroundChat(Request $request)
+    {
+        $message = $request->input('message');
+
+        if (empty($message)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Message is required'
+            ]);
+        }
+
+        try {
+            $aiService = new \App\Services\AIService();
+            $response = $aiService->callAI("You are a helpful AI assistant. Answer questions clearly and helpfully.", $message);
+
+            if (empty($response)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'AI returned empty response'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'response' => $response
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

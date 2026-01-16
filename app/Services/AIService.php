@@ -327,7 +327,7 @@ PROMPT;
     /**
      * Call AI API based on provider with token tracking
      */
-    protected function callAI(string $systemPrompt, string $userMessage): string
+    public function callAI(string $systemPrompt, string $userMessage): string
     {
         $startTime = microtime(true);
 
