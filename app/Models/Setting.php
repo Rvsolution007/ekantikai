@@ -53,10 +53,20 @@ class Setting extends Model
      */
     public static function setValue(string $key, $value, string $group = 'general', string $type = 'text'): void
     {
+        // Prepare the value based on type
+        $storedValue = $value;
+
+        if (is_array($value)) {
+            $storedValue = json_encode($value);
+        } elseif ($type === self::TYPE_ENCRYPTED && !empty($value)) {
+            // Encrypt the value if type is encrypted
+            $storedValue = encrypt($value);
+        }
+
         self::updateOrCreate(
             ['key' => $key],
             [
-                'value' => is_array($value) ? json_encode($value) : $value,
+                'value' => $storedValue,
                 'group' => $group,
                 'type' => $type,
             ]
