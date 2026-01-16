@@ -41,12 +41,12 @@ class TenantController extends Controller
             'paid' => Admin::whereIn('subscription_plan', ['basic', 'pro', 'enterprise'])->count(),
         ];
 
-        return view('superadmin.tenants.index', compact('tenants', 'stats'));
+        return view('superadmin.admins.index', compact('tenants', 'stats'));
     }
 
     public function create()
     {
-        return view('superadmin.tenants.create');
+        return view('superadmin.admins.create');
     }
 
     public function store(Request $request)
@@ -89,8 +89,8 @@ class TenantController extends Controller
             'is_super_admin' => false,
         ]);
 
-        return redirect()->route('superadmin.tenants.index')
-            ->with('success', 'Client created successfully!');
+        return redirect()->route('superadmin.admins.index')
+            ->with('success', 'Admin created successfully!');
     }
 
     public function show(Admin $admin)
@@ -104,12 +104,12 @@ class TenantController extends Controller
             'workflows' => $admin->workflows()->count(),
         ];
 
-        return view('superadmin.tenants.show', compact('admin', 'stats'));
+        return view('superadmin.admins.show', compact('admin', 'stats'));
     }
 
     public function edit(Admin $admin)
     {
-        return view('superadmin.tenants.edit', compact('admin'));
+        return view('superadmin.admins.edit', compact('admin'));
     }
 
     public function update(Request $request, Admin $admin)
@@ -146,16 +146,16 @@ class TenantController extends Controller
             $admin->update(['settings' => $settings]);
         }
 
-        return redirect()->route('superadmin.tenants.show', $admin)
-            ->with('success', 'Client updated successfully!');
+        return redirect()->route('superadmin.admins.show', $admin)
+            ->with('success', 'Admin updated successfully!');
     }
 
     public function destroy(Admin $admin)
     {
         $admin->delete();
 
-        return redirect()->route('superadmin.tenants.index')
-            ->with('success', 'Client deleted successfully!');
+        return redirect()->route('superadmin.admins.index')
+            ->with('success', 'Admin deleted successfully!');
     }
 
     public function addCredits(Request $request, Admin $admin)
@@ -189,7 +189,7 @@ class TenantController extends Controller
         $admin->update(['is_active' => !$admin->is_active]);
 
         $status = $admin->is_active ? 'activated' : 'deactivated';
-        return back()->with('success', "Client {$status} successfully!");
+        return back()->with('success', "Admin {$status} successfully!");
     }
 
     public function toggleProductImages(Admin $admin)

@@ -181,12 +181,12 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     });
     Route::get('/dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
 
-    // Tenant Management
-    Route::resource('tenants', TenantController::class);
-    Route::post('/tenants/{tenant}/add-credits', [TenantController::class, 'addCredits'])->name('tenants.add-credits');
-    Route::patch('/tenants/{tenant}/toggle-status', [TenantController::class, 'toggleStatus'])->name('tenants.toggle-status');
-    Route::patch('/tenants/{tenant}/toggle-product-images', [TenantController::class, 'toggleProductImages'])->name('tenants.toggle-product-images');
-    Route::post('/tenants/{tenant}/reset-password', [TenantController::class, 'resetPassword'])->name('tenants.reset-password');
+    // Admin Management
+    Route::resource('admins', TenantController::class);
+    Route::post('/admins/{admin}/add-credits', [TenantController::class, 'addCredits'])->name('admins.add-credits');
+    Route::patch('/admins/{admin}/toggle-status', [TenantController::class, 'toggleStatus'])->name('admins.toggle-status');
+    Route::patch('/admins/{admin}/toggle-product-images', [TenantController::class, 'toggleProductImages'])->name('admins.toggle-product-images');
+    Route::post('/admins/{admin}/reset-password', [TenantController::class, 'resetPassword'])->name('admins.reset-password');
 
     // AI Configuration (Point 9 - Super Admin)
     Route::get('/ai-config', [AIConfigController::class, 'index'])->name('ai-config.index');

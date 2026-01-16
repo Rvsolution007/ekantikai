@@ -10,7 +10,7 @@
                 <p class="text-gray-400">Admin Details & Statistics</p>
             </div>
             <div class="flex space-x-3">
-                <a href="{{ route('superadmin.tenants.edit', $tenant) }}"
+                <a href="{{ route('superadmin.admins.edit', $tenant) }}"
                     class="btn-gradient px-4 py-2 rounded-lg inline-flex items-center">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -18,7 +18,7 @@
                     </svg>
                     Edit Admin
                 </a>
-                <a href="{{ route('superadmin.tenants.index') }}"
+                <a href="{{ route('superadmin.admins.index') }}"
                     class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg inline-flex items-center transition-colors">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -305,7 +305,7 @@
                 </svg>
                 Reset Password
             </button>
-            <a href="{{ route('superadmin.tenants.edit', $tenant) }}"
+            <a href="{{ route('superadmin.admins.edit', $tenant) }}"
                 class="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-4 py-2 rounded-lg inline-flex items-center transition-colors">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -313,7 +313,7 @@
                 </svg>
                 Edit Details
             </a>
-            <form action="{{ route('superadmin.tenants.toggle-status', $tenant) }}" method="POST" class="inline">
+            <form action="{{ route('superadmin.admins.toggle-status', $tenant) }}" method="POST" class="inline">
                 @csrf
                 @method('PATCH')
                 <button type="submit"
@@ -333,7 +333,7 @@
         class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
         <div class="glass-card p-8 rounded-2xl w-full max-w-md mx-4">
             <h3 class="text-xl font-bold text-white mb-6">Add Credits to {{ $tenant->name }}</h3>
-            <form action="{{ route('superadmin.tenants.add-credits', $tenant) }}" method="POST">
+            <form action="{{ route('superadmin.admins.add-credits', $tenant) }}" method="POST">
                 @csrf
                 <div class="mb-4">
                     <label class="block text-gray-300 text-sm font-medium mb-2">Amount of Credits</label>
@@ -363,7 +363,7 @@
         <div class="glass-card p-8 rounded-2xl w-full max-w-md mx-4">
             <h3 class="text-xl font-bold text-white mb-2">Reset Admin Password</h3>
             <p class="text-gray-400 text-sm mb-6">Set a new password for the admin's login account</p>
-            <form action="{{ route('superadmin.tenants.reset-password', $tenant) }}" method="POST">
+            <form action="{{ route('superadmin.admins.reset-password', $tenant) }}" method="POST">
                 @csrf
                 <div class="mb-4">
                     <label class="block text-gray-300 text-sm font-medium mb-2">Select Admin User</label>

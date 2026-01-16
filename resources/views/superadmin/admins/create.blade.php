@@ -5,7 +5,7 @@
 
 @section('content')
     <div class="max-w-3xl mx-auto">
-        <form action="{{ route('superadmin.tenants.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('superadmin.admins.store') }}" method="POST" class="space-y-6">
             @csrf
 
             <!-- Client Information -->
@@ -163,7 +163,7 @@
 
             <!-- Submit -->
             <div class="flex items-center justify-between">
-                <a href="{{ route('superadmin.tenants.index') }}" class="text-gray-400 hover:text-white transition-colors">
+                <a href="{{ route('superadmin.admins.index') }}" class="text-gray-400 hover:text-white transition-colors">
                     ← Back to Admins
                 </a>
                 <button type="submit"

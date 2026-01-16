@@ -93,7 +93,7 @@
                 <h1 class="text-2xl font-bold text-white mb-2">Edit Admin</h1>
                 <p class="text-gray-400">Update {{ $tenant->name }}'s information</p>
             </div>
-            <a href="{{ route('superadmin.tenants.show', $tenant) }}"
+            <a href="{{ route('superadmin.admins.show', $tenant) }}"
                 class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg inline-flex items-center transition-colors">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -103,7 +103,7 @@
         </div>
     </div>
 
-    <form action="{{ route('superadmin.tenants.update', $tenant) }}" method="POST">
+    <form action="{{ route('superadmin.admins.update', $tenant) }}" method="POST">
         @csrf
         @method('PUT')
 
@@ -286,7 +286,7 @@
 
         <!-- Submit Buttons -->
         <div class="mt-8 flex justify-end space-x-4">
-            <a href="{{ route('superadmin.tenants.show', $tenant) }}"
+            <a href="{{ route('superadmin.admins.show', $tenant) }}"
                 class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors">
                 Cancel
             </a>
