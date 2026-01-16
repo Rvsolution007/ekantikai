@@ -91,6 +91,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Catalogue Management
         Route::resource('catalogue', CatalogueController::class);
         Route::post('/catalogue/{catalogue}/toggle-status', [CatalogueController::class, 'toggleStatus'])->name('catalogue.toggle-status');
+        Route::post('/catalogue/{catalogue}/upload-image', [CatalogueController::class, 'uploadImage'])->name('catalogue.upload-image');
         Route::delete('/catalogue/clear-all', [CatalogueController::class, 'clearAll'])->name('catalogue.clear-all');
 
         // Catalogue Fields

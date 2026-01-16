@@ -214,4 +214,36 @@ class CatalogueController extends Controller
 
         return back()->with('success', 'All products deleted successfully!');
     }
+
+    /**
+     * Upload image for a product
+     */
+    public function uploadImage(Request $request, Catalogue $catalogue)
+    {
+        $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
+
+        if ($catalogue->admin_id !== $adminId) {
+            abort(403);
+        }
+
+        // Check if admin has product images enabled
+        if (!$admin->send_product_images) {
+            return back()->with('error', 'Product images feature is not enabled for your account. Contact Super Admin.');
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
+        ]);
+
+        // Store image
+        $path = $request->file('image')->store('catalogue/' . $adminId, 'public');
+
+        // Update catalogue with image URL
+        $catalogue->update([
+            'image_url' => '/storage/' . $path
+        ]);
+
+        return back()->with('success', 'Product image uploaded successfully!');
+    }
 }
