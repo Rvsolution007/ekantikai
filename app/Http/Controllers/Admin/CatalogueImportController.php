@@ -21,7 +21,7 @@ class CatalogueImportController extends Controller
     public function downloadSample()
     {
         $admin = auth()->guard('admin')->user();
-        $adminId = $admin->admin_id;
+        $adminId = $admin->admin_id ?? $admin->id;
 
         if (!$adminId) {
             return back()->with('error', 'Tenant not found.');
@@ -125,7 +125,7 @@ class CatalogueImportController extends Controller
         ]);
 
         $admin = auth()->guard('admin')->user();
-        $adminId = $admin->admin_id;
+        $adminId = $admin->admin_id ?? $admin->id;
 
         if (!$adminId) {
             return back()->with('error', 'Tenant not found.');

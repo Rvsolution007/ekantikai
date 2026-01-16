@@ -70,8 +70,9 @@ class CatalogueFieldController extends Controller
     public function update(Request $request, CatalogueField $field)
     {
         $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
 
-        if ($field->admin_id !== $admin->admin_id) {
+        if ($field->admin_id !== $adminId) {
             abort(403);
         }
 
@@ -107,8 +108,9 @@ class CatalogueFieldController extends Controller
     public function destroy(CatalogueField $field)
     {
         $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
 
-        if ($field->admin_id !== $admin->admin_id) {
+        if ($field->admin_id !== $adminId) {
             abort(403);
         }
 

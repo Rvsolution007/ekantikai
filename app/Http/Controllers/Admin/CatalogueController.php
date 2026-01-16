@@ -59,7 +59,7 @@ class CatalogueController extends Controller
     public function store(Request $request)
     {
         $admin = auth()->guard('admin')->user();
-        $adminId = $admin->admin_id;
+        $adminId = $admin->admin_id ?? $admin->id;
 
         if (!$adminId) {
             return back()->with('error', 'Tenant not found.');
@@ -112,12 +112,12 @@ class CatalogueController extends Controller
     public function update(Request $request, Catalogue $catalogue)
     {
         $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
 
-        if ($catalogue->admin_id !== $admin->admin_id) {
+        if ($catalogue->admin_id !== $adminId) {
             abort(403);
         }
 
-        $adminId = $admin->admin_id;
         $fields = CatalogueField::forTenant($adminId)->ordered()->get();
 
         $data = [];
@@ -163,8 +163,9 @@ class CatalogueController extends Controller
     public function destroy(Catalogue $catalogue)
     {
         $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
 
-        if ($catalogue->admin_id !== $admin->admin_id) {
+        if ($catalogue->admin_id !== $adminId) {
             abort(403);
         }
 
@@ -179,8 +180,9 @@ class CatalogueController extends Controller
     public function toggleStatus(Request $request, Catalogue $catalogue)
     {
         $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
 
-        if ($catalogue->admin_id !== $admin->admin_id) {
+        if ($catalogue->admin_id !== $adminId) {
             abort(403);
         }
 
@@ -202,7 +204,7 @@ class CatalogueController extends Controller
     public function clearAll()
     {
         $admin = auth()->guard('admin')->user();
-        $adminId = $admin->admin_id;
+        $adminId = $admin->admin_id ?? $admin->id;
 
         if (!$adminId) {
             return back()->with('error', 'Tenant not found.');
