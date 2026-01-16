@@ -56,8 +56,9 @@ class AIService
      */
     protected function getApiKeyForProvider(string $provider): string
     {
+        // Try database first, then fall back to config file (for hardcoded keys)
         return match ($provider) {
-            'google' => Setting::getValue('gemini_api_key', config('services.ai.api_key', '')),
+            'google' => Setting::getValue('gemini_api_key', '') ?: config('services.ai.api_key', ''),
             'openai' => Setting::getValue('openai_api_key', ''),
             'deepseek' => Setting::getValue('deepseek_api_key', ''),
             default => '',
