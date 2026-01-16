@@ -9,10 +9,13 @@ class GlobalQuestion extends Model
 {
     protected $fillable = [
         'admin_id',
+        'question_name',
         'field_name',
         'display_name',
+        'question_type',
         'field_type',
         'options',
+        'add_question',
         'trigger_position',
         'trigger_after_field',
         'is_required',

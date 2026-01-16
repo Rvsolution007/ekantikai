@@ -73,11 +73,13 @@ class GlobalQuestionController extends Controller
         GlobalQuestion::create([
             'admin_id' => $adminId,
             'question_name' => $validated['field_name'],
+            'field_name' => $validated['field_name'],
             'display_name' => $validated['display_name'],
             'question_type' => $validated['question_type'] ?? 'text',
+            'field_type' => $validated['question_type'] ?? 'text',
             'options' => $options,
             'add_question' => $validated['add_question'] ?? null,
-            'trigger_position' => 'before_fields',
+            'trigger_position' => 'first',
             'sort_order' => $maxSort + 1,
             'is_active' => true,
         ]);

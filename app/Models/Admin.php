@@ -35,6 +35,7 @@ class Admin extends Authenticatable
         'whatsapp_api_key',
         'whatsapp_instance',
         'whatsapp_connected',
+        'bot_control_number',
         'gemini_api_key',
         'ai_model',
         'timezone',

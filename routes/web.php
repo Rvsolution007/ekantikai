@@ -123,6 +123,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/settings/test-connection', [SettingController::class, 'testConnection'])->name('settings.test-connection');
         Route::post('/settings/get-qr', [SettingController::class, 'getQrCode'])->name('settings.get-qr');
         Route::post('/settings/disconnect', [SettingController::class, 'disconnect'])->name('settings.disconnect');
+        Route::post('/settings/diagnose', [SettingController::class, 'diagnoseWhatsApp'])->name('settings.diagnose');
 
         // Workflow Builder Routes
         Route::prefix('workflow')->name('workflow.')->group(function () {

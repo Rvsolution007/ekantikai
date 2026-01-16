@@ -25,7 +25,7 @@ class AIConfigController extends Controller
         $totalUsage = AiUsageLog::getTokenStatsForAdmin(0, 'month'); // Global
         $adminUsage = $this->getUsageByAdmin('month');
 
-        return view('super-admin.ai-config.index', compact(
+        return view('superadmin.ai-config.index', compact(
             'currentProvider',
             'currentModel',
             'providers',
@@ -63,7 +63,7 @@ class AIConfigController extends Controller
             Setting::setValue('deepseek_api_key', $validated['deepseek_api_key'], 'ai', 'encrypted');
         }
 
-        return redirect()->route('super-admin.ai-config.index')
+        return redirect()->route('superadmin.ai-config.index')
             ->with('success', 'AI configuration updated successfully.');
     }
 
@@ -79,7 +79,7 @@ class AIConfigController extends Controller
         $modelUsage = $this->getUsageByModel($period);
         $dailyUsage = $this->getDailyUsage($period);
 
-        return view('super-admin.ai-config.dashboard', compact(
+        return view('superadmin.ai-config.dashboard', compact(
             'globalStats',
             'adminUsage',
             'modelUsage',

@@ -104,6 +104,14 @@
                             class="px-6 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors">
                             Disconnect & Rescan
                         </button>
+                        <button type="button" onclick="diagnoseWhatsApp()"
+                            class="px-6 py-3 rounded-xl bg-yellow-600 text-white font-medium hover:bg-yellow-700 transition-colors flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            View Error Log
+                        </button>
                     </div>
                 </div>
             </div>
@@ -146,9 +154,11 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Max Response Length</label>
                         <select name="ai_max_length" class="input-dark w-full px-4 py-3 rounded-xl text-white">
-                            <option value="short" {{ ($settings['ai_max_length'] ?? 'medium') == 'short' ? 'selected' : '' }}>Short (50 words)</option>
+                            <option value="short" {{ ($settings['ai_max_length'] ?? 'medium') == 'short' ? 'selected' : '' }}>
+                                Short (50 words)</option>
                             <option value="medium" {{ ($settings['ai_max_length'] ?? 'medium') == 'medium' ? 'selected' : '' }}>Medium (100 words)</option>
-                            <option value="long" {{ ($settings['ai_max_length'] ?? 'medium') == 'long' ? 'selected' : '' }}>Long (200 words)</option>
+                            <option value="long" {{ ($settings['ai_max_length'] ?? 'medium') == 'long' ? 'selected' : '' }}>
+                                Long (200 words)</option>
                         </select>
                     </div>
                 </div>
@@ -420,6 +430,137 @@
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
                 }
+            }
+
+            async function diagnoseWhatsApp() {
+                // Create modal
+                const modal = document.createElement('div');
+                modal.id = 'diagnoseModal';
+                modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
+                modal.innerHTML = `
+                    <div class="glass rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+                            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                                <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                WhatsApp Diagnostic Report
+                            </h3>
+                            <button onclick="closeDiagnoseModal()" class="text-gray-400 hover:text-white">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="p-6 overflow-y-auto max-h-[70vh]" id="diagnoseContent">
+                            <div class="text-center text-gray-400">
+                                <svg class="w-8 h-8 mx-auto animate-spin mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                Scanning all configurations...
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                try {
+                    const response = await fetch('{{ route("admin.settings.diagnose") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        let html = '';
+                        
+                        // Summary
+                        const summaryColor = data.summary.overall === 'ok' ? 'green' : (data.summary.overall === 'warning' ? 'yellow' : 'red');
+                        html += `
+                            <div class="glass-light rounded-xl p-4 mb-6">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-lg font-medium text-white">Overall Status</span>
+                                    <span class="px-4 py-2 rounded-xl bg-${summaryColor}-500/20 text-${summaryColor}-300 font-medium">
+                                        ${data.summary.ok} OK · ${data.summary.warnings} Warnings · ${data.summary.errors} Errors
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+
+                        // Checks
+                        html += '<div class="space-y-3">';
+                        for (const [key, check] of Object.entries(data.checks)) {
+                            const icon = check.status === 'ok' ? '✅' : (check.status === 'warning' ? '⚠️' : (check.status === 'info' ? 'ℹ️' : '❌'));
+                            const bgColor = check.status === 'ok' ? 'bg-green-500/10 border-green-500/30' : 
+                                           (check.status === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' : 
+                                           (check.status === 'info' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-red-500/10 border-red-500/30'));
+                            
+                            html += `
+                                <div class="rounded-xl p-4 border ${bgColor}">
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-xl">${icon}</span>
+                                        <div class="flex-1">
+                                            <div class="font-medium text-white">${check.name}</div>
+                                            <div class="text-sm text-gray-400 mt-1">${check.message}</div>
+                                            ${check.details && check.details.length > 0 ? `
+                                                <div class="mt-2 text-xs text-gray-500 font-mono bg-black/30 p-2 rounded overflow-x-auto">
+                                                    ${check.details.map(d => d.substring(0, 100)).join('<br>')}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        html += '</div>';
+
+                        // Fixes
+                        if (data.fixes && data.fixes.length > 0) {
+                            html += `
+                                <div class="mt-6 glass-light rounded-xl p-4">
+                                    <h4 class="text-white font-medium mb-3 flex items-center gap-2">
+                                        💡 Suggested Fixes
+                                    </h4>
+                                    <div class="space-y-3">
+                                        ${data.fixes.map(fix => `
+                                            <div class="text-sm">
+                                                <div class="text-cyan-300 font-medium">${fix.title}</div>
+                                                <ol class="mt-1 text-gray-400 list-decimal list-inside">
+                                                    ${fix.steps.map(s => `<li>${s}</li>`).join('')}
+                                                </ol>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        document.getElementById('diagnoseContent').innerHTML = html;
+                    } else {
+                        document.getElementById('diagnoseContent').innerHTML = `
+                            <div class="text-center text-red-400">
+                                <p>Failed to run diagnostics</p>
+                                <p class="text-sm mt-2">${data.message || 'Unknown error'}</p>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    document.getElementById('diagnoseContent').innerHTML = `
+                        <div class="text-center text-red-400">
+                            <p>Error running diagnostics</p>
+                            <p class="text-sm mt-2">${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            function closeDiagnoseModal() {
+                const modal = document.getElementById('diagnoseModal');
+                if (modal) modal.remove();
             }
         </script>
     @endpush

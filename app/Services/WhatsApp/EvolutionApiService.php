@@ -160,6 +160,25 @@ class EvolutionApiService
     }
 
     /**
+     * Get webhook configuration for an instance
+     */
+    public function getWebhook(string $instance): array
+    {
+        $instance = $instance ?: $this->defaultInstance;
+
+        try {
+            return $this->makeRequest('GET', "/webhook/find/{$instance}");
+        } catch (\Exception $e) {
+            // Try alternative endpoint
+            try {
+                return $this->makeRequest('GET', "/instance/fetchInstances", ['instanceName' => $instance]);
+            } catch (\Exception $e2) {
+                return ['error' => $e->getMessage()];
+            }
+        }
+    }
+
+    /**
      * Format phone number for WhatsApp
      */
     protected function formatNumber(string $number): string
