@@ -333,14 +333,19 @@ class SettingController extends Controller
             ];
         }
 
-        // 4. Check AI Configuration
-        $geminiKey = Setting::getValue('gemini_api_key', '') ?: $admin->gemini_api_key;
+        // 4. Check AI Configuration - Now using global Vertex AI
+        $vertexPrivateKey = Setting::getValue('vertex_private_key', '');
+        $vertexProjectId = Setting::getValue('vertex_project_id', '');
+        $vertexServiceEmail = Setting::getValue('vertex_service_email', '');
+
+        $aiConfigured = !empty($vertexPrivateKey) && !empty($vertexProjectId) && !empty($vertexServiceEmail);
+
         $checks['ai_key'] = [
-            'name' => 'AI API Key (Gemini)',
-            'status' => !empty($geminiKey) ? 'ok' : 'error',
-            'message' => !empty($geminiKey)
-                ? 'Gemini API key is configured'
-                : 'Gemini API key not configured. Bot cannot generate responses.',
+            'name' => 'AI Configuration (Vertex AI)',
+            'status' => $aiConfigured ? 'ok' : 'error',
+            'message' => $aiConfigured
+                ? 'Vertex AI is configured (Project: ' . $vertexProjectId . ')'
+                : 'Vertex AI not configured. Contact SuperAdmin to set up AI in SuperAdmin panel.',
         ];
 
         // 5. Check Workflow/Questionnaire Fields

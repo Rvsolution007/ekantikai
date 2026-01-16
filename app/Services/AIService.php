@@ -29,14 +29,24 @@ class AIService
     {
         // Load global AI settings from Super Admin
         $this->provider = Setting::getValue('global_ai_provider', 'google');
-        $this->model = Setting::getValue('global_ai_model', 'gemini-2.5-flash');
+        $this->model = Setting::getValue('global_ai_model', 'gemini-2.0-flash');
 
-        // Load API keys based on provider
-        $this->apiKey = $this->getApiKeyForProvider($this->provider);
+        // Load Vertex AI specific settings from database
+        $this->projectId = Setting::getValue('vertex_project_id', '');
+        $this->location = Setting::getValue('vertex_region', 'asia-south1');
 
-        // Vertex AI specific
-        $this->projectId = config('services.ai.vertex_project_id');
-        $this->location = config('services.ai.vertex_location', 'us-central1');
+        // Check if Vertex AI is configured - if so, force use vertex provider
+        $vertexPrivateKey = Setting::getValue('vertex_private_key', '');
+        $vertexServiceEmail = Setting::getValue('vertex_service_email', '');
+
+        if (!empty($this->projectId) && !empty($vertexPrivateKey) && !empty($vertexServiceEmail)) {
+            // Vertex AI is fully configured, use it
+            $this->provider = 'vertex';
+            $this->apiKey = ''; // Not needed for Vertex AI (uses JWT)
+        } else {
+            // Fall back to API key-based providers
+            $this->apiKey = $this->getApiKeyForProvider($this->provider);
+        }
 
         $this->languageService = new LanguageDetectionService();
     }
@@ -495,42 +505,76 @@ PROMPT;
     }
 
     /**
-     * Get Vertex AI access token
+     * Get Vertex AI access token from database settings (JWT auth)
      */
     protected function getVertexAccessToken(): string
     {
-        $keyPath = config('services.ai.vertex_key_path');
+        // Cache the token for 50 minutes (tokens are valid for 60 minutes)
+        return \Illuminate\Support\Facades\Cache::remember('ai_service_vertex_token', 3000, function () {
+            $serviceEmail = Setting::getValue('vertex_service_email', '');
+            $privateKey = Setting::getValue('vertex_private_key', '');
 
-        if (!$keyPath || !file_exists($keyPath)) {
-            throw new \Exception('Vertex AI service account key file not found');
-        }
+            if (empty($serviceEmail) || empty($privateKey)) {
+                throw new \Exception('Vertex AI service account not configured. Please set up in SuperAdmin AI Config.');
+            }
 
-        $key = json_decode(file_get_contents($keyPath), true);
+            $now = time();
+            $exp = $now + 3600;
 
-        $header = base64_encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
-        $now = time();
-        $claim = base64_encode(json_encode([
-            'iss' => $key['client_email'],
-            'scope' => 'https://www.googleapis.com/auth/cloud-platform',
-            'aud' => 'https://oauth2.googleapis.com/token',
-            'iat' => $now,
-            'exp' => $now + 3600,
-        ]));
+            // Create JWT header
+            $header = [
+                'alg' => 'RS256',
+                'typ' => 'JWT',
+            ];
 
-        $signature = '';
-        openssl_sign("$header.$claim", $signature, $key['private_key'], OPENSSL_ALGO_SHA256);
-        $jwt = "$header.$claim." . base64_encode($signature);
+            // Create JWT payload
+            $payload = [
+                'iss' => $serviceEmail,
+                'scope' => 'https://www.googleapis.com/auth/cloud-platform',
+                'aud' => 'https://oauth2.googleapis.com/token',
+                'iat' => $now,
+                'exp' => $exp,
+            ];
 
-        $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
-            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-            'assertion' => $jwt,
-        ]);
+            // Base64url encode
+            $base64Header = rtrim(strtr(base64_encode(json_encode($header)), '+/', '-_'), '=');
+            $base64Payload = rtrim(strtr(base64_encode(json_encode($payload)), '+/', '-_'), '=');
 
-        if ($response->failed()) {
-            throw new \Exception('Failed to get Vertex AI access token');
-        }
+            // Create signature
+            $signatureInput = $base64Header . '.' . $base64Payload;
 
-        return $response->json('access_token');
+            // Clean up the private key - handle escaped newlines
+            if (!str_contains($privateKey, '-----BEGIN')) {
+                $privateKey = str_replace('\\n', "\n", $privateKey);
+            }
+
+            $key = openssl_pkey_get_private($privateKey);
+            if (!$key) {
+                throw new \Exception('Invalid private key: ' . openssl_error_string());
+            }
+
+            $signature = '';
+            openssl_sign($signatureInput, $signature, $key, OPENSSL_ALGO_SHA256);
+            $base64Signature = rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
+
+            $jwt = $base64Header . '.' . $base64Payload . '.' . $base64Signature;
+
+            // Exchange JWT for access token
+            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $jwt,
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Failed to get Vertex AI access token', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                throw new \Exception('Failed to get Vertex AI access token: ' . $response->body());
+            }
+
+            return $response->json('access_token');
+        });
     }
 
     /**
