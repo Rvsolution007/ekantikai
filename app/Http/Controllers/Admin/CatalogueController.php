@@ -15,7 +15,7 @@ class CatalogueController extends Controller
     public function index(Request $request)
     {
         $admin = auth()->guard('admin')->user();
-        $adminId = $admin->admin_id;
+        $adminId = $admin->admin_id ?? $admin->id;
 
         if (!$adminId) {
             return redirect()->route('admin.dashboard')->with('error', 'Tenant not configured.');
