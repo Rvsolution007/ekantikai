@@ -192,6 +192,14 @@ class TenantController extends Controller
         return back()->with('success', "Client {$status} successfully!");
     }
 
+    public function toggleProductImages(Admin $admin)
+    {
+        $admin->update(['send_product_images' => !$admin->send_product_images]);
+
+        $status = $admin->send_product_images ? 'enabled' : 'disabled';
+        return back()->with('success', "Product images {$status} for {$admin->name}!");
+    }
+
     public function resetPassword(Request $request, Admin $admin)
     {
         $request->validate([

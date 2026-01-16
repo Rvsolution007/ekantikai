@@ -41,6 +41,7 @@ class Admin extends Authenticatable
         'timezone',
         'language',
         'lead_timeout_hours',
+        'send_product_images',
         'is_active',
     ];
 
@@ -48,6 +49,7 @@ class Admin extends Authenticatable
         'is_active' => 'boolean',
         'is_admin_active' => 'boolean',
         'whatsapp_connected' => 'boolean',
+        'send_product_images' => 'boolean',
         'trial_ends_at' => 'datetime',
         'subscription_ends_at' => 'datetime',
         'last_login_at' => 'datetime',

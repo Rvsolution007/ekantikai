@@ -184,6 +184,7 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::resource('tenants', TenantController::class);
     Route::post('/tenants/{tenant}/add-credits', [TenantController::class, 'addCredits'])->name('tenants.add-credits');
     Route::patch('/tenants/{tenant}/toggle-status', [TenantController::class, 'toggleStatus'])->name('tenants.toggle-status');
+    Route::patch('/tenants/{tenant}/toggle-product-images', [TenantController::class, 'toggleProductImages'])->name('tenants.toggle-product-images');
     Route::post('/tenants/{tenant}/reset-password', [TenantController::class, 'resetPassword'])->name('tenants.reset-password');
 
     // AI Configuration (Point 9 - Super Admin)

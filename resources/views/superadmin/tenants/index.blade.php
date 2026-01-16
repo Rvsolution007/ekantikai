@@ -72,6 +72,9 @@
                         </th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status
                         </th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Product
+                            Images
+                        </th>
                         <th class="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions
                         </th>
                     </tr>
@@ -94,10 +97,10 @@
                             <td class="px-6 py-4">
                                 <span
                                     class="px-3 py-1 text-xs font-medium rounded-lg
-                                                    {{ $tenant->subscription_plan === 'enterprise' ? 'bg-yellow-500/20 text-yellow-400' : '' }}
-                                                    {{ $tenant->subscription_plan === 'pro' ? 'bg-purple-500/20 text-purple-400' : '' }}
-                                                    {{ $tenant->subscription_plan === 'basic' ? 'bg-blue-500/20 text-blue-400' : '' }}
-                                                    {{ $tenant->subscription_plan === 'free' ? 'bg-gray-500/20 text-gray-400' : '' }}">
+                                                            {{ $tenant->subscription_plan === 'enterprise' ? 'bg-yellow-500/20 text-yellow-400' : '' }}
+                                                            {{ $tenant->subscription_plan === 'pro' ? 'bg-purple-500/20 text-purple-400' : '' }}
+                                                            {{ $tenant->subscription_plan === 'basic' ? 'bg-blue-500/20 text-blue-400' : '' }}
+                                                            {{ $tenant->subscription_plan === 'free' ? 'bg-gray-500/20 text-gray-400' : '' }}">
                                     {{ ucfirst($tenant->subscription_plan) }}
                                 </span>
                             </td>
@@ -130,6 +133,19 @@
                                     class="px-3 py-1 text-xs font-medium rounded-lg {{ $tenant->is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                     {{ $tenant->is_active ? 'Active' : 'Inactive' }}
                                 </span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <form action="{{ route('superadmin.tenants.toggle-product-images', $tenant) }}" method="POST"
+                                    class="inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {{ $tenant->send_product_images ? 'bg-primary-500' : 'bg-gray-600' }}"
+                                        title="{{ $tenant->send_product_images ? 'Disable' : 'Enable' }} product images">
+                                        <span
+                                            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $tenant->send_product_images ? 'translate-x-5' : 'translate-x-0' }}"></span>
+                                    </button>
+                                </form>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end space-x-2">
