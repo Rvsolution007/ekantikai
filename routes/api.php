@@ -45,3 +45,61 @@ Route::any('/webhook/test', function (Request $request) {
         'method' => $request->method(),
     ]);
 });
+
+// Simulate incoming WhatsApp message (for testing webhook processing)
+Route::post('/webhook/simulate', function (Request $request) {
+    $phone = $request->input('phone', '919876543210');
+    $message = $request->input('message', 'Hello Test');
+    $instance = $request->input('instance', 'vivo mobile');
+
+    // Create fake Evolution API webhook payload
+    $payload = [
+        'event' => 'messages.upsert',
+        'instance' => $instance,
+        'data' => [
+            'key' => [
+                'remoteJid' => $phone . '@s.whatsapp.net',
+                'fromMe' => false,
+                'id' => 'TEST_' . time(),
+            ],
+            'pushName' => 'Test User',
+            'message' => [
+                'conversation' => $message,
+            ],
+            'messageTimestamp' => time(),
+        ],
+    ];
+
+    // Call the actual webhook handler
+    $controller = new \App\Http\Controllers\Api\WebhookController();
+    $fakeRequest = Request::create('/api/webhook/whatsapp/' . $instance, 'POST', $payload);
+    $fakeRequest->headers->set('Content-Type', 'application/json');
+
+    $response = $controller->handle($fakeRequest, $instance);
+
+    return response()->json([
+        'status' => 'simulated',
+        'payload_sent' => $payload,
+        'webhook_response' => json_decode($response->getContent(), true),
+    ]);
+});
+
+// Check if Evolution API is sending webhooks
+Route::get('/webhook/check-evolution', function () {
+    $admin = \App\Models\Admin::where('is_active', true)->first();
+    if (!$admin) {
+        return response()->json(['error' => 'No active admin']);
+    }
+
+    $service = new \App\Services\WhatsApp\EvolutionApiService($admin);
+    $instance = $admin->whatsapp_instance;
+
+    // Get webhook config from Evolution API
+    $webhookConfig = $service->getWebhook($instance);
+
+    return response()->json([
+        'instance' => $instance,
+        'webhook_config' => $webhookConfig,
+        'expected_url' => url('/api/webhook/whatsapp/' . urlencode($instance)),
+    ]);
+});
