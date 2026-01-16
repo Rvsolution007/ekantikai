@@ -249,8 +249,29 @@
     </div>
 
     <!-- Import Modal -->
-    <div id="importModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center"
-        x-data="{ show: false }" x-show="show" x-cloak :class="show ? 'flex' : 'hidden'" @open-import.window="show = true"
+    <div id="importModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center" x-data="{ 
+                show: false, 
+                isDragging: false,
+                fileName: '',
+                handleDrop(e) {
+                    this.isDragging = false;
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const file = files[0];
+                        if (file.name.match(/\.(xlsx|xls)$/i)) {
+                            this.$refs.fileInput.files = files;
+                            this.fileName = file.name;
+                        } else {
+                            alert('Please upload only Excel files (.xlsx or .xls)');
+                        }
+                    }
+                },
+                handleFileSelect(e) {
+                    if (e.target.files.length > 0) {
+                        this.fileName = e.target.files[0].name;
+                    }
+                }
+            }" x-show="show" x-cloak :class="show ? 'flex' : 'hidden'" @open-import.window="show = true; fileName = ''"
         @close-modal.window="show = false" @keydown.escape.window="show = false">
         <div class="glass rounded-2xl p-6 w-full max-w-md mx-4" @click.away="show = false">
             <div class="flex items-center justify-between mb-6">
@@ -278,10 +299,51 @@
                 class="space-y-4">
                 @csrf
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Select Excel File</label>
-                    <input type="file" name="file" accept=".xlsx,.xls" required
-                        class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-white hover:file:bg-primary-600">
+                <!-- Drag & Drop Zone -->
+                <div class="relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer"
+                    :class="isDragging ? 'border-primary-500 bg-primary-500/10' : (fileName ? 'border-green-500 bg-green-500/10' : 'border-gray-600 hover:border-gray-500')"
+                    @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleDrop($event)" @click="$refs.fileInput.click()">
+
+                    <!-- Icon -->
+                    <div class="mb-4">
+                        <template x-if="!fileName">
+                            <svg class="w-12 h-12 mx-auto transition-colors"
+                                :class="isDragging ? 'text-primary-400' : 'text-gray-500'" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                        </template>
+                        <template x-if="fileName">
+                            <svg class="w-12 h-12 mx-auto text-green-400" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </template>
+                    </div>
+
+                    <!-- Text -->
+                    <template x-if="!fileName">
+                        <div>
+                            <p class="text-white font-medium" x-show="isDragging">Drop your Excel file here!</p>
+                            <p class="text-gray-400" x-show="!isDragging">
+                                <span class="text-primary-400 font-medium">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs text-gray-500 mt-2">Excel files only (.xlsx, .xls)</p>
+                        </div>
+                    </template>
+                    <template x-if="fileName">
+                        <div>
+                            <p class="text-green-400 font-medium" x-text="fileName"></p>
+                            <p class="text-xs text-gray-400 mt-2">Click or drag another file to replace</p>
+                        </div>
+                    </template>
+
+                    <!-- Hidden File Input -->
+                    <input type="file" name="file" accept=".xlsx,.xls" required x-ref="fileInput" class="hidden"
+                        @change="handleFileSelect($event)">
                 </div>
 
                 <div class="flex space-x-3 pt-4">
@@ -290,7 +352,8 @@
                         Cancel
                     </button>
                     <button type="submit"
-                        class="flex-1 px-4 py-3 rounded-xl bg-primary-500 text-white font-medium hover:bg-primary-600 transition-colors">
+                        class="flex-1 px-4 py-3 rounded-xl bg-primary-500 text-white font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="!fileName">
                         Import Products
                     </button>
                 </div>
