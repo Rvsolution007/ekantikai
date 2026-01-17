@@ -288,9 +288,24 @@ class TenantController extends Controller
             return back()->with('error', 'Customer not found');
         }
 
+        // Clear chat messages
         \App\Models\ChatMessage::where('customer_id', $customerId)->delete();
 
-        return back()->with('success', 'All chats cleared for ' . ($customer->name ?? $customer->phone));
+        // Reset questionnaire state (clears completed product fields)
+        $state = $customer->questionnaireState;
+        if ($state) {
+            $state->reset();
+            $state->workflow_data = [];
+            $state->pending_items = [];
+            $state->save();
+        }
+
+        // Clear customer's global fields
+        $customer->global_fields = [];
+        $customer->global_asked = [];
+        $customer->save();
+
+        return back()->with('success', 'All chats and product data cleared for ' . ($customer->name ?? $customer->phone));
     }
 
     /**
@@ -298,10 +313,27 @@ class TenantController extends Controller
      */
     public function clearAllChats(Admin $admin)
     {
-        $customerIds = \App\Models\Customer::where('admin_id', $admin->id)->pluck('id');
+        $customers = \App\Models\Customer::where('admin_id', $admin->id)->get();
 
-        \App\Models\ChatMessage::whereIn('customer_id', $customerIds)->delete();
+        foreach ($customers as $customer) {
+            // Clear chat messages
+            \App\Models\ChatMessage::where('customer_id', $customer->id)->delete();
 
-        return back()->with('success', 'All chats cleared for ' . $admin->name);
+            // Reset questionnaire state
+            $state = $customer->questionnaireState;
+            if ($state) {
+                $state->reset();
+                $state->workflow_data = [];
+                $state->pending_items = [];
+                $state->save();
+            }
+
+            // Clear customer's global fields
+            $customer->global_fields = [];
+            $customer->global_asked = [];
+            $customer->save();
+        }
+
+        return back()->with('success', 'All chats and product data cleared for ' . $admin->name);
     }
 }
