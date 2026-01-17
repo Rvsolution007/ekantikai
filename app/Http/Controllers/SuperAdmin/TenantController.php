@@ -138,6 +138,7 @@ class TenantController extends Controller
             'status' => $request->status,
             'is_active' => $request->status === 'active',
             'subscription_ends_at' => $request->subscription_ends_at,
+            'ai_system_prompt' => $request->ai_system_prompt,
         ]);
 
         // Update WhatsApp settings if provided
