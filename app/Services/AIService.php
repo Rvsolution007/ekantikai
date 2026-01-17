@@ -117,6 +117,46 @@ class AIService
     }
 
     /**
+     * Get system prompt preview (for admin viewing)
+     * This generates the same prompt that would be sent to AI, but returns it for display
+     */
+    public function getSystemPromptPreview(Admin $admin): array
+    {
+        // Create a dummy customer and lead for preview
+        $dummyCustomer = new Customer([
+            'admin_id' => $admin->id,
+            'phone' => '9999999999',
+            'name' => 'Preview Customer',
+            'detected_language' => 'hi',
+        ]);
+
+        $dummyLead = new Lead([
+            'admin_id' => $admin->id,
+            'customer_id' => 0,
+            'collected_data' => [],
+            'product_confirmations' => [],
+        ]);
+
+        // Build context (this will include actual catalogue data)
+        $context = $this->buildEnhancedContext($admin, $dummyCustomer, $dummyLead, 'Preview message', []);
+
+        // Get language instruction
+        $languageInstruction = $this->languageService->getLanguageInstruction('hi');
+
+        // Build the actual system prompt
+        $systemPrompt = $this->buildEnhancedSystemPrompt($admin, $dummyCustomer, $dummyLead, $context, $languageInstruction);
+
+        return [
+            'prompt' => $systemPrompt,
+            'context' => [
+                'field_rules' => $context['field_rules'] ?? [],
+                'catalogue_products' => $context['catalogue']['total_products'] ?? 0,
+            ],
+            'catalogue' => $context['catalogue'] ?? [],
+        ];
+    }
+
+    /**
      * Build enhanced context for AI
      */
     protected function buildEnhancedContext(

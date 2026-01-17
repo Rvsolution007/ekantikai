@@ -387,4 +387,52 @@ class AIConfigController extends Controller
             ]);
         }
     }
+
+    /**
+     * Preview the actual AI system prompt for an admin
+     */
+    public function previewPrompt(Request $request)
+    {
+        $adminId = $request->input('admin_id');
+
+        // Get admin (default to first active admin if not specified)
+        $admin = $adminId
+            ? Admin::find($adminId)
+            : Admin::where('is_active', true)->first();
+
+        if (!$admin) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No admin found'
+            ]);
+        }
+
+        try {
+            $aiService = new \App\Services\AIService();
+            $promptData = $aiService->getSystemPromptPreview($admin);
+
+            return response()->json([
+                'success' => true,
+                'admin_name' => $admin->name,
+                'admin_id' => $admin->id,
+                'prompt' => $promptData['prompt'],
+                'context' => $promptData['context'],
+                'catalogue_info' => $promptData['catalogue'] ?? [],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Show prompt preview page
+     */
+    public function promptPreviewPage()
+    {
+        $admins = Admin::where('is_active', true)->get(['id', 'name', 'company_name']);
+        return view('superadmin.ai-config.prompt-preview', compact('admins'));
+    }
 }
