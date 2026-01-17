@@ -44,6 +44,7 @@ class Admin extends Authenticatable
         'send_product_images',
         'delete_passcode',
         'is_active',
+        'ai_system_prompt',
     ];
 
     protected $casts = [

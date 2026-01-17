@@ -62,7 +62,7 @@ class SettingController extends Controller
     {
         $admin = auth('admin')->user();
 
-        // Update WhatsApp settings on Admin model (per-admin)
+        // Update WhatsApp settings and AI prompt on Admin model (per-admin)
         $admin->update([
             'whatsapp_api_url' => $request->input('whatsapp_api_url'),
             'whatsapp_api_key' => $request->input('whatsapp_api_key'),
@@ -71,10 +71,11 @@ class SettingController extends Controller
             'company_name' => $request->input('business_name'),
             'lead_timeout_hours' => (int) $request->input('lead_timeout_hours', 24),
             'delete_passcode' => $request->input('delete_passcode'),
+            'ai_system_prompt' => $request->input('ai_system_prompt'),
         ]);
 
-        // Other settings can remain global
-        $globalSettings = ['ai_system_prompt', 'business_hours', 'ai_tone', 'ai_max_length', 'followup_delay_minutes'];
+        // Other settings can remain global (no ai_system_prompt - moved to Admin model)
+        $globalSettings = ['business_hours', 'ai_tone', 'ai_max_length', 'followup_delay_minutes'];
         foreach ($globalSettings as $key) {
             $value = $request->input($key);
             if ($value !== null) {

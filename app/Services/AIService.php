@@ -529,9 +529,9 @@ class AIService
     ): string {
         $tenantName = $admin->company_name ?? $admin->name ?? 'Datsun Hardware';
 
-        // Get AI settings from global settings (or admin-specific later)
+        // Get AI settings - ai_system_prompt from Admin model (per-admin), others from global
         $aiTone = Setting::getValue('ai_tone', 'friendly');
-        $customSystemPrompt = Setting::getValue('ai_system_prompt', '');
+        $customSystemPrompt = $admin->ai_system_prompt ?? Setting::getValue('ai_system_prompt', '');
         $maxLength = Setting::getValue('ai_max_length', 'medium');
 
         // Tone instructions based on setting
