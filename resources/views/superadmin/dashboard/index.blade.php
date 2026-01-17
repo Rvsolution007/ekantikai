@@ -117,7 +117,7 @@
                 <div class="p-6 border-b border-white/10">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold text-white">Recent Admins</h3>
-                        <a href="{{ route('superadmin.tenants.index') }}"
+                        <a href="{{ route('superadmin.admins.index') }}"
                             class="text-primary-400 hover:text-primary-300 text-sm">View all →</a>
                     </div>
                 </div>
@@ -135,11 +135,12 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <span class="px-2 py-1 text-xs font-medium rounded-lg 
-                                            {{ $tenant->subscription_plan === 'enterprise' ? 'bg-yellow-500/20 text-yellow-400' : '' }}
-                                            {{ $tenant->subscription_plan === 'pro' ? 'bg-purple-500/20 text-purple-400' : '' }}
-                                            {{ $tenant->subscription_plan === 'basic' ? 'bg-blue-500/20 text-blue-400' : '' }}
-                                            {{ $tenant->subscription_plan === 'free' ? 'bg-gray-500/20 text-gray-400' : '' }}">
+                                <span
+                                    class="px-2 py-1 text-xs font-medium rounded-lg 
+                                                            {{ $tenant->subscription_plan === 'enterprise' ? 'bg-yellow-500/20 text-yellow-400' : '' }}
+                                                            {{ $tenant->subscription_plan === 'pro' ? 'bg-purple-500/20 text-purple-400' : '' }}
+                                                            {{ $tenant->subscription_plan === 'basic' ? 'bg-blue-500/20 text-blue-400' : '' }}
+                                                            {{ $tenant->subscription_plan === 'free' ? 'bg-gray-500/20 text-gray-400' : '' }}">
                                     {{ ucfirst($tenant->subscription_plan) }}
                                 </span>
                                 <p class="text-gray-400 text-xs mt-1">{{ $tenant->created_at->diffForHumans() }}</p>
@@ -166,8 +167,9 @@
                     @forelse($recentPayments as $payment)
                         <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
                             <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 rounded-xl flex items-center justify-center
-                                            {{ $payment->status === 'success' ? 'bg-green-500/20' : 'bg-yellow-500/20' }}">
+                                <div
+                                    class="w-10 h-10 rounded-xl flex items-center justify-center
+                                                            {{ $payment->status === 'success' ? 'bg-green-500/20' : 'bg-yellow-500/20' }}">
                                     @if($payment->status === 'success')
                                         <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd"
@@ -183,7 +185,7 @@
                                     @endif
                                 </div>
                                 <div>
-                                    <p class="text-white font-medium">{{ $payment->tenant->name ?? 'Unknown' }}</p>
+                                    <p class="text-white font-medium">{{ $payment->admin->name ?? 'Unknown' }}</p>
                                     <p class="text-gray-400 text-sm">{{ ucfirst($payment->payment_method) }}</p>
                                 </div>
                             </div>
@@ -205,7 +207,7 @@
         <div class="glass rounded-2xl p-6">
             <h3 class="text-lg font-semibold text-white mb-4">Quick Actions</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <a href="{{ route('superadmin.tenants.create') }}"
+                <a href="{{ route('superadmin.admins.create') }}"
                     class="glass-light rounded-xl p-4 text-center hover:bg-primary-500/10 transition-colors group">
                     <div
                         class="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">

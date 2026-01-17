@@ -50,9 +50,9 @@
                                 <div class="flex items-center space-x-3">
                                     <div class="w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center">
                                         <span
-                                            class="text-primary-400 text-sm font-medium">{{ substr($payment->tenant->name ?? 'U', 0, 2) }}</span>
+                                            class="text-primary-400 text-sm font-medium">{{ substr($payment->admin->name ?? 'U', 0, 2) }}</span>
                                     </div>
-                                    <span class="text-white">{{ $payment->tenant->name ?? 'Unknown' }}</span>
+                                    <span class="text-white">{{ $payment->admin->name ?? 'Unknown' }}</span>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-white font-semibold">{{ $payment->formatted_amount }}</td>

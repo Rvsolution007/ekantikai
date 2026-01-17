@@ -213,14 +213,14 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     // Payments
     Route::get('/payments', function () {
         return view('superadmin.payments.index', [
-            'payments' => \App\Models\Payment::with('tenant')->latest()->paginate(20)
+            'payments' => \App\Models\Payment::with('admin')->latest()->paginate(20)
         ]);
     })->name('payments.index');
 
-    // Credits
+    // Credits - placeholder route
     Route::get('/credits', function () {
         return view('superadmin.credits.index', [
-            'credits' => \App\Models\TenantCredit::with('tenant')->paginate(20)
+            'admins' => \App\Models\Admin::orderBy('name')->paginate(20)
         ]);
     })->name('credits.index');
 
