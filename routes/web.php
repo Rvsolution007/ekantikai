@@ -65,6 +65,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('leads', LeadController::class);
         Route::post('/leads/{lead}/update-stage', [LeadController::class, 'updateStage'])->name('leads.update-stage');
         Route::post('/leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
+        Route::delete('/leads/{lead}/product/{index}', [LeadController::class, 'deleteProduct'])->name('leads.delete-product');
         Route::get('/leads/export/csv', [LeadController::class, 'export'])->name('leads.export');
 
         // Lead Statuses (Kanban)

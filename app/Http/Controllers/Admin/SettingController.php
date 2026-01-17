@@ -26,6 +26,7 @@ class SettingController extends Controller
             'bot_control_number' => $admin->bot_control_number ?? '',
             // Lead settings
             'lead_timeout_hours' => $admin->lead_timeout_hours ?? 24,
+            'delete_passcode' => $admin->delete_passcode ?? '',
             // Followup settings
             'followup_delay_minutes' => Setting::getValue('followup_delay_minutes', 60),
             // AI settings (global for now)
@@ -69,6 +70,7 @@ class SettingController extends Controller
             'bot_control_number' => $request->input('bot_control_number'),
             'company_name' => $request->input('business_name'),
             'lead_timeout_hours' => (int) $request->input('lead_timeout_hours', 24),
+            'delete_passcode' => $request->input('delete_passcode'),
         ]);
 
         // Other settings can remain global

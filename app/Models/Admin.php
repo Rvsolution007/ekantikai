@@ -42,6 +42,7 @@ class Admin extends Authenticatable
         'language',
         'lead_timeout_hours',
         'send_product_images',
+        'delete_passcode',
         'is_active',
     ];
 

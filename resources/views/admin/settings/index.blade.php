@@ -115,8 +115,7 @@
                         <button type="submit"
                             class="px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M5 13l4 4L19 7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
                             Save Settings
                         </button>
@@ -274,6 +273,16 @@
                     <p class="text-gray-500 text-xs mt-2">
                         If a user responds after this many hours, a <strong>new lead</strong> will be created.
                         If they respond within this time, the existing lead will be updated.
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">🔐 Delete Passcode</label>
+                    <input type="password" name="delete_passcode" value="{{ $settings['delete_passcode'] ?? '' }}"
+                        class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
+                        placeholder="Enter 4-6 digit passcode">
+                    <p class="text-gray-500 text-xs mt-2">
+                        This passcode is required to delete product rows from lead quotations.
+                        Leave empty to disable delete functionality.
                     </p>
                 </div>
             </div>
@@ -446,30 +455,30 @@
                 modal.id = 'diagnoseModal';
                 modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
                 modal.innerHTML = `
-                            <div class="glass rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-                                <div class="p-4 border-b border-white/10 flex items-center justify-between">
-                                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                                        <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        WhatsApp Diagnostic Report
-                                    </h3>
-                                    <button onclick="closeDiagnoseModal()" class="text-gray-400 hover:text-white">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="p-6 overflow-y-auto max-h-[70vh]" id="diagnoseContent">
-                                    <div class="text-center text-gray-400">
-                                        <svg class="w-8 h-8 mx-auto animate-spin mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                        </svg>
-                                        Scanning all configurations...
+                                    <div class="glass rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                                        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+                                            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                                                <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                WhatsApp Diagnostic Report
+                                            </h3>
+                                            <button onclick="closeDiagnoseModal()" class="text-gray-400 hover:text-white">
+                                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div class="p-6 overflow-y-auto max-h-[70vh]" id="diagnoseContent">
+                                            <div class="text-center text-gray-400">
+                                                <svg class="w-8 h-8 mx-auto animate-spin mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                </svg>
+                                                Scanning all configurations...
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        `;
+                                `;
                 document.body.appendChild(modal);
 
                 try {
@@ -489,15 +498,15 @@
                         // Summary
                         const summaryColor = data.summary.overall === 'ok' ? 'green' : (data.summary.overall === 'warning' ? 'yellow' : 'red');
                         html += `
-                                    <div class="glass-light rounded-xl p-4 mb-6">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-lg font-medium text-white">Overall Status</span>
-                                            <span class="px-4 py-2 rounded-xl bg-${summaryColor}-500/20 text-${summaryColor}-300 font-medium">
-                                                ${data.summary.ok} OK · ${data.summary.warnings} Warnings · ${data.summary.errors} Errors
-                                            </span>
-                                        </div>
-                                    </div>
-                                `;
+                                            <div class="glass-light rounded-xl p-4 mb-6">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-lg font-medium text-white">Overall Status</span>
+                                                    <span class="px-4 py-2 rounded-xl bg-${summaryColor}-500/20 text-${summaryColor}-300 font-medium">
+                                                        ${data.summary.ok} OK · ${data.summary.warnings} Warnings · ${data.summary.errors} Errors
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        `;
 
                         // Checks
                         html += '<div class="space-y-3">';
@@ -508,61 +517,61 @@
                                     (check.status === 'info' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-red-500/10 border-red-500/30'));
 
                             html += `
-                                        <div class="rounded-xl p-4 border ${bgColor}">
-                                            <div class="flex items-start gap-3">
-                                                <span class="text-xl">${icon}</span>
-                                                <div class="flex-1">
-                                                    <div class="font-medium text-white">${check.name}</div>
-                                                    <div class="text-sm text-gray-400 mt-1">${check.message}</div>
-                                                    ${check.details && check.details.length > 0 ? `
-                                                        <div class="mt-2 text-xs text-gray-500 font-mono bg-black/30 p-2 rounded overflow-x-auto">
-                                                            ${check.details.map(d => d.substring(0, 100)).join('<br>')}
+                                                <div class="rounded-xl p-4 border ${bgColor}">
+                                                    <div class="flex items-start gap-3">
+                                                        <span class="text-xl">${icon}</span>
+                                                        <div class="flex-1">
+                                                            <div class="font-medium text-white">${check.name}</div>
+                                                            <div class="text-sm text-gray-400 mt-1">${check.message}</div>
+                                                            ${check.details && check.details.length > 0 ? `
+                                                                <div class="mt-2 text-xs text-gray-500 font-mono bg-black/30 p-2 rounded overflow-x-auto">
+                                                                    ${check.details.map(d => d.substring(0, 100)).join('<br>')}
+                                                                </div>
+                                                            ` : ''}
                                                         </div>
-                                                    ` : ''}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    `;
+                                            `;
                         }
                         html += '</div>';
 
                         // Fixes
                         if (data.fixes && data.fixes.length > 0) {
                             html += `
-                                        <div class="mt-6 glass-light rounded-xl p-4">
-                                            <h4 class="text-white font-medium mb-3 flex items-center gap-2">
-                                                💡 Suggested Fixes
-                                            </h4>
-                                            <div class="space-y-3">
-                                                ${data.fixes.map(fix => `
-                                                    <div class="text-sm">
-                                                        <div class="text-cyan-300 font-medium">${fix.title}</div>
-                                                        <ol class="mt-1 text-gray-400 list-decimal list-inside">
-                                                            ${fix.steps.map(s => `<li>${s}</li>`).join('')}
-                                                        </ol>
+                                                <div class="mt-6 glass-light rounded-xl p-4">
+                                                    <h4 class="text-white font-medium mb-3 flex items-center gap-2">
+                                                        💡 Suggested Fixes
+                                                    </h4>
+                                                    <div class="space-y-3">
+                                                        ${data.fixes.map(fix => `
+                                                            <div class="text-sm">
+                                                                <div class="text-cyan-300 font-medium">${fix.title}</div>
+                                                                <ol class="mt-1 text-gray-400 list-decimal list-inside">
+                                                                    ${fix.steps.map(s => `<li>${s}</li>`).join('')}
+                                                                </ol>
+                                                            </div>
+                                                        `).join('')}
                                                     </div>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    `;
+                                                </div>
+                                            `;
                         }
 
                         document.getElementById('diagnoseContent').innerHTML = html;
                     } else {
                         document.getElementById('diagnoseContent').innerHTML = `
-                                    <div class="text-center text-red-400">
-                                        <p>Failed to run diagnostics</p>
-                                        <p class="text-sm mt-2">${data.message || 'Unknown error'}</p>
-                                    </div>
-                                `;
+                                            <div class="text-center text-red-400">
+                                                <p>Failed to run diagnostics</p>
+                                                <p class="text-sm mt-2">${data.message || 'Unknown error'}</p>
+                                            </div>
+                                        `;
                     }
                 } catch (error) {
                     document.getElementById('diagnoseContent').innerHTML = `
-                                <div class="text-center text-red-400">
-                                    <p>Error running diagnostics</p>
-                                    <p class="text-sm mt-2">${error.message}</p>
-                                </div>
-                            `;
+                                        <div class="text-center text-red-400">
+                                            <p>Error running diagnostics</p>
+                                            <p class="text-sm mt-2">${error.message}</p>
+                                        </div>
+                                    `;
                 }
             }
 

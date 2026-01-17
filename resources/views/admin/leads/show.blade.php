@@ -288,11 +288,14 @@
                                                     {{ $field->display_name }}
                                                 </th>
                                             @endforeach
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">
+                                                Action
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-white/5">
-                                        @foreach($allProducts as $product)
-                                            <tr class="hover:bg-white/5 transition-colors">
+                                        @foreach($allProducts as $index => $product)
+                                            <tr class="hover:bg-white/5 transition-colors" id="product-row-{{ $index }}">
                                                 @foreach($productFields as $field)
                                                     <td class="px-4 py-4 text-white">
                                                         @php
@@ -304,6 +307,17 @@
                                                         {{ $value ?: '-' }}
                                                     </td>
                                                 @endforeach
+                                                <td class="px-4 py-4 text-center">
+                                                    <button type="button"
+                                                        onclick="confirmDeleteProduct({{ $index }})"
+                                                        class="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                                                        title="Delete Product">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -466,6 +480,85 @@
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             });
+            
+            // Delete product with passcode
+            let deleteProductIndex = null;
+            
+            function confirmDeleteProduct(index) {
+                deleteProductIndex = index;
+                document.getElementById('passcodeModal').classList.remove('hidden');
+                document.getElementById('passcodeInput').value = '';
+                document.getElementById('passcodeInput').focus();
+                document.getElementById('passcodeError').classList.add('hidden');
+            }
+            
+            function closePasscodeModal() {
+                document.getElementById('passcodeModal').classList.add('hidden');
+                deleteProductIndex = null;
+            }
+            
+            function submitPasscode() {
+                const passcode = document.getElementById('passcodeInput').value;
+                if (!passcode) {
+                    document.getElementById('passcodeError').textContent = 'Please enter passcode';
+                    document.getElementById('passcodeError').classList.remove('hidden');
+                    return;
+                }
+                
+                fetch(`{{ url('admin/leads/' . $lead->id . '/product') }}/${deleteProductIndex}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ passcode: passcode })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closePasscodeModal();
+                        document.getElementById('product-row-' + deleteProductIndex).remove();
+                        // Show success message
+                        alert('Product deleted successfully!');
+                    } else {
+                        document.getElementById('passcodeError').textContent = data.message || 'Invalid passcode';
+                        document.getElementById('passcodeError').classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('passcodeError').textContent = 'An error occurred. Please try again.';
+                    document.getElementById('passcodeError').classList.remove('hidden');
+                });
+            }
         </script>
+        
+        <!-- Passcode Modal -->
+        <div id="passcodeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">🔐 Enter Delete Passcode</h3>
+                    <button onclick="closePasscodeModal()" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">Enter your delete passcode to confirm deletion of this product.</p>
+                <input type="password" id="passcodeInput" placeholder="Enter passcode..."
+                    class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 mb-2"
+                    onkeypress="if(event.key==='Enter') submitPasscode()">
+                <p id="passcodeError" class="text-red-400 text-sm mb-4 hidden"></p>
+                <div class="flex gap-3">
+                    <button onclick="closePasscodeModal()"
+                        class="flex-1 px-4 py-3 rounded-xl bg-gray-700 text-white font-medium hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button onclick="submitPasscode()"
+                        class="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
     @endpush
 @endsection

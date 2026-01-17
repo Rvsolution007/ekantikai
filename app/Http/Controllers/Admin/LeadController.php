@@ -221,4 +221,59 @@ class LeadController extends Controller
 
         return back()->with('success', 'Notes updated successfully.');
     }
+
+    /**
+     * Delete a product from lead with passcode verification
+     */
+    public function deleteProduct(Request $request, Lead $lead, $productIndex)
+    {
+        $admin = auth('admin')->user();
+
+        // Verify passcode
+        $passcode = $request->input('passcode');
+        $storedPasscode = $admin->delete_passcode;
+
+        if (empty($storedPasscode)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Delete passcode not set. Please configure it in Settings.'
+            ], 400);
+        }
+
+        if ($passcode !== $storedPasscode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid passcode. Please try again.'
+            ], 403);
+        }
+
+        // Check if lead belongs to admin
+        if ($lead->admin_id !== $admin->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Delete from lead_products table
+        $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
+            ->skip($productIndex)
+            ->first();
+
+        if ($leadProduct) {
+            $leadProduct->delete();
+            return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+        }
+
+        // Fallback: Delete from collected_data.products array
+        $collectedData = $lead->collected_data ?? [];
+
+        if (isset($collectedData['products']) && is_array($collectedData['products'])) {
+            if (isset($collectedData['products'][$productIndex])) {
+                array_splice($collectedData['products'], $productIndex, 1);
+                $lead->collected_data = $collectedData;
+                $lead->save();
+                return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+            }
+        }
+
+        return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+    }
 }
