@@ -68,16 +68,40 @@
         @endif
 
         <!-- Search -->
-        <div class="glass rounded-xl p-4">
-            <form action="{{ route('admin.catalogue.index', ['tab' => 'products']) }}" method="GET" class="flex gap-4">
-                <input type="hidden" name="tab" value="products">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search products..."
-                    class="flex-1 px-4 py-2 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                <button type="submit" class="btn-primary px-6 py-2 rounded-xl text-white font-medium">Search</button>
+        <div class="glass rounded-xl p-4" x-data="{
+            search: '{{ request('search') }}',
+            timer: null,
+            doSearch() {
+                clearTimeout(this.timer);
+                this.timer = setTimeout(() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'products');
+                    if (this.search.trim()) {
+                        url.searchParams.set('search', this.search);
+                    } else {
+                        url.searchParams.delete('search');
+                    }
+                    window.location.href = url.toString();
+                }, 300);
+            }
+        }">
+            <div class="flex gap-4">
+                <div class="flex-1 relative">
+                    <input type="text" x-model="search" @input="doSearch()" placeholder="Search products..."
+                        class="w-full px-4 py-2 pl-10 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                    <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
                 @if(request('search'))
-                    <a href="{{ route('admin.catalogue.index', ['tab' => 'products']) }}" class="px-4 py-2 text-gray-400 hover:text-white transition-colors">Reset</a>
+                    <a href="{{ route('admin.catalogue.index', ['tab' => 'products']) }}" class="px-4 py-2 rounded-xl bg-gray-700 text-gray-300 hover:text-white hover:bg-gray-600 transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </a>
                 @endif
-            </form>
+            </div>
         </div>
 
         @if($products->isEmpty())
