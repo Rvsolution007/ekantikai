@@ -13,7 +13,7 @@ class TenantController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Admin::with('credits');
+        $query = Admin::query();
 
         // Filters
         if ($request->search) {
@@ -95,7 +95,10 @@ class TenantController extends Controller
 
     public function show(Admin $admin)
     {
-        $admin->load(['credits', 'payments', 'admins', 'aiAgents', 'workflows']);
+        $admin->load(['payments', 'aiAgents', 'workflows']);
+
+        // View expects $tenant variable
+        $tenant = $admin;
 
         $stats = [
             'total_leads' => $admin->leads()->count(),
@@ -104,7 +107,7 @@ class TenantController extends Controller
             'workflows' => $admin->workflows()->count(),
         ];
 
-        return view('superadmin.admins.show', compact('admin', 'stats'));
+        return view('superadmin.admins.show', compact('tenant', 'stats'));
     }
 
     public function edit(Admin $admin)
@@ -220,5 +223,85 @@ class TenantController extends Controller
         ]);
 
         return back()->with('success', "Password reset successfully for {$admin->email}!");
+    }
+
+    /**
+     * View all chats for an admin (WhatsApp style)
+     */
+    public function chats(Admin $admin)
+    {
+        // Get all customers for this admin with their chats
+        $customers = \App\Models\Customer::where('admin_id', $admin->id)
+            ->withCount('chatMessages')
+            ->orderBy('updated_at', 'desc')
+            ->paginate(20);
+
+        return view('superadmin.admins.chats', compact('admin', 'customers'));
+    }
+
+    /**
+     * View chat conversation with a specific customer
+     */
+    public function viewChat(Admin $admin, $customerId)
+    {
+        $customer = \App\Models\Customer::where('admin_id', $admin->id)
+            ->where('id', $customerId)
+            ->firstOrFail();
+
+        $messages = \App\Models\ChatMessage::where('customer_id', $customerId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return view('superadmin.admins.chat-view', compact('admin', 'customer', 'messages'));
+    }
+
+    /**
+     * Delete a specific chat message
+     */
+    public function deleteChat(Request $request, Admin $admin, $messageId)
+    {
+        $message = \App\Models\ChatMessage::where('id', $messageId)
+            ->whereHas('customer', function ($q) use ($admin) {
+                $q->where('admin_id', $admin->id);
+            })
+            ->first();
+
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        $message->delete();
+
+        return response()->json(['success' => true, 'message' => 'Message deleted successfully']);
+    }
+
+    /**
+     * Clear all chats for a customer
+     */
+    public function clearCustomerChats(Admin $admin, $customerId)
+    {
+        $customer = \App\Models\Customer::where('admin_id', $admin->id)
+            ->where('id', $customerId)
+            ->first();
+
+        if (!$customer) {
+            return back()->with('error', 'Customer not found');
+        }
+
+        \App\Models\ChatMessage::where('customer_id', $customerId)->delete();
+
+        return back()->with('success', 'All chats cleared for ' . ($customer->name ?? $customer->phone));
+    }
+
+    /**
+     * Clear all chats for an admin
+     */
+    public function clearAllChats(Admin $admin)
+    {
+        $customerIds = \App\Models\Customer::where('admin_id', $admin->id)->pluck('id');
+
+        \App\Models\ChatMessage::whereIn('customer_id', $customerIds)->delete();
+
+        return back()->with('success', 'All chats cleared for ' . $admin->name);
     }
 }

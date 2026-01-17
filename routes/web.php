@@ -191,6 +191,13 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::patch('/admins/{admin}/toggle-product-images', [TenantController::class, 'toggleProductImages'])->name('admins.toggle-product-images');
     Route::post('/admins/{admin}/reset-password', [TenantController::class, 'resetPassword'])->name('admins.reset-password');
 
+    // Chat Management for Admin
+    Route::get('/admins/{admin}/chats', [TenantController::class, 'chats'])->name('admins.chats');
+    Route::get('/admins/{admin}/chats/{customer}', [TenantController::class, 'viewChat'])->name('admins.chat-view');
+    Route::delete('/admins/{admin}/chats/{message}', [TenantController::class, 'deleteChat'])->name('admins.chat-delete');
+    Route::delete('/admins/{admin}/customer/{customer}/clear', [TenantController::class, 'clearCustomerChats'])->name('admins.chat-clear-customer');
+    Route::delete('/admins/{admin}/chats-clear-all', [TenantController::class, 'clearAllChats'])->name('admins.chat-clear-all');
+
     // AI Configuration (Point 9 - Super Admin)
     Route::get('/ai-config', [AIConfigController::class, 'index'])->name('ai-config.index');
     Route::post('/ai-config', [AIConfigController::class, 'update'])->name('ai-config.update');

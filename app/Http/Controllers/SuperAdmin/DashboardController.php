@@ -25,8 +25,7 @@ class DashboardController extends Controller
         ];
 
         // Recent Admins (previously Tenants)
-        $recentTenants = Admin::with('credits')
-            ->latest()
+        $recentTenants = Admin::latest()
             ->limit(5)
             ->get();
 

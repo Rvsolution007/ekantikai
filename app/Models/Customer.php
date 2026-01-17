@@ -55,6 +55,11 @@ class Customer extends Model
         return $this->hasMany(Lead::class);
     }
 
+    public function chatMessages(): HasMany
+    {
+        return $this->hasMany(ChatMessage::class);
+    }
+
     // Get or create questionnaire state
     public function getOrCreateState(): CustomerQuestionnaireState
     {
