@@ -82,7 +82,18 @@ class LeadController extends Controller
     public function show(Lead $lead)
     {
         $adminId = auth('admin')->id();
-        $lead->load('whatsappUser', 'customer', 'products', 'followups', 'assignedAdmin', 'leadProducts');
+
+        // Load relationships - exclude leadProducts as table may not exist
+        $lead->load('whatsappUser', 'customer', 'products', 'followups', 'assignedAdmin');
+
+        // Try to load leadProducts if table exists
+        try {
+            if (\Schema::hasTable('lead_products')) {
+                $lead->load('leadProducts');
+            }
+        } catch (\Exception $e) {
+            // Table doesn't exist yet
+        }
 
         // Get chat history - try customer first, then whatsappUser
         $chats = collect();
