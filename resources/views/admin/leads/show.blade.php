@@ -108,7 +108,7 @@
                                 Products
                             </span>
                             <span class="px-2 py-1 text-sm rounded-full bg-primary-500/20 text-primary-300 font-medium">
-                                {{ count($lead->collected_data['products'] ?? []) }} items
+                                {{ count($lead->collected_data['products'] ?? []) + count($lead->product_confirmations ?? []) }} items
                             </span>
                         </div>
                     </div>
@@ -193,7 +193,12 @@
                     </div>
 
                     @php
-                        $products = $lead->collected_data['products'] ?? [];
+                        // Get products from both sources
+                        $collectedProducts = $lead->collected_data['products'] ?? [];
+                        $productConfirmations = $lead->product_confirmations ?? [];
+                        
+                        // Merge both sources - product_confirmations from AI + collected_data products
+                        $products = array_merge($collectedProducts, $productConfirmations);
                     @endphp
 
                     @if(count($products) > 0)

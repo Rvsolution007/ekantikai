@@ -229,6 +229,11 @@ class WebhookController extends Controller
 
         // Handle product confirmations (Point 8.3)
         if (!empty($aiResponse['product_confirmations'])) {
+            Log::debug('Saving product confirmations', [
+                'lead_id' => $lead->id,
+                'count' => count($aiResponse['product_confirmations']),
+                'data' => $aiResponse['product_confirmations'],
+            ]);
             foreach ($aiResponse['product_confirmations'] as $product) {
                 $lead->addProductConfirmation($product);
             }
