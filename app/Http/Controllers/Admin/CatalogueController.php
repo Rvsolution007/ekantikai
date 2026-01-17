@@ -31,15 +31,16 @@ class CatalogueController extends Controller
         // Get products with dynamic data
         $query = Catalogue::where('admin_id', $adminId);
 
-        // Search only in unique fields
+        // Search in all fields (product data)
         if ($request->filled('search')) {
-            $search = $request->search;
-            $uniqueFields = $fields->where('is_unique', true)->pluck('field_key')->toArray();
+            $search = strtolower(trim($request->search));
+            $allFieldKeys = $fields->pluck('field_key')->toArray();
 
-            if (!empty($uniqueFields)) {
-                $query->where(function ($q) use ($search, $uniqueFields) {
-                    foreach ($uniqueFields as $fieldKey) {
-                        $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", ['$.' . $fieldKey, "%{$search}%"]);
+            if (!empty($allFieldKeys)) {
+                $query->where(function ($q) use ($search, $allFieldKeys) {
+                    foreach ($allFieldKeys as $fieldKey) {
+                        // Use LOWER for case-insensitive search
+                        $q->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, ?))) LIKE ?", ['$.' . $fieldKey, "%{$search}%"]);
                     }
                 });
             }
