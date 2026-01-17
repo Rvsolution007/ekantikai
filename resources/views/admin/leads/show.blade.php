@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                                @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                                @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                                @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                    @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                    @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                    @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                        {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                            {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -131,14 +131,15 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                                        {{ $lead->stage === $stageOption
+                                                                                                            {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
-                                            <span class="w-3 h-3 rounded-full mr-3 
-                                                                                        @if($stageOption === 'New Lead') bg-yellow-500
-                                                                                        @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                                        @elseif($stageOption === 'Confirm') bg-green-500
-                                                                                        @else bg-red-500 @endif"></span>
+                                            <span
+                                                class="w-3 h-3 rounded-full mr-3 
+                                                                                                            @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                                            @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                                            @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                                            @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,7 +296,7 @@
                                     </thead>
                                     <tbody class="divide-y divide-white/5">
                                         @foreach($allProducts as $index => $product)
-                                            <tr class="hover:bg-white/5 transition-colors" id="product-row-{{ $product['id'] ?? $index }}">
+                                            <tr class="hover:bg-white/5 transition-colors" id="product-row-{{ $index }}">
                                                 @foreach($productFields as $field)
                                                     <td class="px-4 py-4 text-white">
                                                         @php
@@ -308,7 +309,13 @@
                                                     </td>
                                                 @endforeach
                                                 <td class="px-4 py-4 text-center">
-                                                    <button type="button" onclick="confirmDeleteProduct({{ $product['id'] ?? $index }})"
+                                                    @php
+                                                        // Determine product source and ID
+                                                        $productId = $product['_lead_product_id'] ?? null;
+                                                        $productSource = $productId ? 'lead_product' : 'collected_data';
+                                                    @endphp
+                                                    <button type="button"
+                                                        onclick="confirmDeleteProduct('{{ $productSource }}', '{{ $productId ?? $index }}')"
                                                         class="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
                                                         title="Delete Product">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -410,7 +417,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                                        {{ $role === 'user'
+                                                                                                            {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
@@ -481,10 +488,13 @@
             });
 
             // Delete product with passcode
-            let deleteProductIndex = null;
+            let deleteProductSource = null;
+            let deleteProductId = null;
+            let deleteRowIndex = null;
 
-            function confirmDeleteProduct(index) {
-                deleteProductIndex = index;
+            function confirmDeleteProduct(source, id) {
+                deleteProductSource = source;
+                deleteProductId = id;
                 document.getElementById('passcodeModal').classList.remove('hidden');
                 document.getElementById('passcodeInput').value = '';
                 document.getElementById('passcodeInput').focus();
@@ -493,7 +503,8 @@
 
             function closePasscodeModal() {
                 document.getElementById('passcodeModal').classList.add('hidden');
-                deleteProductIndex = null;
+                deleteProductSource = null;
+                deleteProductId = null;
             }
 
             function submitPasscode() {
@@ -504,21 +515,23 @@
                     return;
                 }
 
-                fetch(`{{ url('admin/leads/' . $lead->id . '/product') }}/${deleteProductIndex}`, {
+                fetch(`{{ url('admin/leads/' . $lead->id . '/product') }}/${deleteProductId}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
-                    body: JSON.stringify({ passcode: passcode })
+                    body: JSON.stringify({ 
+                        passcode: passcode,
+                        source: deleteProductSource 
+                    })
                 })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
                             closePasscodeModal();
-                            document.getElementById('product-row-' + deleteProductIndex).remove();
-                            // Show success message
-                            alert('Product deleted successfully!');
+                            // Reload page to show updated data
+                            location.reload();
                         } else {
                             document.getElementById('passcodeError').textContent = data.message || 'Invalid passcode';
                             document.getElementById('passcodeError').classList.remove('hidden');

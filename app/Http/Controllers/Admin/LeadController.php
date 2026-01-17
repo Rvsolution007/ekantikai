@@ -225,7 +225,7 @@ class LeadController extends Controller
     /**
      * Delete a product from lead with passcode verification
      */
-    public function deleteProduct(Request $request, Lead $lead, $productId)
+    public function deleteProduct(Request $request, Lead $lead, $productIndex)
     {
         $admin = auth('admin')->user();
 
@@ -252,14 +252,32 @@ class LeadController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        // Delete from lead_products table by ID
-        $leadProduct = \App\Models\LeadProduct::where('id', $productId)
-            ->where('lead_id', $lead->id)
-            ->first();
+        $source = $request->input('source', 'lead_product');
 
-        if ($leadProduct) {
-            $leadProduct->delete();
-            return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+        // Delete based on source type
+        if ($source === 'lead_product') {
+            // Delete from lead_products table by ID
+            $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
+                ->where('id', $productIndex) // productIndex is actually the LeadProduct ID
+                ->first();
+
+            if ($leadProduct) {
+                $leadProduct->delete();
+                return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+            }
+        }
+
+        // Fallback: Delete from collected_data.products array (by index)
+        $collectedData = $lead->collected_data ?? [];
+
+        if (isset($collectedData['products']) && is_array($collectedData['products'])) {
+            $index = (int) $productIndex;
+            if (isset($collectedData['products'][$index])) {
+                array_splice($collectedData['products'], $index, 1);
+                $lead->collected_data = $collectedData;
+                $lead->save();
+                return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+            }
         }
 
         return response()->json(['success' => false, 'message' => 'Product not found'], 404);
