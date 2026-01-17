@@ -231,17 +231,18 @@ class CatalogueController extends Controller
 
         $ids = $request->input('ids', []);
 
+        // Handle JSON string from form
+        if (is_string($ids)) {
+            $ids = json_decode($ids, true) ?? [];
+        }
+
         if (empty($ids)) {
-            return response()->json(['success' => false, 'message' => 'No products selected']);
+            return back()->with('error', 'No products selected');
         }
 
         $deleted = Catalogue::where('admin_id', $adminId)
             ->whereIn('id', $ids)
             ->delete();
-
-        if ($request->ajax()) {
-            return response()->json(['success' => true, 'deleted' => $deleted]);
-        }
 
         return back()->with('success', $deleted . ' products deleted successfully!');
     }
