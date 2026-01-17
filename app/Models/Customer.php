@@ -203,6 +203,19 @@ class Customer extends Model
             // Get default lead status for this admin
             $defaultStatus = LeadStatus::getDefault($admin->id);
 
+            // Check if customer has a client profile (returning customer)
+            $collectedData = [];
+            $client = $this->client;
+            if ($client && $client->global_fields) {
+                // Pre-fill global questions from client data
+                $collectedData['global_questions'] = $client->global_fields;
+
+                // Also sync to customer's global_fields for workflow engine
+                $this->global_fields = array_merge($this->global_fields ?? [], $client->global_fields);
+                $this->global_asked = array_merge($this->global_asked ?? [], array_fill_keys(array_keys($client->global_fields), true));
+                $this->save();
+            }
+
             $existingLead = Lead::create([
                 'admin_id' => $admin->id,
                 'customer_id' => $this->id,
@@ -213,6 +226,7 @@ class Customer extends Model
                 'lead_quality' => Lead::QUALITY_COLD,
                 'lead_score' => 0,
                 'detected_language' => $this->detected_language,
+                'collected_data' => $collectedData,
             ]);
         }
 
