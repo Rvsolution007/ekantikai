@@ -31,15 +31,21 @@ class CatalogueController extends Controller
         // Get products with dynamic data
         $query = Catalogue::where('admin_id', $adminId);
 
-        // Search in JSON data
+        // Search only in unique fields
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw("JSON_SEARCH(data, 'one', ?) IS NOT NULL", ["%{$search}%"]);
-            });
+            $uniqueFields = $fields->where('is_unique', true)->pluck('field_key')->toArray();
+
+            if (!empty($uniqueFields)) {
+                $query->where(function ($q) use ($search, $uniqueFields) {
+                    foreach ($uniqueFields as $fieldKey) {
+                        $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", ['$.' . $fieldKey, "%{$search}%"]);
+                    }
+                });
+            }
         }
 
-        $products = $query->orderBy('id', 'desc')->paginate(20);
+        $products = $query->orderBy('id', 'desc')->paginate(50);
 
         // Get import errors from session
         $importErrors = session('import_errors', []);
@@ -213,6 +219,65 @@ class CatalogueController extends Controller
         Catalogue::where('admin_id', $adminId)->delete();
 
         return back()->with('success', 'All products deleted successfully!');
+    }
+
+    /**
+     * Bulk delete multiple products
+     */
+    public function bulkDelete(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
+
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'No products selected']);
+        }
+
+        $deleted = Catalogue::where('admin_id', $adminId)
+            ->whereIn('id', $ids)
+            ->delete();
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'deleted' => $deleted]);
+        }
+
+        return back()->with('success', $deleted . ' products deleted successfully!');
+    }
+
+    /**
+     * AJAX search for smooth experience
+     */
+    public function ajaxSearch(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
+
+        $fields = CatalogueField::forTenant($adminId)->ordered()->get();
+        $query = Catalogue::where('admin_id', $adminId);
+
+        // Search only in unique fields
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $uniqueFields = $fields->where('is_unique', true)->pluck('field_key')->toArray();
+
+            if (!empty($uniqueFields)) {
+                $query->where(function ($q) use ($search, $uniqueFields) {
+                    foreach ($uniqueFields as $fieldKey) {
+                        $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", ['$.' . $fieldKey, "%{$search}%"]);
+                    }
+                });
+            }
+        }
+
+        $products = $query->orderBy('id', 'desc')->paginate(50);
+
+        return response()->json([
+            'html' => view('admin.catalogue.partials.products-table', compact('products', 'fields'))->render(),
+            'total' => $products->total(),
+            'pagination' => $products->hasPages() ? $products->withQueryString()->links()->render() : '',
+        ]);
     }
 
     /**

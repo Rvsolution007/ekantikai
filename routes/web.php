@@ -93,6 +93,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/catalogue/{catalogue}/toggle-status', [CatalogueController::class, 'toggleStatus'])->name('catalogue.toggle-status');
         Route::post('/catalogue/{catalogue}/upload-image', [CatalogueController::class, 'uploadImage'])->name('catalogue.upload-image');
         Route::delete('/catalogue/clear-all', [CatalogueController::class, 'clearAll'])->name('catalogue.clear-all');
+        Route::post('/catalogue/bulk-delete', [CatalogueController::class, 'bulkDelete'])->name('catalogue.bulk-delete');
+        Route::get('/catalogue/ajax-search', [CatalogueController::class, 'ajaxSearch'])->name('catalogue.ajax-search');
 
         // Catalogue Fields
         Route::post('/catalogue-fields', [CatalogueFieldController::class, 'store'])->name('catalogue-fields.store');
