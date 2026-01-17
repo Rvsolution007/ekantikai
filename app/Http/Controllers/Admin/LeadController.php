@@ -81,6 +81,7 @@ class LeadController extends Controller
      */
     public function show(Lead $lead)
     {
+        $adminId = auth('admin')->id();
         $lead->load('whatsappUser', 'customer', 'products', 'followups', 'assignedAdmin');
 
         // Get chat history - try customer first, then whatsappUser
@@ -95,7 +96,13 @@ class LeadController extends Controller
             $chats = $lead->whatsappUser->chats()->orderBy('created_at', 'asc')->get();
         }
 
-        return view('admin.leads.show', compact('lead', 'chats'));
+        // Get Product Question fields for table columns (from workflow)
+        $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['field_name', 'display_name', 'field_type']);
+
+        return view('admin.leads.show', compact('lead', 'chats', 'productFields'));
     }
 
     /**

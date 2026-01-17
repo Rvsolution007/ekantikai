@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                        @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                        @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                        @else bg-blue-500/20 border border-blue-500/30 @endif">
+                            @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                            @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                            @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                    {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -108,7 +108,8 @@
                                 Products
                             </span>
                             <span class="px-2 py-1 text-sm rounded-full bg-primary-500/20 text-primary-300 font-medium">
-                                {{ count($lead->collected_data['products'] ?? []) + count($lead->product_confirmations ?? []) }} items
+                                {{ count($lead->collected_data['products'] ?? []) + count($lead->product_confirmations ?? []) }}
+                                items
                             </span>
                         </div>
                     </div>
@@ -126,14 +127,14 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                {{ $lead->stage === $stageOption
+                                                                    {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span class="w-3 h-3 rounded-full mr-3 
-                                                @if($stageOption === 'New Lead') bg-yellow-500
-                                                @elseif($stageOption === 'Qualified') bg-blue-500
-                                                @elseif($stageOption === 'Confirm') bg-green-500
-                                                @else bg-red-500 @endif"></span>
+                                                                    @if($stageOption === 'New Lead') bg-yellow-500
+                                                                    @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                    @elseif($stageOption === 'Confirm') bg-green-500
+                                                                    @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,7 +184,8 @@
                                     Product Quotation
                                 </h3>
                                 <p class="text-white/70 text-sm mt-1">Items requested by
-                                    {{ $lead->contact_name ?? 'customer' }}</p>
+                                    {{ $lead->contact_name ?? 'customer' }}
+                                </p>
                             </div>
                             <div class="text-right">
                                 <p class="text-white/70 text-sm">Date</p>
@@ -196,60 +198,44 @@
                         // Get products from both sources
                         $collectedProducts = $lead->collected_data['products'] ?? [];
                         $productConfirmations = $lead->product_confirmations ?? [];
-                        
-                        // Merge both sources - product_confirmations from AI + collected_data products
+
+                        // Merge both sources
                         $products = array_merge($collectedProducts, $productConfirmations);
                     @endphp
 
                     @if(count($products) > 0)
                         <div class="p-6">
-                            <!-- Quotation Table -->
+                            <!-- Dynamic Quotation Table with productFields columns -->
                             <div class="overflow-x-auto">
                                 <table class="w-full">
                                     <thead>
                                         <tr class="border-b border-white/10">
-                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">#</th>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
-                                                Product Details</th>
-                                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">Qty
-                                            </th>
-                                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase">
-                                                Specifications</th>
+                                            @foreach($productFields as $field)
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">
+                                                    {{ $field->display_name }}
+                                                </th>
+                                            @endforeach
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-white/5">
-                                        @foreach($products as $index => $product)
+                                        @foreach($products as $product)
                                             <tr class="hover:bg-white/5 transition-colors">
-                                                <td class="px-4 py-4">
-                                                    <span
-                                                        class="w-8 h-8 rounded-lg bg-primary-500/20 text-primary-400 flex items-center justify-center text-sm font-medium">
-                                                        {{ $index + 1 }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-4 py-4">
-                                                    <div>
-                                                        <p class="text-white font-medium">
-                                                            {{ $product['category'] ?? $product['model'] ?? 'Product' }}</p>
-                                                        <p class="text-gray-400 text-sm">{{ $product['model'] ?? '' }}</p>
-                                                    </div>
-                                                </td>
-                                                <td class="px-4 py-4 text-center">
-                                                    <span
-                                                        class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
-                                                        {{ $product['qty'] ?? $product['quantity'] ?? 1 }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-4 py-4 text-right">
-                                                    <div class="flex flex-wrap gap-2 justify-end">
-                                                        @foreach($product as $key => $value)
-                                                            @if(!in_array($key, ['category', 'model', 'qty', 'quantity']))
-                                                                <span class="px-2 py-1 bg-white/5 rounded-lg text-xs text-gray-300">
-                                                                    {{ ucfirst($key) }}: {{ $value }}
-                                                                </span>
-                                                            @endif
-                                                        @endforeach
-                                                    </div>
-                                                </td>
+                                                @foreach($productFields as $field)
+                                                    <td class="px-4 py-4 text-white">
+                                                        @php
+                                                            // Check both field_name and possible variations
+                                                            $value = $product[$field->field_name] ??
+                                                                $product[strtolower($field->field_name)] ??
+                                                                $product[ucfirst($field->field_name)] ??
+                                                                '-';
+                                                            // Also check for 'field' and 'value' format from AI
+                                                            if ($value === '-' && isset($product['field']) && $product['field'] === $field->field_name) {
+                                                                $value = $product['value'] ?? '-';
+                                                            }
+                                                        @endphp
+                                                        {{ $value }}
+                                                    </td>
+                                                @endforeach
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -269,7 +255,18 @@
                                 </div>
                                 <div class="text-right">
                                     <p class="text-2xl font-bold text-white">
-                                        {{ array_sum(array_map(fn($p) => intval($p['qty'] ?? $p['quantity'] ?? 1), $products)) }}
+                                        @php
+                                            $totalQty = array_sum(array_map(function ($p) use ($productFields) {
+                                                // Look for qty field
+                                                foreach ($productFields as $field) {
+                                                    if (in_array(strtolower($field->field_name), ['qty', 'quantity'])) {
+                                                        return intval($p[$field->field_name] ?? $p['qty'] ?? $p['quantity'] ?? 1);
+                                                    }
+                                                }
+                                                return intval($p['qty'] ?? $p['quantity'] ?? 1);
+                                            }, $products));
+                                        @endphp
+                                        {{ $totalQty }}
                                     </p>
                                     <p class="text-gray-400 text-sm">Total Quantity</p>
                                 </div>
@@ -332,7 +329,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                {{ $role === 'user'
+                                                                    {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
