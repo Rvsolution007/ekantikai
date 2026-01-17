@@ -225,7 +225,7 @@ class LeadController extends Controller
     /**
      * Delete a product from lead with passcode verification
      */
-    public function deleteProduct(Request $request, Lead $lead, $productIndex)
+    public function deleteProduct(Request $request, Lead $lead, $productId)
     {
         $admin = auth('admin')->user();
 
@@ -252,26 +252,14 @@ class LeadController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        // Delete from lead_products table
-        $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
-            ->skip($productIndex)
+        // Delete from lead_products table by ID
+        $leadProduct = \App\Models\LeadProduct::where('id', $productId)
+            ->where('lead_id', $lead->id)
             ->first();
 
         if ($leadProduct) {
             $leadProduct->delete();
             return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
-        }
-
-        // Fallback: Delete from collected_data.products array
-        $collectedData = $lead->collected_data ?? [];
-
-        if (isset($collectedData['products']) && is_array($collectedData['products'])) {
-            if (isset($collectedData['products'][$productIndex])) {
-                array_splice($collectedData['products'], $productIndex, 1);
-                $lead->collected_data = $collectedData;
-                $lead->save();
-                return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
-            }
         }
 
         return response()->json(['success' => false, 'message' => 'Product not found'], 404);

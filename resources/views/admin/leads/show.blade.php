@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                            @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                            @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                            @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                    {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                        {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -131,14 +131,14 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                    {{ $lead->stage === $stageOption
+                                                                                        {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span class="w-3 h-3 rounded-full mr-3 
-                                                                    @if($stageOption === 'New Lead') bg-yellow-500
-                                                                    @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                    @elseif($stageOption === 'Confirm') bg-green-500
-                                                                    @else bg-red-500 @endif"></span>
+                                                                                        @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                        @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                        @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                        @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +201,7 @@
                     @php
                         // Safely get products - handle multiple data formats
                         $allProducts = collect();
-                        
+
                         // 1. Get from lead_products table (new system)
                         try {
                             $leadProducts = $lead->leadProducts ?? collect();
@@ -213,13 +213,13 @@
                         } catch (\Exception $e) {
                             // Table might not exist yet
                         }
-                        
+
                         // 2. Transform OLD format product_confirmations (field/value pairs)
                         $legacyConfirmations = $lead->product_confirmations ?? [];
                         if (!empty($legacyConfirmations)) {
                             // Check if it's old format (has 'field' key)
                             $isOldFormat = isset($legacyConfirmations[0]['field']);
-                            
+
                             if ($isOldFormat) {
                                 // Transform field/value pairs into single product object
                                 $transformedProduct = [];
@@ -240,28 +240,28 @@
                                 }
                             }
                         }
-                        
+
                         // 3. Get from collected_data (global_questions + workflow_questions)
                         $collectedData = $lead->collected_data ?? [];
                         $globalQ = $collectedData['global_questions'] ?? [];
                         $workflowQ = $collectedData['workflow_questions'] ?? [];
-                        
+
                         // Merge global and workflow questions as a product if they have product fields
                         if (!empty($globalQ) || !empty($workflowQ)) {
                             $mergedProduct = array_merge($globalQ, $workflowQ);
                             // Only add if it has meaningful product data
                             if (isset($mergedProduct['category']) || isset($mergedProduct['model'])) {
                                 // Check if this data is already in allProducts
-                                $isDuplicate = $allProducts->contains(function($p) use ($mergedProduct) {
+                                $isDuplicate = $allProducts->contains(function ($p) use ($mergedProduct) {
                                     return ($p['category'] ?? '') === ($mergedProduct['category'] ?? '') &&
-                                           ($p['model'] ?? '') === ($mergedProduct['model'] ?? '');
+                                        ($p['model'] ?? '') === ($mergedProduct['model'] ?? '');
                                 });
                                 if (!$isDuplicate) {
                                     $allProducts->push($mergedProduct);
                                 }
                             }
                         }
-                        
+
                         // 4. Legacy collected_data products array
                         $collectedProducts = $collectedData['products'] ?? [];
                         foreach ($collectedProducts as $cp) {
@@ -269,9 +269,9 @@
                                 $allProducts->push($cp);
                             }
                         }
-                        
+
                         // Remove duplicates - keep unique by category+model
-                        $allProducts = $allProducts->unique(function($item) {
+                        $allProducts = $allProducts->unique(function ($item) {
                             return ($item['category'] ?? '') . '|' . ($item['model'] ?? '');
                         })->values();
                     @endphp
@@ -295,7 +295,7 @@
                                     </thead>
                                     <tbody class="divide-y divide-white/5">
                                         @foreach($allProducts as $index => $product)
-                                            <tr class="hover:bg-white/5 transition-colors" id="product-row-{{ $index }}">
+                                            <tr class="hover:bg-white/5 transition-colors" id="product-row-{{ $product['id'] ?? $index }}">
                                                 @foreach($productFields as $field)
                                                     <td class="px-4 py-4 text-white">
                                                         @php
@@ -308,12 +308,11 @@
                                                     </td>
                                                 @endforeach
                                                 <td class="px-4 py-4 text-center">
-                                                    <button type="button"
-                                                        onclick="confirmDeleteProduct({{ $index }})"
+                                                    <button type="button" onclick="confirmDeleteProduct({{ $product['id'] ?? $index }})"
                                                         class="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
                                                         title="Delete Product">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                         </svg>
                                                     </button>
@@ -411,7 +410,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                    {{ $role === 'user'
+                                                                                        {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
@@ -480,10 +479,10 @@
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             });
-            
+
             // Delete product with passcode
             let deleteProductIndex = null;
-            
+
             function confirmDeleteProduct(index) {
                 deleteProductIndex = index;
                 document.getElementById('passcodeModal').classList.remove('hidden');
@@ -491,12 +490,12 @@
                 document.getElementById('passcodeInput').focus();
                 document.getElementById('passcodeError').classList.add('hidden');
             }
-            
+
             function closePasscodeModal() {
                 document.getElementById('passcodeModal').classList.add('hidden');
                 deleteProductIndex = null;
             }
-            
+
             function submitPasscode() {
                 const passcode = document.getElementById('passcodeInput').value;
                 if (!passcode) {
@@ -504,7 +503,7 @@
                     document.getElementById('passcodeError').classList.remove('hidden');
                     return;
                 }
-                
+
                 fetch(`{{ url('admin/leads/' . $lead->id . '/product') }}/${deleteProductIndex}`, {
                     method: 'DELETE',
                     headers: {
@@ -513,25 +512,25 @@
                     },
                     body: JSON.stringify({ passcode: passcode })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        closePasscodeModal();
-                        document.getElementById('product-row-' + deleteProductIndex).remove();
-                        // Show success message
-                        alert('Product deleted successfully!');
-                    } else {
-                        document.getElementById('passcodeError').textContent = data.message || 'Invalid passcode';
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            closePasscodeModal();
+                            document.getElementById('product-row-' + deleteProductIndex).remove();
+                            // Show success message
+                            alert('Product deleted successfully!');
+                        } else {
+                            document.getElementById('passcodeError').textContent = data.message || 'Invalid passcode';
+                            document.getElementById('passcodeError').classList.remove('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById('passcodeError').textContent = 'An error occurred. Please try again.';
                         document.getElementById('passcodeError').classList.remove('hidden');
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('passcodeError').textContent = 'An error occurred. Please try again.';
-                    document.getElementById('passcodeError').classList.remove('hidden');
-                });
+                    });
             }
         </script>
-        
+
         <!-- Passcode Modal -->
         <div id="passcodeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
