@@ -195,15 +195,29 @@
                     </div>
 
                     @php
-                        // Get products from both sources
+                        // Get products from lead_products table (new) + legacy sources
+                        $leadProducts = $lead->leadProducts ?? collect();
                         $collectedProducts = $lead->collected_data['products'] ?? [];
-                        $productConfirmations = $lead->product_confirmations ?? [];
-
-                        // Merge both sources
-                        $products = array_merge($collectedProducts, $productConfirmations);
+                        $legacyConfirmations = $lead->product_confirmations ?? [];
+                        
+                        // Combine all sources for display
+                        $allProducts = collect();
+                        
+                        // Add products from new lead_products table
+                        foreach ($leadProducts as $lp) {
+                            $allProducts->push($lp->toProductArray());
+                        }
+                        
+                        // Add legacy data if any
+                        foreach ($collectedProducts as $cp) {
+                            $allProducts->push($cp);
+                        }
+                        foreach ($legacyConfirmations as $lc) {
+                            $allProducts->push($lc);
+                        }
                     @endphp
 
-                    @if(count($products) > 0)
+                    @if($allProducts->count() > 0)
                         <div class="p-6">
                             <!-- Dynamic Quotation Table with productFields columns -->
                             <div class="overflow-x-auto">
@@ -218,22 +232,17 @@
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-white/5">
-                                        @foreach($products as $product)
+                                        @foreach($allProducts as $product)
                                             <tr class="hover:bg-white/5 transition-colors">
                                                 @foreach($productFields as $field)
                                                     <td class="px-4 py-4 text-white">
                                                         @php
-                                                            // Check both field_name and possible variations
                                                             $value = $product[$field->field_name] ??
                                                                 $product[strtolower($field->field_name)] ??
                                                                 $product[ucfirst($field->field_name)] ??
                                                                 '-';
-                                                            // Also check for 'field' and 'value' format from AI
-                                                            if ($value === '-' && isset($product['field']) && $product['field'] === $field->field_name) {
-                                                                $value = $product['value'] ?? '-';
-                                                            }
                                                         @endphp
-                                                        {{ $value }}
+                                                        {{ $value ?: '-' }}
                                                     </td>
                                                 @endforeach
                                             </tr>

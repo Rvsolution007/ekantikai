@@ -96,6 +96,14 @@ class Lead extends Model
     }
 
     /**
+     * Get confirmed products (from lead_products table)
+     */
+    public function leadProducts()
+    {
+        return $this->hasMany(LeadProduct::class);
+    }
+
+    /**
      * Add or update collected data
      */
     public function addCollectedData(string $key, $value, string $category = 'global_questions'): void

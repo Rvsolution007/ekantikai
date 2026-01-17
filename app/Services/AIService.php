@@ -476,8 +476,25 @@ IMPORTANT: You MUST detect the language of user's message and respond in THE EXA
     "intent": "inquiry|confirmation|modification|rejection|casual|unclear",
     "lead_status_suggestion": "status name from list above or null",
     "extracted_data": {"field_name": "value"},
-    "product_confirmations": [{"field": "value"}],
-    "product_actions": {"action": "add|remove|update", "details": {}},
+    "product_confirmations": [
+        {
+            "category": "Product type if mentioned",
+            "model": "Model number if mentioned",
+            "size": "Size if mentioned",
+            "finish": "Finish/color if mentioned",
+            "qty": 1,
+            "material": "Material if mentioned",
+            "packaging": "Packaging if mentioned"
+        }
+    ],
+    "product_rejections": [
+        {
+            "category": "Product to remove (add * to delete)",
+            "model": "Model to remove (add * to delete)",
+            "size": "Size to clear",
+            "finish": "Finish to clear"
+        }
+    ],
     "unique_field_mentioned": "unique field value if mentioned or null",
     "response_message": "Your conversational response IN USER'S LANGUAGE",
     "all_required_complete": true/false,
@@ -486,13 +503,14 @@ IMPORTANT: You MUST detect the language of user's message and respond in THE EXA
 
 ## RULES:
 1. ALWAYS respond in the SAME LANGUAGE as user's input - this is MANDATORY
-2. Extract ALL relevant fields from message
-3. Return ONLY valid JSON
-4. Check if all required questions are answered
-5. If user says they don't want something, note removal in product_actions
-6. Determine lead status based on answered questions and user engagement
-7. NEVER mention products not in your catalogue - only use products from YOUR PRODUCT CATALOGUE section
-8. If language is unclear, default to Hinglish (Hindi+English mix)
+2. Extract ALL product fields into product_confirmations as objects with category, model, size, finish, qty, material, packaging
+3. DO NOT create separate confirmations for same product - combine into ONE object
+4. If user wants to remove/cancel something, add to product_rejections with * on the field
+5. Return ONLY valid JSON
+6. Check if all required questions are answered
+7. Determine lead status based on answered questions and user engagement
+8. NEVER mention products not in your catalogue
+9. If language is unclear, default to Hinglish (Hindi+English mix)
 
 PROMPT;
     }

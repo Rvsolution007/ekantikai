@@ -13,6 +13,7 @@ use App\Services\AIService;
 use App\Services\BotControlService;
 use App\Services\LanguageDetectionService;
 use App\Services\MessageProcessorService;
+use App\Services\ProductConfirmationService;
 use App\Services\QuestionnaireService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -23,11 +24,13 @@ class WebhookController extends Controller
 {
     protected BotControlService $botControlService;
     protected LanguageDetectionService $languageService;
+    protected ProductConfirmationService $productService;
 
     public function __construct()
     {
         $this->botControlService = new BotControlService();
         $this->languageService = new LanguageDetectionService();
+        $this->productService = new ProductConfirmationService();
     }
 
     /**
@@ -227,24 +230,35 @@ class WebhookController extends Controller
             }
         }
 
-        // Handle product confirmations (Point 8.3)
+        // Handle product confirmations using ProductConfirmationService (Point 8.3)
         if (!empty($aiResponse['product_confirmations'])) {
-            Log::debug('Saving product confirmations', [
+            Log::debug('Processing product confirmations with service', [
                 'lead_id' => $lead->id,
                 'count' => count($aiResponse['product_confirmations']),
                 'data' => $aiResponse['product_confirmations'],
             ]);
-            foreach ($aiResponse['product_confirmations'] as $product) {
-                $lead->addProductConfirmation($product);
-            }
+
+            $results = $this->productService->processConfirmations($lead, $aiResponse['product_confirmations']);
+
+            Log::debug('Product confirmation results', [
+                'lead_id' => $lead->id,
+                'results' => $results,
+            ]);
         }
 
-        // Handle product actions (remove/update)
-        if (!empty($aiResponse['product_actions'])) {
-            $action = $aiResponse['product_actions'];
-            if ($action['action'] === 'remove' && isset($action['index'])) {
-                $lead->updateProductConfirmation($action['index'], null);
-            }
+        // Handle product rejections/deletions (Point 8.3b)
+        if (!empty($aiResponse['product_rejections'])) {
+            Log::debug('Processing product rejections', [
+                'lead_id' => $lead->id,
+                'rejections' => $aiResponse['product_rejections'],
+            ]);
+
+            $results = $this->productService->processRejections($lead, $aiResponse['product_rejections']);
+
+            Log::debug('Product rejection results', [
+                'lead_id' => $lead->id,
+                'results' => $results,
+            ]);
         }
 
         // Update lead status (Point 8.5)

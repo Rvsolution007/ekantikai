@@ -82,7 +82,7 @@ class LeadController extends Controller
     public function show(Lead $lead)
     {
         $adminId = auth('admin')->id();
-        $lead->load('whatsappUser', 'customer', 'products', 'followups', 'assignedAdmin');
+        $lead->load('whatsappUser', 'customer', 'products', 'followups', 'assignedAdmin', 'leadProducts');
 
         // Get chat history - try customer first, then whatsappUser
         $chats = collect();
