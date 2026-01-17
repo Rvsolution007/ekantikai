@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                                    @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                                    @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                                    @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                        @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                        @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                        @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -75,16 +75,44 @@
                             </span>
                             <span class="text-white font-medium">{{ $lead->customer->global_fields['city'] ?? '-' }}</span>
                         </div>
-                        <div class="flex items-center justify-between py-3 border-b border-white/10">
-                            <span class="text-gray-400 flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Purpose
-                            </span>
-                            <span class="text-white font-medium">{{ $lead->purpose_of_purchase ?? '-' }}</span>
-                        </div>
+
+                        {{-- Dynamic Global Question Fields --}}
+                        @if(isset($globalFields) && $globalFields->count() > 0)
+                            @foreach($globalFields as $gField)
+                                <div class="flex items-center justify-between py-3 border-b border-white/10">
+                                    <span class="text-gray-400 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        {{ $gField['display_name'] }}
+                                    </span>
+                                    <span class="text-white font-medium">
+                                        @php
+                                            $fieldKey = strtolower($gField['field_name']);
+                                            $globalVal = $lead->collected_data['global_questions'][$fieldKey] ??
+                                                $lead->collected_data['global_questions'][$gField['field_name']] ??
+                                                $lead->customer->global_fields[$fieldKey] ??
+                                                '-';
+                                        @endphp
+                                        {{ $globalVal }}
+                                    </span>
+                                </div>
+                            @endforeach
+                        @else
+                            {{-- Fallback: Show Purpose if no globalFields defined --}}
+                            <div class="flex items-center justify-between py-3 border-b border-white/10">
+                                <span class="text-gray-400 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Purpose
+                                </span>
+                                <span class="text-white font-medium">{{ $lead->purpose_of_purchase ?? '-' }}</span>
+                            </div>
+                        @endif
+
                         <div class="flex items-center justify-between py-3 border-b border-white/10">
                             <span class="text-gray-400 flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +123,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                            {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                                {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -131,15 +159,15 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                                                            {{ $lead->stage === $stageOption
+                                                                                                                                {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span
                                                 class="w-3 h-3 rounded-full mr-3 
-                                                                                                            @if($stageOption === 'New Lead') bg-yellow-500
-                                                                                                            @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                                                            @elseif($stageOption === 'Confirm') bg-green-500
-                                                                                                            @else bg-red-500 @endif"></span>
+                                                                                                                                @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                                                                @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                                                                @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                                                                @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +445,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                                                            {{ $role === 'user'
+                                                                                                                                {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
@@ -521,9 +549,9 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         passcode: passcode,
-                        source: deleteProductSource 
+                        source: deleteProductSource
                     })
                 })
                     .then(response => response.json())

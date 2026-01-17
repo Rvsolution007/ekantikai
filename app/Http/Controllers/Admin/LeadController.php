@@ -108,12 +108,55 @@ class LeadController extends Controller
         }
 
         // Get Product Question fields for table columns (from workflow)
+        // These are fields from Product Question nodes in flowchart
         $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
             ->where('is_active', true)
             ->orderBy('sort_order')
-            ->get(['field_name', 'display_name', 'field_type']);
+            ->get(['id', 'field_name', 'display_name', 'field_type']);
 
-        return view('admin.leads.show', compact('lead', 'chats', 'productFields'));
+        // Get Global Question fields for left panel
+        // These are fields stored in global_questions in collected_data
+        $globalQuestionNodes = \App\Models\QuestionnaireNode::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->whereNotNull('questionnaire_field_id')
+            ->with('questionnaireField')
+            ->get();
+
+        // Build global fields from nodes that are connected to "Global Questions" section
+        // Check config for question_type = 'global'
+        $globalFields = collect();
+        foreach ($globalQuestionNodes as $node) {
+            $config = $node->config ?? [];
+            if (isset($config['question_type']) && $config['question_type'] === 'global' && $node->questionnaireField) {
+                $globalFields->push([
+                    'field_name' => $node->questionnaireField->field_name,
+                    'display_name' => $node->questionnaireField->display_name ?? $node->label,
+                ]);
+            }
+        }
+
+        // If no explicit global type, check collected_data keys to infer global fields
+        if ($globalFields->isEmpty() && $lead->collected_data) {
+            $globalKeys = array_keys($lead->collected_data['global_questions'] ?? []);
+            foreach ($globalKeys as $key) {
+                // Find matching field
+                $field = $productFields->first(function ($f) use ($key) {
+                    return strtolower($f->field_name) === strtolower($key);
+                });
+                if ($field) {
+                    $globalFields->push([
+                        'field_name' => $field->field_name,
+                        'display_name' => $field->display_name,
+                    ]);
+                    // Remove from product fields
+                    $productFields = $productFields->reject(function ($f) use ($key) {
+                        return strtolower($f->field_name) === strtolower($key);
+                    });
+                }
+            }
+        }
+
+        return view('admin.leads.show', compact('lead', 'chats', 'productFields', 'globalFields'));
     }
 
     /**
