@@ -108,10 +108,19 @@ class LeadController extends Controller
         }
 
         // Get Product Question fields for table columns (from workflow)
+        // Exclude fields that are global questions (like City)
         $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get(['field_name', 'display_name', 'field_type']);
+
+        // Get global question keys to exclude from product table
+        $globalKeys = array_keys($lead->collected_data['global_questions'] ?? []);
+        if (!empty($globalKeys)) {
+            $productFields = $productFields->reject(function ($field) use ($globalKeys) {
+                return in_array(strtolower($field->field_name), array_map('strtolower', $globalKeys));
+            });
+        }
 
         return view('admin.leads.show', compact('lead', 'chats', 'productFields'));
     }
@@ -252,22 +261,28 @@ class LeadController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        // Delete from lead_products table
-        $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
-            ->skip($productIndex)
-            ->first();
+        $source = $request->input('source', 'lead_product');
 
-        if ($leadProduct) {
-            $leadProduct->delete();
-            return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+        // Delete based on source
+        if ($source === 'lead_product') {
+            // productIndex is actually the LeadProduct ID
+            $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
+                ->where('id', $productIndex)
+                ->first();
+
+            if ($leadProduct) {
+                $leadProduct->delete();
+                return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+            }
         }
 
         // Fallback: Delete from collected_data.products array
         $collectedData = $lead->collected_data ?? [];
 
         if (isset($collectedData['products']) && is_array($collectedData['products'])) {
-            if (isset($collectedData['products'][$productIndex])) {
-                array_splice($collectedData['products'], $productIndex, 1);
+            $index = (int) $productIndex;
+            if (isset($collectedData['products'][$index])) {
+                array_splice($collectedData['products'], $index, 1);
                 $lead->collected_data = $collectedData;
                 $lead->save();
                 return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
