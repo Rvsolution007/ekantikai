@@ -75,7 +75,6 @@ class LeadProduct extends Model
     public function toProductArray(): array
     {
         return [
-            '_lead_product_id' => $this->id,
             'category' => $this->category,
             'model' => $this->model,
             'size' => $this->size,

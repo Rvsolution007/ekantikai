@@ -108,55 +108,12 @@ class LeadController extends Controller
         }
 
         // Get Product Question fields for table columns (from workflow)
-        // These are fields from Product Question nodes in flowchart
         $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
             ->where('is_active', true)
             ->orderBy('sort_order')
-            ->get(['id', 'field_name', 'display_name', 'field_type']);
+            ->get(['field_name', 'display_name', 'field_type']);
 
-        // Get Global Question fields for left panel
-        // These are fields stored in global_questions in collected_data
-        $globalQuestionNodes = \App\Models\QuestionnaireNode::where('admin_id', $adminId)
-            ->where('is_active', true)
-            ->whereNotNull('questionnaire_field_id')
-            ->with('questionnaireField')
-            ->get();
-
-        // Build global fields from nodes that are connected to "Global Questions" section
-        // Check config for question_type = 'global'
-        $globalFields = collect();
-        foreach ($globalQuestionNodes as $node) {
-            $config = $node->config ?? [];
-            if (isset($config['question_type']) && $config['question_type'] === 'global' && $node->questionnaireField) {
-                $globalFields->push([
-                    'field_name' => $node->questionnaireField->field_name,
-                    'display_name' => $node->questionnaireField->display_name ?? $node->label,
-                ]);
-            }
-        }
-
-        // If no explicit global type, check collected_data keys to infer global fields
-        if ($globalFields->isEmpty() && $lead->collected_data) {
-            $globalKeys = array_keys($lead->collected_data['global_questions'] ?? []);
-            foreach ($globalKeys as $key) {
-                // Find matching field
-                $field = $productFields->first(function ($f) use ($key) {
-                    return strtolower($f->field_name) === strtolower($key);
-                });
-                if ($field) {
-                    $globalFields->push([
-                        'field_name' => $field->field_name,
-                        'display_name' => $field->display_name,
-                    ]);
-                    // Remove from product fields
-                    $productFields = $productFields->reject(function ($f) use ($key) {
-                        return strtolower($f->field_name) === strtolower($key);
-                    });
-                }
-            }
-        }
-
-        return view('admin.leads.show', compact('lead', 'chats', 'productFields', 'globalFields'));
+        return view('admin.leads.show', compact('lead', 'chats', 'productFields'));
     }
 
     /**
@@ -295,28 +252,22 @@ class LeadController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $source = $request->input('source', 'lead_product');
+        // Delete from lead_products table
+        $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
+            ->skip($productIndex)
+            ->first();
 
-        // Delete based on source type
-        if ($source === 'lead_product') {
-            // Delete from lead_products table by ID
-            $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
-                ->where('id', $productIndex) // productIndex is actually the LeadProduct ID
-                ->first();
-
-            if ($leadProduct) {
-                $leadProduct->delete();
-                return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
-            }
+        if ($leadProduct) {
+            $leadProduct->delete();
+            return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
         }
 
-        // Fallback: Delete from collected_data.products array (by index)
+        // Fallback: Delete from collected_data.products array
         $collectedData = $lead->collected_data ?? [];
 
         if (isset($collectedData['products']) && is_array($collectedData['products'])) {
-            $index = (int) $productIndex;
-            if (isset($collectedData['products'][$index])) {
-                array_splice($collectedData['products'], $index, 1);
+            if (isset($collectedData['products'][$productIndex])) {
+                array_splice($collectedData['products'], $productIndex, 1);
                 $lead->collected_data = $collectedData;
                 $lead->save();
                 return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
