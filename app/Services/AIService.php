@@ -122,13 +122,15 @@ class AIService
      */
     public function getSystemPromptPreview(Admin $admin): array
     {
-        // Create a dummy customer and lead for preview
+        // Create a dummy customer and lead for preview (with fake IDs to prevent errors)
         $dummyCustomer = new Customer([
             'admin_id' => $admin->id,
             'phone' => '9999999999',
             'name' => 'Preview Customer',
             'detected_language' => 'hi',
+            'global_fields' => [],
         ]);
+        $dummyCustomer->id = 0; // Set fake ID to prevent null errors
 
         $dummyLead = new Lead([
             'admin_id' => $admin->id,
@@ -136,9 +138,18 @@ class AIService
             'collected_data' => [],
             'product_confirmations' => [],
         ]);
+        $dummyLead->id = 0; // Set fake ID
 
-        // Build context (this will include actual catalogue data)
-        $context = $this->buildEnhancedContext($admin, $dummyCustomer, $dummyLead, 'Preview message', []);
+        // Build context manually for preview (skip conversation history)
+        $context = [
+            'reply' => [],
+            'recent_conversation' => [], // Skip for preview
+            'product_confirmations' => [], // Skip for preview
+            'field_rules' => $this->getFlowchartRules($admin->id),
+            'collected_data' => [],
+            'customer_fields' => [],
+            'catalogue' => $this->getCatalogueContext($admin->id),
+        ];
 
         // Get language instruction
         $languageInstruction = $this->languageService->getLanguageInstruction('hi');
