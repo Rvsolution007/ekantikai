@@ -286,6 +286,40 @@
         </div>
     </div>
 
+    <!-- AI System Prompt Preview -->
+    <div class="mt-8 glass-card p-6 rounded-xl">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-white flex items-center">
+                <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                AI System Prompt
+            </h3>
+            <a href="{{ route('superadmin.admins.edit', $tenant) }}"
+                class="text-primary-400 hover:text-primary-300 text-sm flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Prompt
+            </a>
+        </div>
+        @if($tenant->ai_system_prompt)
+            <div class="bg-black/30 rounded-xl p-4 max-h-64 overflow-y-auto">
+                <pre class="text-gray-300 text-sm whitespace-pre-wrap font-mono">{{ $tenant->ai_system_prompt }}</pre>
+            </div>
+        @else
+            <div class="bg-black/20 rounded-xl p-6 text-center">
+                <p class="text-gray-400">No custom AI prompt configured for this admin.</p>
+                <a href="{{ route('superadmin.admins.edit', $tenant) }}"
+                    class="text-primary-400 hover:underline text-sm mt-2 inline-block">Add Prompt →</a>
+            </div>
+        @endif
+        <p class="text-gray-500 text-xs mt-2">This prompt defines how the AI chatbot talks to customers. Admin can also edit
+            this in their Settings → AI Configuration.</p>
+    </div>
+
     <!-- Quick Actions -->
     <div class="mt-8 glass-card p-6 rounded-xl">
         <h3 class="text-lg font-semibold text-white mb-6">Quick Actions</h3>
