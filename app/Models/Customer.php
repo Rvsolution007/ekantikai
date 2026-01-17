@@ -207,12 +207,18 @@ class Customer extends Model
             $collectedData = [];
             $client = $this->client;
             if ($client && $client->global_fields) {
-                // Pre-fill global questions from client data
-                $collectedData['global_questions'] = $client->global_fields;
+                // Filter out product fields - only use customer info fields
+                $productFieldKeys = ['category', 'model', 'size', 'finish', 'quantity', 'material', 'product_type', 'color', 'packaging'];
+                $customerOnlyFields = array_filter($client->global_fields, function ($key) use ($productFieldKeys) {
+                    return !in_array(strtolower($key), $productFieldKeys);
+                }, ARRAY_FILTER_USE_KEY);
+
+                // Pre-fill global questions from filtered client data
+                $collectedData['global_questions'] = $customerOnlyFields;
 
                 // Also sync to customer's global_fields for workflow engine
-                $this->global_fields = array_merge($this->global_fields ?? [], $client->global_fields);
-                $this->global_asked = array_merge($this->global_asked ?? [], array_fill_keys(array_keys($client->global_fields), true));
+                $this->global_fields = array_merge($this->global_fields ?? [], $customerOnlyFields);
+                $this->global_asked = array_merge($this->global_asked ?? [], array_fill_keys(array_keys($customerOnlyFields), true));
                 $this->save();
             }
 

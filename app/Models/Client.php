@@ -76,17 +76,25 @@ class Client extends Model
         $collectedData = $lead->collected_data ?? [];
         $globalQuestions = $collectedData['global_questions'] ?? [];
 
+        // Filter out product fields - only keep customer info fields
+        $productFieldKeys = ['category', 'model', 'size', 'finish', 'quantity', 'material', 'product_type', 'color', 'packaging'];
+        $customerOnlyFields = array_filter($globalQuestions, function ($key) use ($productFieldKeys) {
+            return !in_array(strtolower($key), $productFieldKeys);
+        }, ARRAY_FILTER_USE_KEY);
+
+        // Also filter customer's global_fields
+        $customerGlobalFields = array_filter($customer->global_fields ?? [], function ($key) use ($productFieldKeys) {
+            return !in_array(strtolower($key), $productFieldKeys);
+        }, ARRAY_FILTER_USE_KEY);
+
         return self::create([
             'admin_id' => $lead->admin_id,
             'customer_id' => $customer->id,
             'lead_id' => $lead->id,
             'name' => $customer->name ?? $globalQuestions['name'] ?? null,
             'phone' => $customer->phone,
-            'city' => $globalQuestions['city'] ?? $customer->getGlobalField('city'),
-            'global_fields' => array_merge(
-                $customer->global_fields ?? [],
-                $globalQuestions
-            ),
+            'city' => $customerOnlyFields['city'] ?? $customer->getGlobalField('city'),
+            'global_fields' => array_merge($customerGlobalFields, $customerOnlyFields),
         ]);
     }
 
