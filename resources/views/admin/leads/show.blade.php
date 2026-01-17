@@ -195,20 +195,25 @@
                     </div>
 
                     @php
-                        // Get products from lead_products table (new) + legacy sources
-                        $leadProducts = $lead->leadProducts ?? collect();
-                        $collectedProducts = $lead->collected_data['products'] ?? [];
-                        $legacyConfirmations = $lead->product_confirmations ?? [];
-                        
-                        // Combine all sources for display
+                        // Safely get products - handle case where lead_products table may not exist
                         $allProducts = collect();
                         
-                        // Add products from new lead_products table
-                        foreach ($leadProducts as $lp) {
-                            $allProducts->push($lp->toProductArray());
+                        try {
+                            // Get products from lead_products table (new)
+                            $leadProducts = $lead->leadProducts ?? collect();
+                            foreach ($leadProducts as $lp) {
+                                if (method_exists($lp, 'toProductArray')) {
+                                    $allProducts->push($lp->toProductArray());
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            // Table might not exist yet
                         }
                         
                         // Add legacy data if any
+                        $collectedProducts = $lead->collected_data['products'] ?? [];
+                        $legacyConfirmations = $lead->product_confirmations ?? [];
+                        
                         foreach ($collectedProducts as $cp) {
                             $allProducts->push($cp);
                         }
