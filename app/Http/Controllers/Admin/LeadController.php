@@ -262,6 +262,7 @@ class LeadController extends Controller
         }
 
         $source = $request->input('source', 'lead_product');
+        $collectedData = $lead->collected_data ?? [];
 
         // Delete based on source
         if ($source === 'lead_product') {
@@ -274,18 +275,34 @@ class LeadController extends Controller
                 $leadProduct->delete();
                 return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
             }
-        }
-
-        // Fallback: Delete from collected_data.products array
-        $collectedData = $lead->collected_data ?? [];
-
-        if (isset($collectedData['products']) && is_array($collectedData['products'])) {
+        } elseif ($source === 'confirmation') {
+            // Delete from product_confirmations
+            $confirmations = $lead->product_confirmations ?? [];
             $index = (int) $productIndex;
-            if (isset($collectedData['products'][$index])) {
-                array_splice($collectedData['products'], $index, 1);
+            if (isset($confirmations[$index])) {
+                array_splice($confirmations, $index, 1);
+                $lead->product_confirmations = $confirmations;
+                $lead->save();
+                return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+            }
+        } elseif ($source === 'workflow') {
+            // Delete workflow_questions from collected_data
+            if (isset($collectedData['workflow_questions'])) {
+                unset($collectedData['workflow_questions']);
                 $lead->collected_data = $collectedData;
                 $lead->save();
                 return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+            }
+        } elseif ($source === 'collected') {
+            // Delete from collected_data.products array
+            if (isset($collectedData['products']) && is_array($collectedData['products'])) {
+                $index = (int) $productIndex;
+                if (isset($collectedData['products'][$index])) {
+                    array_splice($collectedData['products'], $index, 1);
+                    $lead->collected_data = $collectedData;
+                    $lead->save();
+                    return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+                }
             }
         }
 

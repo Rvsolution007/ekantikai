@@ -208,7 +208,10 @@
                             $leadProducts = $lead->leadProducts ?? collect();
                             foreach ($leadProducts as $lp) {
                                 if (method_exists($lp, 'toProductArray')) {
-                                    $allProducts->push($lp->toProductArray());
+                                    $productData = $lp->toProductArray();
+                                    $productData['_source'] = 'lead_product';
+                                    $productData['_id'] = $lp->id;
+                                    $allProducts->push($productData);
                                 }
                             }
                         } catch (\Exception $e) {
@@ -230,12 +233,16 @@
                                     }
                                 }
                                 if (!empty($transformedProduct)) {
+                                    $transformedProduct['_source'] = 'confirmation';
+                                    $transformedProduct['_id'] = 0;
                                     $allProducts->push($transformedProduct);
                                 }
                             } else {
                                 // New format - just add as is
-                                foreach ($legacyConfirmations as $lc) {
+                                foreach ($legacyConfirmations as $idx => $lc) {
                                     if (is_array($lc)) {
+                                        $lc['_source'] = 'confirmation';
+                                        $lc['_id'] = $idx;
                                         $allProducts->push($lc);
                                     }
                                 }
@@ -256,6 +263,8 @@
                                         ($p['model'] ?? '') === ($workflowQ['model'] ?? '');
                                 });
                                 if (!$isDuplicate) {
+                                    $workflowQ['_source'] = 'workflow';
+                                    $workflowQ['_id'] = 'workflow';
                                     $allProducts->push($workflowQ);
                                 }
                             }
@@ -263,8 +272,10 @@
 
                         // 4. Legacy collected_data products array
                         $collectedProducts = $collectedData['products'] ?? [];
-                        foreach ($collectedProducts as $cp) {
+                        foreach ($collectedProducts as $idx => $cp) {
                             if (is_array($cp)) {
+                                $cp['_source'] = 'collected';
+                                $cp['_id'] = $idx;
                                 $allProducts->push($cp);
                             }
                         }
