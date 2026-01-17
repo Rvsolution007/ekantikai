@@ -108,8 +108,12 @@
                                 Products
                             </span>
                             <span class="px-2 py-1 text-sm rounded-full bg-primary-500/20 text-primary-300 font-medium">
-                                {{ count($lead->collected_data['products'] ?? []) + count($lead->product_confirmations ?? []) }}
-                                items
+                                @php
+                                    $collectedCount = is_array($lead->collected_data['products'] ?? null) ? count($lead->collected_data['products']) : 0;
+                                    $confirmCount = is_array($lead->product_confirmations ?? null) ? count($lead->product_confirmations) : 0;
+                                    $leadProductCount = $lead->leadProducts ? $lead->leadProducts->count() : 0;
+                                @endphp
+                                {{ $collectedCount + $confirmCount + $leadProductCount }} items
                             </span>
                         </div>
                     </div>
