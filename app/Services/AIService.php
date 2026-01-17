@@ -151,7 +151,69 @@ class AIService
         // Customer global fields
         $context['customer_fields'] = $customer->global_fields ?? [];
 
+        // *** NEW: Get actual catalogue data for this admin ***
+        $context['catalogue'] = $this->getCatalogueContext($admin->id);
+
         return $context;
+    }
+
+    /**
+     * Get catalogue context for AI (product categories, types, sample models)
+     */
+    protected function getCatalogueContext(int $adminId): array
+    {
+        // Get unique product types/categories from catalogue
+        $productTypes = Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->distinct()
+            ->pluck('product_type')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        // Get unique categories
+        $categories = Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->distinct()
+            ->pluck('category')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        // Get sample model codes (first 20)
+        $sampleModels = Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->whereNotNull('model_code')
+            ->limit(20)
+            ->pluck('model_code')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        // Get sample products with details (first 10 for context)
+        $sampleProducts = Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->limit(10)
+            ->get(['product_type', 'model_code', 'category', 'sizes', 'finishes', 'material'])
+            ->map(function ($item) {
+                return [
+                    'type' => $item->product_type,
+                    'model' => $item->model_code,
+                    'category' => $item->category,
+                    'sizes' => $item->sizes,
+                    'finishes' => $item->finishes,
+                    'material' => $item->material,
+                ];
+            })
+            ->toArray();
+
+        return [
+            'product_types' => $productTypes,
+            'categories' => $categories,
+            'sample_models' => $sampleModels,
+            'sample_products' => $sampleProducts,
+            'total_products' => Catalogue::where('admin_id', $adminId)->where('is_active', true)->count(),
+        ];
     }
 
     /**
@@ -260,6 +322,40 @@ class AIService
         // Custom personality from admin settings
         $customPersonality = $customSystemPrompt ? "\n## CUSTOM PERSONALITY\n{$customSystemPrompt}\n" : '';
 
+        // *** NEW: Format catalogue data for AI ***
+        $catalogueSection = '';
+        if (!empty($context['catalogue'])) {
+            $cat = $context['catalogue'];
+            $catalogueSection = "## YOUR PRODUCT CATALOGUE\n";
+            $catalogueSection .= "IMPORTANT: Only mention products from this list. Do NOT make up products.\n\n";
+
+            if (!empty($cat['product_types'])) {
+                $catalogueSection .= "Product Types Available: " . implode(', ', $cat['product_types']) . "\n";
+            }
+            if (!empty($cat['categories'])) {
+                $catalogueSection .= "Categories: " . implode(', ', $cat['categories']) . "\n";
+            }
+            if (!empty($cat['sample_models'])) {
+                $catalogueSection .= "Sample Model Codes: " . implode(', ', array_slice($cat['sample_models'], 0, 15)) . "\n";
+            }
+            if (!empty($cat['sample_products'])) {
+                $catalogueSection .= "\nSample Products:\n";
+                foreach (array_slice($cat['sample_products'], 0, 5) as $product) {
+                    $details = [];
+                    if ($product['type'])
+                        $details[] = "Type: {$product['type']}";
+                    if ($product['model'])
+                        $details[] = "Model: {$product['model']}";
+                    if ($product['sizes'])
+                        $details[] = "Sizes: {$product['sizes']}";
+                    if ($product['finishes'])
+                        $details[] = "Finishes: {$product['finishes']}";
+                    $catalogueSection .= "- " . implode(', ', $details) . "\n";
+                }
+            }
+            $catalogueSection .= "\nTotal Products in Catalogue: {$cat['total_products']}\n";
+        }
+
         return <<<PROMPT
 You are a sales assistant for {$tenantName}. You must communicate naturally like a human sales person.
 
@@ -272,12 +368,15 @@ You are a sales assistant for {$tenantName}. You must communicate naturally like
 ## LANGUAGE INSTRUCTION
 {$languageInstruction}
 
+{$catalogueSection}
+
 ## RESPONSE STYLE (POINT 13)
 - Keep responses natural and human-like
 - For simple confirmations: 5-15 words
 - For explanations/details: 40-60 words
 - Ask flowchart questions in conversational manner
 - Never sound robotic or AI-generated
+- ONLY mention products that exist in your catalogue above
 
 {$replyContext}
 
@@ -298,7 +397,7 @@ You are a sales assistant for {$tenantName}. You must communicate naturally like
 2. Determine appropriate lead status based on conversation progress
 3. If user mentions removing/changing products, note it in product_actions
 4. Identify if user mentions any unique field values (for catalogue lookup)
-5. Generate natural conversational response
+5. Generate natural conversational response based on YOUR PRODUCT CATALOGUE
 
 ## OUTPUT FORMAT (JSON only)
 {
@@ -320,6 +419,7 @@ You are a sales assistant for {$tenantName}. You must communicate naturally like
 4. Check if all required questions are answered
 5. If user says they don't want something, note removal in product_actions
 6. Determine lead status based on answered questions and user engagement
+7. NEVER mention products not in your catalogue - only use products from YOUR PRODUCT CATALOGUE section
 
 PROMPT;
     }
@@ -544,14 +644,47 @@ PROMPT;
             // Create signature
             $signatureInput = $base64Header . '.' . $base64Payload;
 
-            // Clean up the private key - handle escaped newlines
-            if (!str_contains($privateKey, '-----BEGIN')) {
-                $privateKey = str_replace('\\n', "\n", $privateKey);
+            // Clean up the private key - handle all possible escaped newline formats
+            // Step 1: Replace literal backslash-n sequences with actual newlines
+            $privateKey = str_replace('\\n', "\n", $privateKey);
+
+            // Step 2: If still no newlines, try replacing literal \n as 2 characters
+            if (!str_contains($privateKey, "\n")) {
+                $privateKey = str_replace('\n', "\n", $privateKey);
             }
+
+            // Step 3: If key doesn't have proper PEM format, wrap it
+            if (!str_contains($privateKey, '-----BEGIN')) {
+                Log::error('Vertex AI private key missing PEM header', [
+                    'key_length' => strlen($privateKey),
+                    'key_preview' => substr($privateKey, 0, 50) . '...',
+                ]);
+                throw new \Exception('Invalid private key format: missing PEM header. Please paste the complete private key from your service account JSON file.');
+            }
+
+            // Step 4: Ensure proper line breaks after header and before footer
+            $privateKey = preg_replace('/-----BEGIN (PRIVATE KEY|RSA PRIVATE KEY)-----/', "-----BEGIN $1-----\n", $privateKey);
+            $privateKey = preg_replace('/-----END (PRIVATE KEY|RSA PRIVATE KEY)-----/', "\n-----END $1-----", $privateKey);
+
+            // Step 5: Clean up multiple consecutive newlines
+            $privateKey = preg_replace("/\n{2,}/", "\n", $privateKey);
+
+            // Debug log (remove in production)
+            Log::debug('Vertex AI private key prepared', [
+                'key_length' => strlen($privateKey),
+                'has_header' => str_contains($privateKey, '-----BEGIN'),
+                'has_footer' => str_contains($privateKey, '-----END'),
+                'newline_count' => substr_count($privateKey, "\n"),
+            ]);
 
             $key = openssl_pkey_get_private($privateKey);
             if (!$key) {
-                throw new \Exception('Invalid private key: ' . openssl_error_string());
+                $opensslError = openssl_error_string();
+                Log::error('Vertex AI private key OpenSSL error', [
+                    'error' => $opensslError,
+                    'key_preview' => substr($privateKey, 0, 100),
+                ]);
+                throw new \Exception('Invalid private key: ' . $opensslError . '. Please ensure you copied the complete private_key from your Google Cloud service account JSON file.');
             }
 
             $signature = '';
@@ -621,15 +754,42 @@ PROMPT;
     protected function parseEnhancedResponse(string $response): array
     {
         try {
-            $data = json_decode($response, true);
+            // Log raw response for debugging
+            Log::debug('AI raw response for parsing', [
+                'response_length' => strlen($response),
+                'response_preview' => substr($response, 0, 500),
+            ]);
+
+            // Clean the response - remove any markdown code blocks
+            $cleanedResponse = $response;
+            $cleanedResponse = preg_replace('/```json\s*/', '', $cleanedResponse);
+            $cleanedResponse = preg_replace('/```\s*/', '', $cleanedResponse);
+            $cleanedResponse = trim($cleanedResponse);
+
+            $data = json_decode($cleanedResponse, true);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
-                Log::warning('AI response not valid JSON', ['response' => $response]);
+                Log::warning('AI response not valid JSON', [
+                    'json_error' => json_last_error_msg(),
+                    'response' => substr($response, 0, 1000),
+                ]);
+
+                // FALLBACK: If not JSON, treat the raw response as a plain text message
+                // This handles cases where AI returns a simple text response instead of JSON
+                $fallbackMessage = $this->extractFallbackMessage($response);
+
                 return [
-                    'success' => false,
-                    'error' => 'Invalid JSON',
-                    'raw' => $response,
-                    'response_message' => 'Kuch technical problem hui. Kripya dubara try karein.',
+                    'success' => true, // Mark as success since we have a message to send
+                    'intent' => 'unclear',
+                    'lead_status_suggestion' => null,
+                    'extracted_data' => [],
+                    'product_confirmations' => [],
+                    'product_actions' => null,
+                    'unique_field_mentioned' => null,
+                    'response_message' => $fallbackMessage,
+                    'all_required_complete' => false,
+                    'detected_language' => 'hi',
+                    'fallback_used' => true,
                 ];
             }
 
@@ -646,14 +806,46 @@ PROMPT;
                 'detected_language' => $data['detected_language'] ?? 'hi',
             ];
         } catch (\Exception $e) {
+            Log::error('parseEnhancedResponse exception', [
+                'error' => $e->getMessage(),
+                'response' => substr($response, 0, 500),
+            ]);
+
             return [
-                'success' => false,
-                'error' => 'Parse error',
-                'raw' => $response,
-                'response_message' => 'Kuch technical problem hui.',
+                'success' => true,
+                'intent' => 'unclear',
+                'response_message' => $this->extractFallbackMessage($response),
+                'all_required_complete' => false,
+                'fallback_used' => true,
             ];
         }
     }
+
+    /**
+     * Extract a usable message from non-JSON AI response
+     */
+    protected function extractFallbackMessage(string $response): string
+    {
+        // Remove any JSON-like structures that are malformed
+        $cleaned = preg_replace('/\{[^}]*$/', '', $response); // Remove incomplete JSON
+        $cleaned = preg_replace('/```[a-z]*\s*/', '', $cleaned); // Remove code block markers
+        $cleaned = trim($cleaned);
+
+        // If it looks like the response has a response_message field but failed to parse,
+        // try to extract it manually
+        if (preg_match('/"response_message"\s*:\s*"([^"]+)"/', $response, $matches)) {
+            return $matches[1];
+        }
+
+        // If response is empty or too short, provide a default
+        if (empty($cleaned) || strlen($cleaned) < 5) {
+            return 'Aapka sawaal samajh nahi aaya. Kripya dobara batayein.';
+        }
+
+        // Return cleaned response (limit length)
+        return mb_substr($cleaned, 0, 500);
+    }
+
 
     /**
      * Check if unique field is mentioned and get catalogue image
