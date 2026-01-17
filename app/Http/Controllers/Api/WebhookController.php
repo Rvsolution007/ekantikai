@@ -366,6 +366,12 @@ class WebhookController extends Controller
             ->first();
 
         if ($admin) {
+            Log::debug('Found admin by whatsapp_instance', [
+                'instance' => $instanceName,
+                'admin_id' => $admin->id,
+                'admin_name' => $admin->name,
+                'catalogue_count' => $admin->catalogues()->where('is_active', true)->count(),
+            ]);
             return $admin;
         }
 
@@ -375,14 +381,29 @@ class WebhookController extends Controller
                 ->first();
 
             if ($instance) {
-                return Admin::find($instance->admin_id);
+                $admin = Admin::find($instance->admin_id);
+                if ($admin) {
+                    Log::debug('Found admin via whatsapp_instances table', [
+                        'instance' => $instanceName,
+                        'admin_id' => $admin->id,
+                    ]);
+                }
+                return $admin;
             }
         }
 
         Log::warning('Could not find tenant by instance name, using first active', [
             'instance' => $instanceName
         ]);
-        return Admin::where('is_active', true)->first();
+        $fallbackAdmin = Admin::where('is_active', true)->first();
+        if ($fallbackAdmin) {
+            Log::debug('Using fallback admin', [
+                'admin_id' => $fallbackAdmin->id,
+                'admin_name' => $fallbackAdmin->name,
+                'catalogue_count' => $fallbackAdmin->catalogues()->where('is_active', true)->count(),
+            ]);
+        }
+        return $fallbackAdmin;
     }
 
     /**

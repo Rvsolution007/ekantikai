@@ -202,6 +202,13 @@ class AIService
      */
     protected function getCatalogueContext(int $adminId): array
     {
+        // Debug log to trace catalogue fetch
+        $catalogueCount = Catalogue::where('admin_id', $adminId)->where('is_active', true)->count();
+        Log::debug('getCatalogueContext called', [
+            'admin_id' => $adminId,
+            'total_active_products' => $catalogueCount,
+        ]);
+
         // Get unique product types/categories from catalogue
         $productTypes = Catalogue::where('admin_id', $adminId)
             ->where('is_active', true)
