@@ -367,18 +367,23 @@
                     @endif
                 </div>
 
-                <!-- Global Information -->
+                <!-- Global Information (Customer Info Only - NOT product fields) -->
                 @php
                     $globalQuestions = $lead->collected_data['global_questions'] ?? [];
+                    // Filter out product-related fields - only show customer info
+                    $productFieldKeys = ['category', 'model', 'size', 'finish', 'quantity', 'material', 'product_type', 'color'];
+                    $customerInfo = array_filter($globalQuestions, function($key) use ($productFieldKeys) {
+                        return !in_array(strtolower($key), $productFieldKeys);
+                    }, ARRAY_FILTER_USE_KEY);
                 @endphp
-                @if(!empty($globalQuestions))
+                @if(!empty($customerInfo))
                     <div class="glass rounded-2xl p-6">
                         <h4 class="font-semibold text-white mb-4 flex items-center gap-2">
                             <span class="text-lg">🌐</span>
                             Customer Information
                         </h4>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            @foreach($globalQuestions as $key => $value)
+                            @foreach($customerInfo as $key => $value)
                                 <div class="p-4 bg-white/5 rounded-xl">
                                     <p class="text-xs text-gray-400 mb-1">{{ ucwords(str_replace('_', ' ', $key)) }}</p>
                                     <p class="text-white font-medium">{{ $value }}</p>
