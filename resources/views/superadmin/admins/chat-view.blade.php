@@ -1,4 +1,4 @@
-@extends('layouts.superadmin')
+@extends('superadmin.layouts.app')
 
 @section('title', 'Chat - ' . ($customer->name ?? $customer->phone))
 
