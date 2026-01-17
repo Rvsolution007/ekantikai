@@ -268,7 +268,7 @@
                                     </div>
                                     <div>
                                         <p class="text-white font-medium">Total Items</p>
-                                        <p class="text-gray-400 text-sm">{{ count($products) }} product(s) selected</p>
+                                        <p class="text-gray-400 text-sm">{{ $allProducts->count() }} product(s) selected</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -282,7 +282,7 @@
                                                     }
                                                 }
                                                 return intval($p['qty'] ?? $p['quantity'] ?? 1);
-                                            }, $products));
+                                            }, $allProducts->toArray()));
                                         @endphp
                                         {{ $totalQty }}
                                     </p>
