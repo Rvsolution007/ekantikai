@@ -55,6 +55,23 @@ class Lead extends Model
     const QUALITY_HOT = 'hot';
     const QUALITY_AT_RISK = 'at_risk';
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Auto-create client when lead stage becomes Confirm
+        static::updated(function ($lead) {
+            if ($lead->isDirty('stage') && $lead->stage === self::STAGE_CONFIRM) {
+                $customer = $lead->customer;
+
+                // Only create client if customer exists and doesn't already have one
+                if ($customer && !$customer->client) {
+                    Client::createFromLead($lead);
+                }
+            }
+        });
+    }
+
     /**
      * Get the admin (tenant)
      */

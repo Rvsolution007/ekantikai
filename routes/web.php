@@ -68,6 +68,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/leads/{lead}/product/{index}', [LeadController::class, 'deleteProduct'])->name('leads.delete-product');
         Route::get('/leads/export/csv', [LeadController::class, 'export'])->name('leads.export');
 
+        // Clients Management
+        Route::resource('clients', \App\Http\Controllers\Admin\ClientController::class);
+
         // Lead Statuses (Kanban)
         Route::resource('lead-status', LeadStatusController::class);
         Route::get('/lead-status-kanban', [LeadStatusController::class, 'kanban'])->name('lead-status.kanban');

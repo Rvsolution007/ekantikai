@@ -129,6 +129,11 @@ class Admin extends Authenticatable
         return $this->hasMany(Catalogue::class);
     }
 
+    public function clients()
+    {
+        return $this->hasMany(Client::class);
+    }
+
     // Accessors
     public function getLogoAttribute()
     {
