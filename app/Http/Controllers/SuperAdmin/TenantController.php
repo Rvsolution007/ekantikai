@@ -294,7 +294,8 @@ class TenantController extends Controller
         // Reset questionnaire state (clears completed product fields)
         $state = $customer->questionnaireState;
         if ($state) {
-            $state->reset();
+            $state->completed_fields = [];
+            $state->current_field = null;
             $state->workflow_data = [];
             $state->pending_items = [];
             $state->save();
@@ -304,6 +305,12 @@ class TenantController extends Controller
         $customer->global_fields = [];
         $customer->global_asked = [];
         $customer->save();
+
+        // Clear all leads' product data for this customer
+        \App\Models\Lead::where('customer_id', $customerId)->update([
+            'collected_data' => null,
+            'product_confirmations' => null,
+        ]);
 
         return back()->with('success', 'All chats and product data cleared for ' . ($customer->name ?? $customer->phone));
     }
@@ -322,7 +329,8 @@ class TenantController extends Controller
             // Reset questionnaire state
             $state = $customer->questionnaireState;
             if ($state) {
-                $state->reset();
+                $state->completed_fields = [];
+                $state->current_field = null;
                 $state->workflow_data = [];
                 $state->pending_items = [];
                 $state->save();
@@ -332,6 +340,12 @@ class TenantController extends Controller
             $customer->global_fields = [];
             $customer->global_asked = [];
             $customer->save();
+
+            // Clear all leads' product data for this customer
+            \App\Models\Lead::where('customer_id', $customer->id)->update([
+                'collected_data' => null,
+                'product_confirmations' => null,
+            ]);
         }
 
         return back()->with('success', 'All chats and product data cleared for ' . $admin->name);
