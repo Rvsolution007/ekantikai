@@ -202,10 +202,82 @@ class AIService
         // Customer global fields
         $context['customer_fields'] = $customer->global_fields ?? [];
 
-        // *** NEW: Get actual catalogue data for this admin ***
+        // *** Get actual catalogue data for this admin ***
         $context['catalogue'] = $this->getCatalogueContext($admin->id);
 
+        // *** NEW: Find mentioned model from message or collected_data and fetch exact product ***
+        $mentionedModels = $this->findMentionedModels($admin->id, $message, $context);
+        if (!empty($mentionedModels)) {
+            $context['mentioned_products'] = $mentionedModels;
+        }
+
         return $context;
+    }
+
+    /**
+     * Find mentioned models from message and collected_data, then fetch their exact catalogue data
+     */
+    protected function findMentionedModels(int $adminId, string $message, array $context): array
+    {
+        $mentionedProducts = [];
+
+        // Get all model codes from catalogue for this admin
+        $allModels = Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->pluck('model_code')
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // Check if any model is mentioned in the current message
+        $messageLower = strtolower($message);
+        foreach ($allModels as $model) {
+            if (stripos($messageLower, strtolower($model)) !== false) {
+                // Fetch this model's exact catalogue data
+                $product = Catalogue::where('admin_id', $adminId)
+                    ->where('is_active', true)
+                    ->where('model_code', $model)
+                    ->first();
+                if ($product) {
+                    $mentionedProducts[$model] = [
+                        'model' => $product->model_code,
+                        'product_type' => $product->product_type,
+                        'category' => $product->category,
+                        'sizes' => $product->sizes,
+                        'finishes' => $product->finishes,
+                        'material' => $product->material,
+                        'price' => $product->price,
+                    ];
+                    Log::debug('Found mentioned model in message', ['model' => $model, 'data' => $mentionedProducts[$model]]);
+                }
+            }
+        }
+
+        // Also check model from collected_data (global_questions or product_confirmations)
+        $collectedModel = $context['collected_data']['global_questions']['model'] ??
+            $context['customer_fields']['model'] ?? null;
+
+        if ($collectedModel && !isset($mentionedProducts[$collectedModel])) {
+            $product = Catalogue::where('admin_id', $adminId)
+                ->where('is_active', true)
+                ->where('model_code', $collectedModel)
+                ->first();
+            if ($product) {
+                $mentionedProducts[$collectedModel] = [
+                    'model' => $product->model_code,
+                    'product_type' => $product->product_type,
+                    'category' => $product->category,
+                    'sizes' => $product->sizes,
+                    'finishes' => $product->finishes,
+                    'material' => $product->material,
+                    'price' => $product->price,
+                ];
+                Log::debug('Found model from collected_data', ['model' => $collectedModel, 'data' => $mentionedProducts[$collectedModel]]);
+            }
+        }
+
+        return $mentionedProducts;
     }
 
     /**
@@ -414,6 +486,28 @@ class AIService
             $catalogueSection .= "\nTotal Products in Catalogue: {$cat['total_products']}\n";
         }
 
+        // *** NEW: Add CURRENT PRODUCT section if model is mentioned ***
+        $currentProductSection = '';
+        if (!empty($context['mentioned_products'])) {
+            $currentProductSection = "\n## CURRENT PRODUCT CONTEXT (USE THIS DATA)\n";
+            $currentProductSection .= "CRITICAL: The customer is asking about these specific products. Use ONLY these exact options:\n\n";
+            foreach ($context['mentioned_products'] as $model => $data) {
+                $currentProductSection .= "### Model: {$model}\n";
+                if ($data['product_type'])
+                    $currentProductSection .= "- Product Type: {$data['product_type']}\n";
+                if ($data['category'])
+                    $currentProductSection .= "- Category: {$data['category']}\n";
+                if ($data['sizes'])
+                    $currentProductSection .= "- Available Sizes: {$data['sizes']}\n";
+                if ($data['finishes'])
+                    $currentProductSection .= "- Available Finishes: {$data['finishes']}\n";
+                if ($data['material'])
+                    $currentProductSection .= "- Material: {$data['material']}\n";
+                $currentProductSection .= "\n";
+            }
+            $currentProductSection .= "IMPORTANT: When asking about size or finish for these models, ONLY offer the options listed above. Do NOT make up options.\n";
+        }
+
         return <<<PROMPT
 You are a sales assistant for {$tenantName}. You must communicate naturally like a human sales person.
 
@@ -439,6 +533,8 @@ IMPORTANT: You MUST detect the language of user's message and respond in THE EXA
 {$languageInstruction}
 
 {$catalogueSection}
+
+{$currentProductSection}
 
 ## RESPONSE STYLE
 - Keep responses natural and human-like
