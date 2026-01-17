@@ -199,11 +199,11 @@
                     </div>
 
                     @php
-                        // Safely get products - handle case where lead_products table may not exist
+                        // Safely get products - handle multiple data formats
                         $allProducts = collect();
                         
+                        // 1. Get from lead_products table (new system)
                         try {
-                            // Get products from lead_products table (new)
                             $leadProducts = $lead->leadProducts ?? collect();
                             foreach ($leadProducts as $lp) {
                                 if (method_exists($lp, 'toProductArray')) {
@@ -214,16 +214,66 @@
                             // Table might not exist yet
                         }
                         
-                        // Add legacy data if any
-                        $collectedProducts = $lead->collected_data['products'] ?? [];
+                        // 2. Transform OLD format product_confirmations (field/value pairs)
                         $legacyConfirmations = $lead->product_confirmations ?? [];
+                        if (!empty($legacyConfirmations)) {
+                            // Check if it's old format (has 'field' key)
+                            $isOldFormat = isset($legacyConfirmations[0]['field']);
+                            
+                            if ($isOldFormat) {
+                                // Transform field/value pairs into single product object
+                                $transformedProduct = [];
+                                foreach ($legacyConfirmations as $item) {
+                                    if (isset($item['field']) && isset($item['value'])) {
+                                        $transformedProduct[$item['field']] = $item['value'];
+                                    }
+                                }
+                                if (!empty($transformedProduct)) {
+                                    $allProducts->push($transformedProduct);
+                                }
+                            } else {
+                                // New format - just add as is
+                                foreach ($legacyConfirmations as $lc) {
+                                    if (is_array($lc)) {
+                                        $allProducts->push($lc);
+                                    }
+                                }
+                            }
+                        }
                         
+                        // 3. Get from collected_data (global_questions + workflow_questions)
+                        $collectedData = $lead->collected_data ?? [];
+                        $globalQ = $collectedData['global_questions'] ?? [];
+                        $workflowQ = $collectedData['workflow_questions'] ?? [];
+                        
+                        // Merge global and workflow questions as a product if they have product fields
+                        if (!empty($globalQ) || !empty($workflowQ)) {
+                            $mergedProduct = array_merge($globalQ, $workflowQ);
+                            // Only add if it has meaningful product data
+                            if (isset($mergedProduct['category']) || isset($mergedProduct['model'])) {
+                                // Check if this data is already in allProducts
+                                $isDuplicate = $allProducts->contains(function($p) use ($mergedProduct) {
+                                    return ($p['category'] ?? '') === ($mergedProduct['category'] ?? '') &&
+                                           ($p['model'] ?? '') === ($mergedProduct['model'] ?? '');
+                                });
+                                if (!$isDuplicate) {
+                                    $allProducts->push($mergedProduct);
+                                }
+                            }
+                        }
+                        
+                        // 4. Legacy collected_data products array
+                        $collectedProducts = $collectedData['products'] ?? [];
                         foreach ($collectedProducts as $cp) {
-                            $allProducts->push($cp);
+                            if (is_array($cp)) {
+                                $allProducts->push($cp);
+                            }
                         }
-                        foreach ($legacyConfirmations as $lc) {
-                            $allProducts->push($lc);
-                        }
+                        
+                        // Remove duplicates - keep unique by category+model
+                        $allProducts = $allProducts->unique(function($item) {
+                            return ($item['category'] ?? '') . '|' . ($item['model'] ?? '');
+                        })->values();
                     @endphp
 
                     @if($allProducts->count() > 0)
