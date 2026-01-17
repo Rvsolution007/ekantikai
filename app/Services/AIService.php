@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Admin;
 use App\Models\AiUsageLog;
 use App\Models\Catalogue;
+use App\Models\CatalogueField;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\QuestionnaireField;
@@ -211,7 +212,147 @@ class AIService
             $context['mentioned_products'] = $mentionedModels;
         }
 
+        // *** NEW: Dynamic catalogue filtering based on confirmed workflow answers ***
+        $filteredOptions = $this->getFilteredCatalogueOptions($admin->id, $context);
+        if (!empty($filteredOptions)) {
+            $context['available_options'] = $filteredOptions;
+        }
+
         return $context;
+    }
+
+    /**
+     * Get filtered catalogue options based on confirmed workflow answers
+     * This filters the catalogue progressively as user confirms each field
+     */
+    protected function getFilteredCatalogueOptions(int $adminId, array $context): array
+    {
+        // Get all catalogue fields for this admin
+        $catalogueFields = CatalogueField::forTenant($adminId)->ordered()->get();
+
+        if ($catalogueFields->isEmpty()) {
+            return [];
+        }
+
+        // Get confirmed values from workflow_questions
+        $confirmedValues = [];
+
+        // Check workflow_questions in collected_data
+        $workflowQuestions = $context['collected_data']['workflow_questions'] ?? [];
+        foreach ($workflowQuestions as $fieldKey => $value) {
+            if (!empty($value)) {
+                $confirmedValues[$fieldKey] = $value;
+            }
+        }
+
+        // Also check global_questions
+        $globalQuestions = $context['collected_data']['global_questions'] ?? [];
+        foreach ($globalQuestions as $fieldKey => $value) {
+            if (!empty($value)) {
+                $confirmedValues[$fieldKey] = $value;
+            }
+        }
+
+        // Also check customer global_fields
+        foreach ($context['customer_fields'] ?? [] as $fieldKey => $value) {
+            if (!empty($value) && !isset($confirmedValues[$fieldKey])) {
+                $confirmedValues[$fieldKey] = $value;
+            }
+        }
+
+        if (empty($confirmedValues)) {
+            // No filters yet, return all unique values for first field
+            return $this->getAllCatalogueOptionsForFields($adminId, $catalogueFields);
+        }
+
+        // Build filter query based on confirmed values
+        $query = Catalogue::where('admin_id', $adminId)->where('is_active', true);
+
+        foreach ($confirmedValues as $fieldKey => $value) {
+            // Filter catalogue where this field matches the confirmed value
+            $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) = ?", ['$.' . $fieldKey, $value]);
+        }
+
+        // Get filtered catalogue items
+        $filteredItems = $query->get();
+
+        if ($filteredItems->isEmpty()) {
+            return ['no_matching_products' => true, 'confirmed_filters' => $confirmedValues];
+        }
+
+        // Extract unique values for each remaining field from filtered catalogue
+        $availableOptions = [];
+
+        foreach ($catalogueFields as $field) {
+            $fieldKey = $field->field_key;
+
+            // Skip already confirmed fields
+            if (isset($confirmedValues[$fieldKey])) {
+                $availableOptions[$fieldKey] = [
+                    'field_name' => $field->field_name,
+                    'confirmed_value' => $confirmedValues[$fieldKey],
+                    'is_confirmed' => true,
+                ];
+                continue;
+            }
+
+            // Get unique values for this field from filtered catalogue
+            $uniqueValues = $filteredItems->map(function ($item) use ($fieldKey) {
+                return $item->data[$fieldKey] ?? null;
+            })->filter()->unique()->values()->toArray();
+
+            if (!empty($uniqueValues)) {
+                $availableOptions[$fieldKey] = [
+                    'field_name' => $field->field_name,
+                    'available_values' => $uniqueValues,
+                    'is_confirmed' => false,
+                ];
+            }
+        }
+
+        $availableOptions['matching_products_count'] = $filteredItems->count();
+
+        Log::debug('Filtered catalogue options', [
+            'admin_id' => $adminId,
+            'confirmed_values' => $confirmedValues,
+            'available_options' => $availableOptions,
+        ]);
+
+        return $availableOptions;
+    }
+
+    /**
+     * Get all unique values for each catalogue field (no filters applied)
+     */
+    protected function getAllCatalogueOptionsForFields(int $adminId, $catalogueFields): array
+    {
+        $allItems = Catalogue::where('admin_id', $adminId)->where('is_active', true)->get();
+
+        if ($allItems->isEmpty()) {
+            return ['no_products_in_catalogue' => true];
+        }
+
+        $options = [];
+
+        foreach ($catalogueFields as $field) {
+            $fieldKey = $field->field_key;
+
+            $uniqueValues = $allItems->map(function ($item) use ($fieldKey) {
+                return $item->data[$fieldKey] ?? null;
+            })->filter()->unique()->values()->toArray();
+
+            if (!empty($uniqueValues)) {
+                $options[$fieldKey] = [
+                    'field_name' => $field->field_name,
+                    'available_values' => $uniqueValues,
+                    'is_confirmed' => false,
+                ];
+            }
+        }
+
+        $options['total_products'] = $allItems->count();
+
+        return $options;
     }
 
     /**
@@ -508,6 +649,46 @@ class AIService
             $currentProductSection .= "IMPORTANT: When asking about size or finish for these models, ONLY offer the options listed above. Do NOT make up options.\n";
         }
 
+        // *** NEW: Add AVAILABLE OPTIONS section from filtered catalogue ***
+        $availableOptionsSection = '';
+        if (!empty($context['available_options'])) {
+            $opts = $context['available_options'];
+
+            // Check if no products match
+            if (isset($opts['no_matching_products']) && $opts['no_matching_products']) {
+                $availableOptionsSection = "\n## CATALOGUE STATUS\n";
+                $availableOptionsSection .= "WARNING: No products match the customer's selected criteria. Inform customer politely.\n";
+            } elseif (isset($opts['no_products_in_catalogue']) && $opts['no_products_in_catalogue']) {
+                $availableOptionsSection = "\n## CATALOGUE STATUS\n";
+                $availableOptionsSection .= "NOTE: Catalogue is empty. Ask customer for their requirements and note them.\n";
+            } else {
+                $availableOptionsSection = "\n## AVAILABLE OPTIONS FROM CATALOGUE (USE ONLY THESE)\n";
+                $availableOptionsSection .= "CRITICAL: When asking about any field below, ONLY offer the options listed. Do NOT invent options.\n\n";
+
+                foreach ($opts as $fieldKey => $fieldData) {
+                    // Skip meta fields
+                    if (in_array($fieldKey, ['matching_products_count', 'total_products', 'no_matching_products', 'no_products_in_catalogue'])) {
+                        continue;
+                    }
+
+                    if (is_array($fieldData) && isset($fieldData['field_name'])) {
+                        if (isset($fieldData['is_confirmed']) && $fieldData['is_confirmed']) {
+                            $availableOptionsSection .= "✓ {$fieldData['field_name']}: CONFIRMED = {$fieldData['confirmed_value']}\n";
+                        } elseif (isset($fieldData['available_values']) && !empty($fieldData['available_values'])) {
+                            $values = implode(', ', $fieldData['available_values']);
+                            $availableOptionsSection .= "• {$fieldData['field_name']}: Available options = [{$values}]\n";
+                        }
+                    }
+                }
+
+                if (isset($opts['matching_products_count'])) {
+                    $availableOptionsSection .= "\nMatching Products: {$opts['matching_products_count']} products available\n";
+                }
+
+                $availableOptionsSection .= "\nIMPORTANT: When asking about any field above, list ALL available options to customer. Never make up options not in the list.\n";
+            }
+        }
+
         return <<<PROMPT
 You are a sales assistant for {$tenantName}. You must communicate naturally like a human sales person.
 
@@ -535,6 +716,8 @@ IMPORTANT: You MUST detect the language of user's message and respond in THE EXA
 {$catalogueSection}
 
 {$currentProductSection}
+
+{$availableOptionsSection}
 
 ## RESPONSE STYLE
 - Keep responses natural and human-like
