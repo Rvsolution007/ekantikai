@@ -180,6 +180,10 @@ class AIService
     ): array {
         $context = [];
 
+        // Store IDs for fallback lookups
+        $context['lead_id'] = $lead->id;
+        $context['customer_id'] = $customer->id;
+        $context['admin_id'] = $admin->id;
         // 8.1 Reply context
         if (isset($options['reply_to_content']) && $options['reply_to_content']) {
             $context['reply'] = [
@@ -276,6 +280,35 @@ class AIService
             }
         }
 
+        // Check if user is asking for model list/options - skip to fallback check
+        $modelListKeywords = [
+            'model list',
+            'model ka list',
+            'model konse',
+            'kaunsa model',
+            'कौनसा मॉडल',
+            'model number list',
+            'sab model',
+            'all models',
+            'model batao',
+            'model bata',
+            'which model',
+            'konse model',
+            'kitne model',
+            'model hai',
+            'available model',
+            'model options',
+            'model dikhao'
+        ];
+        $askingForModels = false;
+        foreach ($modelListKeywords as $keyword) {
+            if (stripos($messageLower, $keyword) !== false) {
+                $askingForModels = true;
+                Log::info('User asking for model list', ['keyword_matched' => $keyword, 'message' => $message]);
+                break;
+            }
+        }
+
         // FIRST: Check if any field value is mentioned in CURRENT message
         foreach ($fieldValuesMap as $fieldKey => $fieldData) {
             foreach ($fieldData['values'] as $value => $matchingItems) {
@@ -325,12 +358,13 @@ class AIService
             }
         }
 
-        // FALLBACK: Check collected_data for previously confirmed category values
-        if (empty($result) && !empty($context)) {
-            // Check workflow_questions and product_confirmations for category values
+        // FALLBACK: Check multiple sources when:
+        // 1. No direct match found in message, OR
+        // 2. User is asking for model list/options (trigger regardless of direct match)
+        if ((empty($result) || $askingForModels) && !empty($context)) {
             $collectedCategories = [];
 
-            // Check workflow_questions
+            // 1. Check workflow_questions (using all keys, not just 'category')
             $workflowData = $context['collected_data']['workflow_questions'] ?? [];
             foreach ($workflowData as $key => $value) {
                 if (!empty($value)) {
@@ -338,11 +372,47 @@ class AIService
                 }
             }
 
-            // Check product_confirmations (category field)
-            $confirmations = $context['product_confirmations'] ?? [];
+            // 2. Check product_confirmations - check ALL field values, not just 'category'
+            $confirmations = $context['collected_data']['product_confirmations'] ?? [];
             foreach ($confirmations as $conf) {
-                if (!empty($conf['category'])) {
-                    $collectedCategories['category'] = $conf['category'];
+                foreach ($conf as $fieldKey => $fieldValue) {
+                    if (!empty($fieldValue) && $fieldValue !== '-' && !in_array($fieldKey, ['qty', 'quantity'])) {
+                        $collectedCategories[$fieldKey] = $fieldValue;
+                    }
+                }
+            }
+
+            // 3. Check LeadProducts table for this lead
+            if (!empty($context['lead_id'])) {
+                $leadProducts = \App\Models\LeadProduct::where('lead_id', $context['lead_id'])->get();
+                foreach ($leadProducts as $product) {
+                    if (!empty($product->category)) {
+                        $collectedCategories['category'] = $product->category;
+                    }
+                    if (!empty($product->product)) {
+                        $collectedCategories['product'] = $product->product;
+                    }
+                }
+            }
+
+            // 4. Check recent chat messages for ANY catalogue value mentions
+            if (!empty($context['customer_id'])) {
+                $recentChats = \App\Models\WhatsappChat::where('customer_id', $context['customer_id'])
+                    ->orderBy('created_at', 'desc')
+                    ->take(10)
+                    ->pluck('content')
+                    ->toArray();
+
+                $allChatText = strtolower(implode(' ', $recentChats));
+
+                // Check if any known catalogue value is mentioned in recent chats
+                foreach ($fieldValuesMap as $fieldKey => $fieldData) {
+                    foreach (array_keys($fieldData['values']) as $catalogueValue) {
+                        if (stripos($allChatText, strtolower($catalogueValue)) !== false) {
+                            $collectedCategories[$fieldKey] = $catalogueValue;
+                            break 2; // Found a match, stop searching
+                        }
+                    }
                 }
             }
 
@@ -375,9 +445,9 @@ class AIService
                             }
                         }
 
-                        Log::info('Found category from collected_data', [
-                            'collected_key' => $key,
-                            'collected_value' => $value,
+                        Log::info('Found category from fallback sources', [
+                            'source_key' => $key,
+                            'matched_value' => $value,
                             'matching_count' => count($matchingItems),
                         ]);
 

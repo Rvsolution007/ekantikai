@@ -183,19 +183,24 @@ class ProductConfirmationService
 
     /**
      * Check if confirmation has meaningful data
+     * Requires at least 2 fields to be filled to create a product row
+     * This prevents creating incomplete rows when user only mentions category
      */
     protected function isMeaningfulConfirmation(array $confirmation): bool
     {
-        $fields = ['category', 'model', 'size', 'finish', 'qty', 'material', 'packaging'];
+        $fields = ['category', 'model', 'size', 'finish', 'material', 'packaging'];
+        $filledCount = 0;
 
         foreach ($fields as $field) {
             $value = $confirmation[$field] ?? null;
-            if (!empty($value) && $value !== '-') {
-                return true;
+            if (!empty($value) && $value !== '-' && $value !== null) {
+                $filledCount++;
             }
         }
 
-        return false;
+        // Require at least 2 fields (e.g., category + model, or category + size)
+        // This prevents creating rows when user just says "Profile handles"
+        return $filledCount >= 2;
     }
 
     /**
