@@ -312,6 +312,12 @@ class TenantController extends Controller
         \Log::info('Customers found', [
             'count' => $customers->count(),
             'total' => $customers->total(),
+            'first_customer' => $customers->first() ? [
+                'id' => $customers->first()->id,
+                'name' => $customers->first()->name,
+                'phone' => $customers->first()->phone,
+                'chat_count' => $customers->first()->chat_messages_count,
+            ] : null,
         ]);
 
         return view('superadmin.admins.chats', compact('admin', 'customers'));
