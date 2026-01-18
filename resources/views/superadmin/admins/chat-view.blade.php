@@ -42,10 +42,7 @@
 
         <!-- Chat Messages (WhatsApp Style) -->
         <div class="flex-1 overflow-y-auto p-4 bg-dark-300 space-y-4" id="chat-container"
-            style="background-image: url('data:image/svg+xml,<svg xmlns=\" http://www.w3.org/2000/svg\" viewBox=\"0 0 80
-            80\">
-            <rect fill=\"%23111827\" width=\"80\" height=\"80\" />
-            <circle fill=\"%231f2937\" cx=\"40\" cy=\"40\" r=\"2\" opacity=\"0.3\" /></svg>'); background-size: 40px 40px;">
+            style="background-color: #111827;">
 
             @if($messages->count() > 0)
                 @foreach($messages as $message)
