@@ -24,7 +24,7 @@
                 <!-- Name -->
                 <div>
                     <label class="block text-gray-300 text-sm mb-2">Name <span class="text-red-400">*</span></label>
-                    <input type="text" name="name" value="{{ old('name') }}"
+                    <input type="text" name="name" value="{{ old('name', request('name')) }}"
                         class="w-full bg-dark-300 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary-500 focus:outline-none"
                         placeholder="Client name" required>
                     @error('name') <span class="text-red-400 text-sm">{{ $message }}</span> @enderror
@@ -33,7 +33,7 @@
                 <!-- Phone -->
                 <div>
                     <label class="block text-gray-300 text-sm mb-2">Phone Number <span class="text-red-400">*</span></label>
-                    <input type="text" name="phone" value="{{ old('phone') }}"
+                    <input type="text" name="phone" value="{{ old('phone', request('phone')) }}"
                         class="w-full bg-dark-300 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary-500 focus:outline-none"
                         placeholder="10 digit phone number" required>
                     @error('phone') <span class="text-red-400 text-sm">{{ $message }}</span> @enderror
