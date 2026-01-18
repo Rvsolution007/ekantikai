@@ -270,7 +270,9 @@ class AIService
 
         foreach ($confirmedValues as $fieldKey => $value) {
             // Filter catalogue where this field matches the confirmed value
-            $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) = ?", ['$.' . $fieldKey, $value]);
+            // Quote field key properly for JSON path (handles spaces in field names)
+            $jsonPath = '$."' . $fieldKey . '"';
+            $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) = ?", [$jsonPath, $value]);
         }
 
         // Get filtered catalogue items
