@@ -292,31 +292,158 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
-                AI System Prompt
+                AI System Prompt Preview
             </h3>
-            <a href="{{ route('superadmin.admins.edit', $tenant) }}"
-                class="text-primary-400 hover:text-primary-300 text-sm flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit Prompt
-            </a>
-        </div>
-        @if($tenant->ai_system_prompt)
-            <div class="bg-black/30 rounded-xl p-4 max-h-64 overflow-y-auto">
-                <pre class="text-gray-300 text-sm whitespace-pre-wrap font-mono">{{ $tenant->ai_system_prompt }}</pre>
-            </div>
-        @else
-            <div class="bg-black/20 rounded-xl p-6 text-center">
-                <p class="text-gray-400">No custom AI prompt configured for this admin.</p>
+            <div class="flex items-center gap-3">
+                <button onclick="loadPrompt()" id="loadBtn"
+                    class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Load Full Prompt
+                </button>
+                <button onclick="copyPrompt()" id="copyBtn"
+                    class="hidden px-4 py-2 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                    Copy
+                </button>
                 <a href="{{ route('superadmin.admins.edit', $tenant) }}"
-                    class="text-primary-400 hover:underline text-sm mt-2 inline-block">Add Prompt →</a>
+                    class="text-primary-400 hover:text-primary-300 text-sm flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit Prompt
+                </a>
             </div>
-        @endif
-        <p class="text-gray-500 text-xs mt-2">This prompt defines how the AI chatbot talks to customers. Admin can also edit
-            this in their Settings → AI Configuration.</p>
+        </div>
+
+        <!-- Catalogue Info Card -->
+        <div id="catalogueInfo" class="hidden mb-4">
+            <h4 class="text-white font-medium mb-3">📦 Catalogue Data for This Admin</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gray-700/30 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-400" id="totalProducts">0</div>
+                    <div class="text-gray-400 text-sm">Total Products</div>
+                </div>
+                <div class="bg-gray-700/30 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-green-400" id="productTypes">0</div>
+                    <div class="text-gray-400 text-sm">Product Types</div>
+                </div>
+                <div class="bg-gray-700/30 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-400" id="categories">0</div>
+                    <div class="text-gray-400 text-sm">Categories</div>
+                </div>
+                <div class="bg-gray-700/30 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-yellow-400" id="fieldRules">0</div>
+                    <div class="text-gray-400 text-sm">Field Rules</div>
+                </div>
+            </div>
+            <div id="productTypesList" class="mt-3 hidden">
+                <span class="text-gray-400 text-sm">Product Types: </span>
+                <div class="flex flex-wrap gap-2 mt-1" id="productTypesContainer"></div>
+            </div>
+        </div>
+
+        <!-- Loading / Simple Prompt -->
+        <div id="promptLoading">
+            @if($tenant->ai_system_prompt)
+                <div class="bg-black/30 rounded-xl p-4 max-h-64 overflow-y-auto">
+                    <p class="text-gray-500 text-xs mb-2">Basic Prompt Preview (Click "Load Full Prompt" to see complete prompt
+                        with catalogue data)</p>
+                    <pre class="text-gray-300 text-sm whitespace-pre-wrap font-mono">{{ $tenant->ai_system_prompt }}</pre>
+                </div>
+            @else
+                <div class="bg-black/20 rounded-xl p-6 text-center">
+                    <p class="text-gray-400">No custom AI prompt configured for this admin.</p>
+                    <a href="{{ route('superadmin.admins.edit', $tenant) }}"
+                        class="text-primary-400 hover:underline text-sm mt-2 inline-block">Add Prompt →</a>
+                </div>
+            @endif
+        </div>
+
+        <!-- Full Prompt Content -->
+        <pre id="promptContent"
+            class="hidden bg-black/30 rounded-xl p-4 text-gray-300 text-sm overflow-x-auto whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono"></pre>
+
+        <p class="text-gray-500 text-xs mt-2">This prompt is sent to AI with every message along with the catalogue data.
+            Admin can also edit this in their Settings → AI Configuration.</p>
     </div>
+
+    <script>
+        async function loadPrompt() {
+            const loadBtn = document.getElementById('loadBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const promptContent = document.getElementById('promptContent');
+            const promptLoading = document.getElementById('promptLoading');
+            const catalogueInfo = document.getElementById('catalogueInfo');
+
+            loadBtn.disabled = true;
+            loadBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Loading...';
+
+            try {
+                const response = await fetch('{{ route("superadmin.ai-config.prompt-preview.get") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ admin_id: {{ $tenant->id }} })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show prompt
+                    promptContent.textContent = data.prompt;
+                    promptContent.classList.remove('hidden');
+                    promptLoading.classList.add('hidden');
+                    copyBtn.classList.remove('hidden');
+
+                    // Show catalogue info
+                    catalogueInfo.classList.remove('hidden');
+                    document.getElementById('totalProducts').textContent = data.catalogue_info.total_products || 0;
+                    document.getElementById('productTypes').textContent = (data.catalogue_info.product_types || []).length;
+                    document.getElementById('categories').textContent = (data.catalogue_info.categories || []).length;
+                    document.getElementById('fieldRules').textContent = (data.context.field_rules || []).length;
+
+                    // Show product types
+                    const productTypes = data.catalogue_info.product_types || [];
+                    if (productTypes.length > 0) {
+                        document.getElementById('productTypesList').classList.remove('hidden');
+                        document.getElementById('productTypesContainer').innerHTML = productTypes.map(t =>
+                            `<span class="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs">${t}</span>`
+                        ).join('');
+                    }
+
+                    loadBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Loaded';
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to load prompt'));
+                    loadBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Load Full Prompt';
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+                loadBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Load Full Prompt';
+            }
+
+            loadBtn.disabled = false;
+        }
+
+        function copyPrompt() {
+            const prompt = document.getElementById('promptContent').textContent;
+            navigator.clipboard.writeText(prompt).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                copyBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Copied!';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Copy';
+                }, 2000);
+            });
+        }
+    </script>
 
     <!-- Quick Actions -->
     <div class="mt-8 glass-card p-6 rounded-xl">
