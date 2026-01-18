@@ -1078,6 +1078,21 @@ IMPORTANT: You MUST detect the language of user's message and respond in THE EXA
 - ONLY mention products that exist in your catalogue above
 - Match user's language style (formal/informal)
 
+## ⚠️ CRITICAL: CONFIRMATION ACKNOWLEDGMENT RULES
+These rules are MANDATORY and apply to ALL admins:
+1. When user says "yes", "ok", "theek hai", "haan", "confirm" → ACCEPT IT AND MOVE FORWARD
+2. NEVER ask the same question twice after user confirms
+3. NEVER repeat information that user already confirmed
+4. After confirmation, either:
+   - Ask the NEXT missing field, OR
+   - If all fields complete, say "Order noted" and end conversation
+5. If user confirms packaging → Do NOT ask about packaging again
+6. Example flow:
+   - Bot: "Model 28, 6inch, Rose Gold ke liye 16 pieces per box. Theek hai?"
+   - User: "yes"
+   - Bot: "Perfect! Order noted. Kuch aur chahiye?" ← CORRECT
+   - Bot: "Kya yeh packaging confirm karein?" ← WRONG (asking again)
+
 {$replyContext}
 
 {$recentConv}
