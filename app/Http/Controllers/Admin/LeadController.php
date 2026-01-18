@@ -107,14 +107,21 @@ class LeadController extends Controller
             $chats = $lead->whatsappUser->chats()->orderBy('created_at', 'asc')->get();
         }
 
-        // Get Product Question fields for table columns (from workflow)
-        // Exclude fields that are global questions (like City)
-        $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
-            ->where('is_active', true)
+        // Get Product fields from CatalogueField for table columns
+        // CatalogueField has all product attributes like Model Number, Size, Finish/Color, etc.
+        $productFields = \App\Models\CatalogueField::where('admin_id', $adminId)
             ->orderBy('sort_order')
-            ->get(['field_name', 'display_name', 'field_type']);
+            ->get(['field_key as field_name', 'field_name as display_name', 'sort_order']);
 
-        // Get global question keys to exclude from product table
+        // Also check if fields exist in QuestionnaireField as backup
+        if ($productFields->isEmpty()) {
+            $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get(['field_name', 'display_name', 'field_type']);
+        }
+
+        // Get global question keys to exclude from product table (like City)
         $globalKeys = array_keys($lead->collected_data['global_questions'] ?? []);
         if (!empty($globalKeys)) {
             $productFields = $productFields->reject(function ($field) use ($globalKeys) {
