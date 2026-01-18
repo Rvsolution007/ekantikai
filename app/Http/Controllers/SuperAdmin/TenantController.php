@@ -110,16 +110,14 @@ class TenantController extends Controller
         // Get workflow connection status for the visual diagram
         $catalogueCount = \App\Models\Catalogue::where('admin_id', $admin->id)->where('is_active', true)->count();
         $catalogueFieldsCount = \App\Models\CatalogueField::where('admin_id', $admin->id)->count();
-        $productQuestionsCount = \App\Models\QuestionnaireField::where('admin_id', $admin->id)
-            ->where('context_type', 'product')
+
+        // Count questionnaire fields (no context_type column - all fields are counted together)
+        $workflowQuestionsCount = \App\Models\QuestionnaireField::where('admin_id', $admin->id)
             ->where('is_active', true)
             ->count();
-        $globalQuestionsCount = \App\Models\QuestionnaireField::where('admin_id', $admin->id)
-            ->where('context_type', 'global')
-            ->where('is_active', true)
-            ->count();
+
         $hasSystemPrompt = !empty($admin->ai_system_prompt);
-        $hasFlowchart = ($productQuestionsCount > 0 || $globalQuestionsCount > 0);
+        $hasFlowchart = $workflowQuestionsCount > 0;
 
         $workflowStatus = [
             'catalogue' => [
@@ -135,17 +133,17 @@ class TenantController extends Controller
             ],
             'flowchart' => [
                 'connected' => $hasFlowchart,
-                'count' => $productQuestionsCount + $globalQuestionsCount,
+                'count' => $workflowQuestionsCount,
                 'label' => 'Flowchart',
             ],
             'product_questions' => [
-                'connected' => $productQuestionsCount > 0,
-                'count' => $productQuestionsCount,
+                'connected' => $workflowQuestionsCount > 0,
+                'count' => $workflowQuestionsCount,
                 'label' => 'Product Questions',
             ],
             'global_questions' => [
-                'connected' => $globalQuestionsCount > 0,
-                'count' => $globalQuestionsCount,
+                'connected' => false,  // Not tracked separately in current schema
+                'count' => 0,
                 'label' => 'Global Questions',
             ],
         ];
