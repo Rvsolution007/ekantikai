@@ -45,13 +45,14 @@ class QuestionnaireFieldController extends Controller
             'field_name' => 'required|string|max:50|regex:/^[a-z_]+$/',
             'display_name' => 'required|string|max:100',
             'field_type' => 'required|in:text,number,select,multiselect',
-            'is_required' => 'boolean',
-            'is_unique_key' => 'boolean',
+            'is_required' => 'nullable',
+            'is_unique_key' => 'nullable',
             'unique_key_order' => 'nullable|integer|min:1',
             'options_source' => 'required|in:manual,catalogue,dynamic',
             'options_manual' => 'nullable|array',
             'catalogue_field' => 'nullable|string|max:50',
             'validation_rules' => 'nullable|array',
+            'is_active' => 'nullable',
         ]);
 
         $adminId = $this->getAdminId();
@@ -108,15 +109,20 @@ class QuestionnaireFieldController extends Controller
         $validated = $request->validate([
             'display_name' => 'required|string|max:100',
             'field_type' => 'required|in:text,number,select,multiselect',
-            'is_required' => 'boolean',
-            'is_unique_key' => 'boolean',
+            'is_required' => 'nullable',
+            'is_unique_key' => 'nullable',
             'unique_key_order' => 'nullable|integer|min:1',
             'options_source' => 'required|in:manual,catalogue,dynamic',
             'options_manual' => 'nullable|array',
             'catalogue_field' => 'nullable|string|max:50',
             'validation_rules' => 'nullable|array',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable',
         ]);
+
+        // Convert checkbox values to boolean
+        $validated['is_required'] = !empty($validated['is_required']);
+        $validated['is_unique_key'] = !empty($validated['is_unique_key']);
+        $validated['is_active'] = !empty($validated['is_active']);
 
         $field->update($validated);
 
