@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                                        @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                                        @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                                        @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                            @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                            @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                            @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                                {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                                    {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -131,15 +131,15 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                                                                                {{ $lead->stage === $stageOption
+                                                                                                                                                    {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span
                                                 class="w-3 h-3 rounded-full mr-3 
-                                                                                                                                @if($stageOption === 'New Lead') bg-yellow-500
-                                                                                                                                @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                                                                                @elseif($stageOption === 'Confirm') bg-green-500
-                                                                                                                                @else bg-red-500 @endif"></span>
+                                                                                                                                                    @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                                                                                    @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                                                                                    @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                                                                                    @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -349,13 +349,15 @@
                                     <p class="text-2xl font-bold text-white">
                                         @php
                                             $totalQty = array_sum(array_map(function ($p) use ($productFields) {
-                                                // Look for qty field
+                                                // Look for qty field - default to 0 if not mentioned
                                                 foreach ($productFields as $field) {
                                                     if (in_array(strtolower($field->field_name), ['qty', 'quantity'])) {
-                                                        return intval($p[$field->field_name] ?? $p['qty'] ?? $p['quantity'] ?? 1);
+                                                        $val = $p[$field->field_name] ?? $p['qty'] ?? $p['quantity'] ?? null;
+                                                        return $val ? intval($val) : 0;
                                                     }
                                                 }
-                                                return intval($p['qty'] ?? $p['quantity'] ?? 1);
+                                                $val = $p['qty'] ?? $p['quantity'] ?? null;
+                                                return $val ? intval($val) : 0;
                                             }, $allProducts->toArray()));
                                         @endphp
                                         {{ $totalQty }}
@@ -383,7 +385,7 @@
                     $globalQuestions = $lead->collected_data['global_questions'] ?? [];
                     // Filter out product-related fields - only show customer info
                     $productFieldKeys = ['category', 'model', 'size', 'finish', 'quantity', 'material', 'product_type', 'color'];
-                    $customerInfo = array_filter($globalQuestions, function($key) use ($productFieldKeys) {
+                    $customerInfo = array_filter($globalQuestions, function ($key) use ($productFieldKeys) {
                         return !in_array(strtolower($key), $productFieldKeys);
                     }, ARRAY_FILTER_USE_KEY);
                 @endphp
@@ -426,7 +428,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                                                                                {{ $role === 'user'
+                                                                                                                                                    {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
