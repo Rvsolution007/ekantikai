@@ -228,7 +228,76 @@ class AIService
             $context['available_options'] = $filteredOptions;
         }
 
+        // *** NEW: Get PENDING flowchart questions (not yet answered) ***
+        $pendingQuestions = $this->getPendingFlowchartQuestions($admin->id, $context);
+        if (!empty($pendingQuestions)) {
+            $context['pending_questions'] = $pendingQuestions;
+        }
+
         return $context;
+    }
+
+    /**
+     * Get flowchart questions that haven't been answered yet
+     */
+    protected function getPendingFlowchartQuestions(int $adminId, array $context): array
+    {
+        $fieldRules = $context['field_rules'] ?? [];
+        $collectedData = $context['collected_data'] ?? [];
+        $productConfirmations = $context['product_confirmations'] ?? [];
+        $customerFields = $context['customer_fields'] ?? [];
+
+        // Combine all answered fields
+        $answeredFields = [];
+
+        // From workflow_questions
+        if (isset($collectedData['workflow_questions'])) {
+            foreach ($collectedData['workflow_questions'] as $key => $value) {
+                if (!empty($value)) {
+                    $answeredFields[strtolower($key)] = $value;
+                }
+            }
+        }
+
+        // From global_questions
+        if (isset($collectedData['global_questions'])) {
+            foreach ($collectedData['global_questions'] as $key => $value) {
+                if (!empty($value)) {
+                    $answeredFields[strtolower($key)] = $value;
+                }
+            }
+        }
+
+        // From product_confirmations
+        foreach ($productConfirmations as $conf) {
+            foreach ($conf as $key => $value) {
+                if (!empty($value) && !str_starts_with($key, '_')) {
+                    $answeredFields[strtolower($key)] = $value;
+                }
+            }
+        }
+
+        // From customer global_fields
+        foreach ($customerFields as $key => $value) {
+            if (!empty($value)) {
+                $answeredFields[strtolower($key)] = $value;
+            }
+        }
+
+        // Find pending questions
+        $pending = [];
+        foreach ($fieldRules as $rule) {
+            $fieldName = strtolower($rule['field_name'] ?? '');
+            if (!isset($answeredFields[$fieldName])) {
+                $pending[] = [
+                    'field_name' => $rule['field_name'],
+                    'display_name' => $rule['display_name'],
+                    'is_required' => $rule['is_required'] ?? true,
+                ];
+            }
+        }
+
+        return $pending;
     }
 
     /**
@@ -870,6 +939,25 @@ class AIService
             }
         }
 
+        // *** NEW: Build pending questions section ***
+        $pendingQuestionsSection = '';
+        if (!empty($context['pending_questions'])) {
+            $pendingQuestionsSection = "\n## ⚠️ IMPORTANT: PENDING QUESTIONS TO ASK\n";
+            $pendingQuestionsSection .= "The following flowchart questions have NOT been answered yet:\n";
+            foreach ($context['pending_questions'] as $i => $q) {
+                $num = $i + 1;
+                $required = $q['is_required'] ? '[REQUIRED]' : '[OPTIONAL]';
+                $pendingQuestionsSection .= "{$num}. {$q['display_name']} ({$q['field_name']}) {$required}\n";
+            }
+            $pendingQuestionsSection .= "\n### ACTION REQUIRED:\n";
+            $pendingQuestionsSection .= "- After confirming current product, ASK THE FIRST PENDING QUESTION\n";
+            $pendingQuestionsSection .= "- Example: If City is pending, ask 'Aapka city konsa hai?' or 'Which city?'\n";
+            $pendingQuestionsSection .= "- Do NOT skip these questions - they are part of the sales workflow\n";
+        } else {
+            $pendingQuestionsSection = "\n## ALL QUESTIONS ANSWERED\n";
+            $pendingQuestionsSection .= "All flowchart questions have been answered. Order is complete.\n";
+        }
+
         $collectedData = json_encode($context['collected_data'] ?? [], JSON_PRETTY_PRINT);
 
         // Custom personality from admin settings
@@ -1100,6 +1188,8 @@ These rules are MANDATORY and apply to ALL admins:
 {$productMemory}
 
 {$fieldRules}
+
+{$pendingQuestionsSection}
 
 ## COLLECTED DATA SO FAR
 {$collectedData}
