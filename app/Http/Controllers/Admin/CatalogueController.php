@@ -39,8 +39,9 @@ class CatalogueController extends Controller
             if (!empty($allFieldKeys)) {
                 $query->where(function ($q) use ($search, $allFieldKeys) {
                     foreach ($allFieldKeys as $fieldKey) {
-                        // Use LOWER for case-insensitive search
-                        $q->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, ?))) LIKE ?", ['$.' . $fieldKey, "%{$search}%"]);
+                        // Use LOWER for case-insensitive search - quote field key for JSON path
+                        $jsonPath = '$."' . $fieldKey . '"';
+                        $q->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, ?))) LIKE ?", [$jsonPath, "%{$search}%"]);
                     }
                 });
             }
@@ -90,8 +91,9 @@ class CatalogueController extends Controller
 
             // Check unique
             if ($field->is_unique && !empty($value)) {
+                $jsonPath = '$."' . $field->field_key . '"';
                 $exists = Catalogue::where('admin_id', $adminId)
-                    ->whereRaw("JSON_EXTRACT(data, ?) = ?", ['$.' . $field->field_key, $value])
+                    ->whereRaw("JSON_EXTRACT(data, ?) = ?", [$jsonPath, $value])
                     ->exists();
 
                 if ($exists) {
@@ -142,9 +144,10 @@ class CatalogueController extends Controller
 
             // Check unique (exclude current record)
             if ($field->is_unique && !empty($value)) {
+                $jsonPath = '$."' . $field->field_key . '"';
                 $exists = Catalogue::where('admin_id', $adminId)
                     ->where('id', '!=', $catalogue->id)
-                    ->whereRaw("JSON_EXTRACT(data, ?) = ?", ['$.' . $field->field_key, $value])
+                    ->whereRaw("JSON_EXTRACT(data, ?) = ?", [$jsonPath, $value])
                     ->exists();
 
                 if ($exists) {
@@ -267,7 +270,9 @@ class CatalogueController extends Controller
             if (!empty($uniqueFields)) {
                 $query->where(function ($q) use ($search, $uniqueFields) {
                     foreach ($uniqueFields as $fieldKey) {
-                        $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", ['$.' . $fieldKey, "%{$search}%"]);
+                        // Quote field key for JSON path
+                        $jsonPath = '$."' . $fieldKey . '"';
+                        $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$search}%"]);
                     }
                 });
             }
