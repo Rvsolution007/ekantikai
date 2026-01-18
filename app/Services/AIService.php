@@ -212,8 +212,8 @@ class AIService
             $context['mentioned_products'] = $mentionedModels;
         }
 
-        // *** NEW: Find products by mentioned category (like "Profile handles") ***
-        $categoryProducts = $this->findProductsByCategory($admin->id, $message);
+        // *** NEW: Find products by mentioned category - check message AND collected_data ***
+        $categoryProducts = $this->findProductsByCategory($admin->id, $message, $context);
         if (!empty($categoryProducts)) {
             $context['category_products'] = $categoryProducts;
         }
@@ -228,11 +228,11 @@ class AIService
     }
 
     /**
-     * Find products by ANY mentioned field value in message
+     * Find products by ANY mentioned field value in message OR collected_data
      * FULLY DYNAMIC - works with ALL CatalogueFields, not hardcoded fields
-     * When user mentions any value from catalogue, returns all matching products with ALL their field data
+     * When user mentions any value from catalogue (or mentioned earlier), returns all matching products
      */
-    protected function findProductsByCategory(int $adminId, string $message): array
+    protected function findProductsByCategory(int $adminId, string $message, array $context = []): array
     {
         $messageLower = strtolower($message);
         $result = [];
@@ -276,7 +276,7 @@ class AIService
             }
         }
 
-        // Check if any field value is mentioned in the message
+        // FIRST: Check if any field value is mentioned in CURRENT message
         foreach ($fieldValuesMap as $fieldKey => $fieldData) {
             foreach ($fieldData['values'] as $value => $matchingItems) {
                 if (stripos($messageLower, strtolower($value)) !== false) {
@@ -321,6 +321,75 @@ class AIService
                     ]);
 
                     return $result; // Return first match
+                }
+            }
+        }
+
+        // FALLBACK: Check collected_data for previously confirmed category values
+        if (empty($result) && !empty($context)) {
+            // Check workflow_questions and product_confirmations for category values
+            $collectedCategories = [];
+
+            // Check workflow_questions
+            $workflowData = $context['collected_data']['workflow_questions'] ?? [];
+            foreach ($workflowData as $key => $value) {
+                if (!empty($value)) {
+                    $collectedCategories[$key] = $value;
+                }
+            }
+
+            // Check product_confirmations (category field)
+            $confirmations = $context['product_confirmations'] ?? [];
+            foreach ($confirmations as $conf) {
+                if (!empty($conf['category'])) {
+                    $collectedCategories['category'] = $conf['category'];
+                }
+            }
+
+            // Now check if any collected value exists in our field map
+            foreach ($collectedCategories as $key => $value) {
+                foreach ($fieldValuesMap as $fieldKey => $fieldData) {
+                    if (isset($fieldData['values'][$value])) {
+                        $matchingItems = $fieldData['values'][$value];
+
+                        // Build the related fields data
+                        $otherFieldValues = [];
+                        foreach ($catalogueFields as $otherField) {
+                            $otherKey = $otherField->field_key;
+                            if ($otherKey === $fieldKey)
+                                continue;
+
+                            $uniqueValues = [];
+                            foreach ($matchingItems as $item) {
+                                $otherValue = $item->data[$otherKey] ?? null;
+                                if ($otherValue && !empty(trim($otherValue))) {
+                                    $uniqueValues[] = trim($otherValue);
+                                }
+                            }
+
+                            if (!empty($uniqueValues)) {
+                                $otherFieldValues[$otherKey] = [
+                                    'field_name' => $otherField->field_name,
+                                    'values' => array_unique($uniqueValues),
+                                ];
+                            }
+                        }
+
+                        Log::info('Found category from collected_data', [
+                            'collected_key' => $key,
+                            'collected_value' => $value,
+                            'matching_count' => count($matchingItems),
+                        ]);
+
+                        return [
+                            'matched_field' => $fieldData['field_name'],
+                            'matched_value' => $value,
+                            'matching_count' => count($matchingItems),
+                            'related_fields' => $otherFieldValues,
+                            'sample_products' => array_slice(array_map(fn($i) => $i->data, $matchingItems), 0, 15),
+                            'from_collected_data' => true,
+                        ];
+                    }
                 }
             }
         }
