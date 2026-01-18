@@ -107,38 +107,41 @@ class LeadController extends Controller
             $chats = $lead->whatsappUser->chats()->orderBy('created_at', 'asc')->get();
         }
 
-        // Get Product fields from CatalogueField for table columns
-        // CatalogueField has all product attributes like Model Number, Size, Finish/Color, etc.
-        $catalogueFields = \App\Models\CatalogueField::where('admin_id', $adminId)
+        // Get Product fields from QuestionnaireField (Product Questions) for table columns
+        // These are the fields defined in Workflow -> Product Questions
+        $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+            ->where('is_active', true)
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->map(function ($field) {
+                return (object) [
+                    'field_name' => $field->field_name,
+                    'display_name' => $field->display_name,
+                ];
+            });
 
-        // DEBUG: Log how many fields found
-        \Log::info('CatalogueFields for Product Quotation', [
+        // DEBUG: Log QuestionnaireField count
+        \Log::info('QuestionnaireFields for Product Quotation', [
             'admin_id' => $adminId,
-            'fields_count' => $catalogueFields->count(),
-            'field_names' => $catalogueFields->pluck('field_name')->toArray(),
+            'fields_count' => $productFields->count(),
+            'field_names' => $productFields->pluck('display_name')->toArray(),
         ]);
 
-        // Map to expected format for view (field_name, display_name)
-        $productFields = $catalogueFields->map(function ($field) {
-            return (object) [
-                'field_name' => $field->field_key,  // field_key is the actual key used in product data
-                'display_name' => $field->field_name,  // field_name is the display name
-            ];
-        });
-
-        // Also check if fields exist in QuestionnaireField as backup
+        // Fallback to CatalogueField if no QuestionnaireField defined
         if ($productFields->isEmpty()) {
-            \Log::info('Using QuestionnaireField as backup for Product Quotation');
-            $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
-                ->where('is_active', true)
+            $catalogueFields = \App\Models\CatalogueField::where('admin_id', $adminId)
                 ->orderBy('sort_order')
-                ->get(['field_name', 'display_name', 'field_type']);
+                ->get();
+
+            $productFields = $catalogueFields->map(function ($field) {
+                return (object) [
+                    'field_name' => $field->field_key,
+                    'display_name' => $field->field_name,
+                ];
+            });
         }
 
         // NOTE: Removed global_questions filter - all product fields should show
-        // The filter was incorrectly removing some fields
 
         return view('admin.leads.show', compact('lead', 'chats', 'productFields'));
     }
