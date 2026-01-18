@@ -228,26 +228,19 @@ class AIService
     }
 
     /**
-     * Find products by mentioned category in message
-     * Searches the JSON data for matching category values
+     * Find products by ANY mentioned field value in message
+     * FULLY DYNAMIC - works with ALL CatalogueFields, not hardcoded fields
+     * When user mentions any value from catalogue, returns all matching products with ALL their field data
      */
     protected function findProductsByCategory(int $adminId, string $message): array
     {
         $messageLower = strtolower($message);
         $result = [];
 
-        // Get all catalogue fields for this admin
+        // Get ALL catalogue fields for this admin (dynamic - from CatalogueField table)
         $catalogueFields = CatalogueField::forTenant($adminId)->ordered()->get();
-        $categoryFieldKeys = [];
-        foreach ($catalogueFields as $field) {
-            $keyLower = strtolower($field->field_key);
-            // Fields that might contain category info
-            if (str_contains($keyLower, 'category') || str_contains($keyLower, 'type') || str_contains($keyLower, 'product')) {
-                $categoryFieldKeys[$field->field_key] = $field->field_name;
-            }
-        }
 
-        if (empty($categoryFieldKeys)) {
+        if ($catalogueFields->isEmpty()) {
             return [];
         }
 
@@ -256,54 +249,79 @@ class AIService
             ->where('is_active', true)
             ->get();
 
-        // Get unique category values
-        $allCategories = [];
+        if ($catalogueItems->isEmpty()) {
+            return [];
+        }
+
+        // Build a map of ALL unique values for EACH field
+        // Structure: $fieldValuesMap[fieldKey][value] = [items array]
+        $fieldValuesMap = [];
+        foreach ($catalogueFields as $field) {
+            $fieldValuesMap[$field->field_key] = [
+                'field_name' => $field->field_name,
+                'values' => [],
+            ];
+        }
+
         foreach ($catalogueItems as $item) {
-            foreach ($categoryFieldKeys as $fieldKey => $fieldName) {
-                $categoryValue = $item->data[$fieldKey] ?? null;
-                if ($categoryValue && !empty(trim($categoryValue))) {
-                    if (!isset($allCategories[$categoryValue])) {
-                        $allCategories[$categoryValue] = [];
+            foreach ($catalogueFields as $field) {
+                $value = $item->data[$field->field_key] ?? null;
+                if ($value && !empty(trim($value))) {
+                    $value = trim($value);
+                    if (!isset($fieldValuesMap[$field->field_key]['values'][$value])) {
+                        $fieldValuesMap[$field->field_key]['values'][$value] = [];
                     }
-                    $allCategories[$categoryValue][] = $item;
+                    $fieldValuesMap[$field->field_key]['values'][$value][] = $item;
                 }
             }
         }
 
-        // Check if any category is mentioned in message
-        foreach ($allCategories as $category => $items) {
-            if (stripos($messageLower, strtolower($category)) !== false) {
-                // Found a matching category! Get all models in this category
-                $models = [];
-                foreach ($items as $item) {
-                    $modelValue = null;
-                    // Find model number in data
-                    foreach ($item->data as $key => $value) {
-                        $keyLower = strtolower($key);
-                        if ((str_contains($keyLower, 'model') || str_contains($keyLower, 'number') || str_contains($keyLower, 'code')) && !empty($value)) {
-                            $modelValue = $value;
-                            break;
+        // Check if any field value is mentioned in the message
+        foreach ($fieldValuesMap as $fieldKey => $fieldData) {
+            foreach ($fieldData['values'] as $value => $matchingItems) {
+                if (stripos($messageLower, strtolower($value)) !== false) {
+                    // Found a match! Now get ALL other field values from matching products
+                    $otherFieldValues = [];
+
+                    foreach ($catalogueFields as $otherField) {
+                        $otherKey = $otherField->field_key;
+                        if ($otherKey === $fieldKey)
+                            continue; // Skip the matched field
+
+                        $uniqueValues = [];
+                        foreach ($matchingItems as $item) {
+                            $otherValue = $item->data[$otherKey] ?? null;
+                            if ($otherValue && !empty(trim($otherValue))) {
+                                $uniqueValues[] = trim($otherValue);
+                            }
+                        }
+
+                        if (!empty($uniqueValues)) {
+                            $otherFieldValues[$otherKey] = [
+                                'field_name' => $otherField->field_name,
+                                'values' => array_unique($uniqueValues),
+                            ];
                         }
                     }
-                    if ($modelValue) {
-                        $models[] = $modelValue;
-                    }
+
+                    $result = [
+                        'matched_field' => $fieldData['field_name'],
+                        'matched_value' => $value,
+                        'matching_count' => count($matchingItems),
+                        'related_fields' => $otherFieldValues,
+                        'sample_products' => array_slice(array_map(fn($i) => $i->data, $matchingItems), 0, 15),
+                    ];
+
+                    Log::info('Dynamic catalogue match found', [
+                        'admin_id' => $adminId,
+                        'matched_field' => $fieldData['field_name'],
+                        'matched_value' => $value,
+                        'matching_count' => count($matchingItems),
+                        'related_fields_count' => count($otherFieldValues),
+                    ]);
+
+                    return $result; // Return first match
                 }
-
-                $result = [
-                    'category' => $category,
-                    'models' => array_unique($models),
-                    'count' => count($items),
-                    'sample_products' => array_slice(array_map(fn($i) => $i->data, $items), 0, 10),
-                ];
-
-                Log::info('Found products by category', [
-                    'category' => $category,
-                    'models_count' => count($models),
-                    'models' => array_slice($models, 0, 20),
-                ]);
-
-                break; // Only match first category
             }
         }
 
@@ -832,15 +850,31 @@ class AIService
             }
         }
 
-        // *** NEW: Add CATEGORY PRODUCTS section when user asks about a category ***
+        // *** DYNAMIC: Add matching products section when user asks about ANY catalogue value ***
         $categoryProductsSection = '';
         if (!empty($context['category_products'])) {
             $catData = $context['category_products'];
-            $categoryProductsSection = "\n## PRODUCTS IN '{$catData['category']}' CATEGORY (THESE ARE AVAILABLE!)\n";
-            $categoryProductsSection .= "CRITICAL: Customer is asking about '{$catData['category']}'. Here are ALL available models:\n\n";
-            $categoryProductsSection .= "**Available Model Numbers:** " . implode(', ', array_slice($catData['models'], 0, 50)) . "\n";
-            $categoryProductsSection .= "**Total Products:** {$catData['count']}\n\n";
+            $matchedField = $catData['matched_field'] ?? 'Category';
+            $matchedValue = $catData['matched_value'] ?? '';
+            $matchingCount = $catData['matching_count'] ?? 0;
+            $relatedFields = $catData['related_fields'] ?? [];
 
+            $categoryProductsSection = "\n## ⚡ PRODUCTS MATCHING '{$matchedValue}' ({$matchedField})\n";
+            $categoryProductsSection .= "**CRITICAL:** Customer mentioned '{$matchedValue}'. Found {$matchingCount} matching products.\n\n";
+
+            // Show ALL related field values dynamically
+            if (!empty($relatedFields)) {
+                $categoryProductsSection .= "**AVAILABLE OPTIONS (GIVE THESE IMMEDIATELY):**\n";
+                foreach ($relatedFields as $fieldKey => $fieldInfo) {
+                    $fieldName = $fieldInfo['field_name'] ?? ucwords(str_replace('_', ' ', $fieldKey));
+                    $values = array_slice($fieldInfo['values'] ?? [], 0, 50);
+                    $valuesList = implode(', ', $values);
+                    $categoryProductsSection .= "• {$fieldName}: {$valuesList}\n";
+                }
+                $categoryProductsSection .= "\n";
+            }
+
+            // Show sample products
             if (!empty($catData['sample_products'])) {
                 $categoryProductsSection .= "**Sample Products:**\n";
                 foreach (array_slice($catData['sample_products'], 0, 5) as $product) {
@@ -856,11 +890,12 @@ class AIService
                     }
                 }
             }
+
             $categoryProductsSection .= "\n### ⚠️ MANDATORY BEHAVIOR - FIRST RESPONSE RULE:\n";
-            $categoryProductsSection .= "1. IMMEDIATELY list ALL model numbers above when customer asks about '{$catData['category']}'\n";
-            $categoryProductsSection .= "2. Do NOT ask follow-up questions like 'koi specific model chahiye?' BEFORE giving the list\n";
-            $categoryProductsSection .= "3. FIRST give model list, THEN ask which one they want\n";
-            $categoryProductsSection .= "4. Example: 'Ji, {$catData['category']} me ye models available hain: [MODEL LIST]. Kaunsa dekhenge?'\n";
+            $categoryProductsSection .= "1. IMMEDIATELY list the available options above when customer asks about '{$matchedValue}'\n";
+            $categoryProductsSection .= "2. Do NOT ask follow-up questions BEFORE giving the full list\n";
+            $categoryProductsSection .= "3. FIRST give all available values, THEN ask which one they want\n";
+            $categoryProductsSection .= "4. Example: 'Ji, {$matchedValue} me ye options available hain: [LIST]. Kaunsa chahiye?'\n";
         }
 
         return <<<PROMPT
