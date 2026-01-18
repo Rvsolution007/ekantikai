@@ -298,11 +298,21 @@ class TenantController extends Controller
      */
     public function chats(Admin $admin)
     {
+        \Log::info('SuperAdmin viewing chats', [
+            'admin_id' => $admin->id,
+            'admin_name' => $admin->name,
+        ]);
+
         // Get all customers for this admin with their chats
         $customers = \App\Models\Customer::where('admin_id', $admin->id)
             ->withCount('chatMessages')
             ->orderBy('updated_at', 'desc')
             ->paginate(20);
+
+        \Log::info('Customers found', [
+            'count' => $customers->count(),
+            'total' => $customers->total(),
+        ]);
 
         return view('superadmin.admins.chats', compact('admin', 'customers'));
     }
