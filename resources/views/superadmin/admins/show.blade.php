@@ -35,15 +35,13 @@
         <div class="glass-card p-6 rounded-xl">
             <div class="flex items-center justify-between mb-4">
                 <span class="text-gray-400 text-sm">Status</span>
-                @if($tenant->status === 'active')
+                @if($tenant->is_active)
                     <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">Active</span>
-                @elseif($tenant->status === 'trial')
-                    <span class="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400">Trial</span>
                 @else
                     <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400">Inactive</span>
                 @endif
             </div>
-            <p class="text-2xl font-bold text-white capitalize">{{ $tenant->status }}</p>
+            <p class="text-2xl font-bold text-white capitalize">{{ $tenant->is_active ? 'Active' : 'Inactive' }}</p>
         </div>
 
         <div class="glass-card p-6 rounded-xl">
@@ -359,12 +357,12 @@
                 @csrf
                 @method('PATCH')
                 <button type="submit"
-                    class="bg-{{ $tenant->status === 'active' ? 'red' : 'green' }}-500/20 hover:bg-{{ $tenant->status === 'active' ? 'red' : 'green' }}-500/30 text-{{ $tenant->status === 'active' ? 'red' : 'green' }}-400 px-4 py-2 rounded-lg inline-flex items-center transition-colors">
+                    class="{{ $tenant->is_active ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400' : 'bg-green-500/20 hover:bg-green-500/30 text-green-400' }} px-4 py-2 rounded-lg inline-flex items-center transition-colors">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                     </svg>
-                    {{ $tenant->status === 'active' ? 'Deactivate' : 'Activate' }}
+                    {{ $tenant->is_active ? 'Deactivate' : 'Activate' }}
                 </button>
             </form>
         </div>
