@@ -47,9 +47,10 @@ class CatalogueImportController extends Controller
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ];
 
-        // Add headers
+        // Add headers - show field_name and field_key
         $col = 'A';
         foreach ($fields as $field) {
+            // Show display name in header
             $headerText = $field->field_name;
             if ($field->is_required) {
                 $headerText .= ' *';
@@ -59,6 +60,12 @@ class CatalogueImportController extends Controller
             }
 
             $sheet->setCellValue($col . '1', $headerText);
+
+            // Add a comment showing the internal field_key (for debugging)
+            $sheet->getComment($col . '1')
+                ->getText()
+                ->createTextRun("Internal key: " . $field->field_key);
+
             $sheet->getColumnDimension($col)->setAutoSize(true);
             $col++;
         }
