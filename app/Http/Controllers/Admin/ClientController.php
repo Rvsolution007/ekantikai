@@ -74,7 +74,7 @@ class ClientController extends Controller
 
         // Find or create customer
         $customer = Customer::firstOrCreate(
-            ['phone_number' => $phone, 'admin_id' => $admin->id],
+            ['phone' => $phone, 'admin_id' => $admin->id],
             [
                 'name' => $validated['name'],
                 'admin_id' => $admin->id,
