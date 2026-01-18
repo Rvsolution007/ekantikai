@@ -107,7 +107,50 @@ class TenantController extends Controller
             'workflows' => $admin->workflows()->count(),
         ];
 
-        return view('superadmin.admins.show', compact('tenant', 'stats'));
+        // Get workflow connection status for the visual diagram
+        $catalogueCount = \App\Models\Catalogue::where('admin_id', $admin->id)->where('is_active', true)->count();
+        $catalogueFieldsCount = \App\Models\CatalogueField::where('admin_id', $admin->id)->count();
+        $productQuestionsCount = \App\Models\QuestionnaireField::where('admin_id', $admin->id)
+            ->where('context_type', 'product')
+            ->where('is_active', true)
+            ->count();
+        $globalQuestionsCount = \App\Models\QuestionnaireField::where('admin_id', $admin->id)
+            ->where('context_type', 'global')
+            ->where('is_active', true)
+            ->count();
+        $hasSystemPrompt = !empty($admin->ai_system_prompt);
+        $hasFlowchart = ($productQuestionsCount > 0 || $globalQuestionsCount > 0);
+
+        $workflowStatus = [
+            'catalogue' => [
+                'connected' => $catalogueCount > 0,
+                'count' => $catalogueCount,
+                'fields_count' => $catalogueFieldsCount,
+                'label' => 'Catalogue',
+            ],
+            'system_prompt' => [
+                'connected' => $hasSystemPrompt,
+                'count' => $hasSystemPrompt ? 1 : 0,
+                'label' => 'System Prompt',
+            ],
+            'flowchart' => [
+                'connected' => $hasFlowchart,
+                'count' => $productQuestionsCount + $globalQuestionsCount,
+                'label' => 'Flowchart',
+            ],
+            'product_questions' => [
+                'connected' => $productQuestionsCount > 0,
+                'count' => $productQuestionsCount,
+                'label' => 'Product Questions',
+            ],
+            'global_questions' => [
+                'connected' => $globalQuestionsCount > 0,
+                'count' => $globalQuestionsCount,
+                'label' => 'Global Questions',
+            ],
+        ];
+
+        return view('superadmin.admins.show', compact('tenant', 'stats', 'workflowStatus'));
     }
 
     public function edit(Admin $admin)
