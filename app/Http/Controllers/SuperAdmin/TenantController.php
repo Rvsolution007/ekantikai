@@ -303,9 +303,9 @@ class TenantController extends Controller
             'admin_name' => $admin->name,
         ]);
 
-        // Get all customers for this admin with their chats
+        // Get all customers for this admin with their WhatsApp chats
         $customers = \App\Models\Customer::where('admin_id', $admin->id)
-            ->withCount('chatMessages')
+            ->withCount('whatsappChats')
             ->orderBy('updated_at', 'desc')
             ->paginate(20);
 
@@ -316,7 +316,7 @@ class TenantController extends Controller
                 'id' => $customers->first()->id,
                 'name' => $customers->first()->name,
                 'phone' => $customers->first()->phone,
-                'chat_count' => $customers->first()->chat_messages_count,
+                'chat_count' => $customers->first()->whatsapp_chats_count,
             ] : null,
         ]);
 
@@ -332,7 +332,8 @@ class TenantController extends Controller
             ->where('id', $customerId)
             ->firstOrFail();
 
-        $messages = \App\Models\ChatMessage::where('customer_id', $customerId)
+        // Use WhatsappChat model (where messages are actually stored)
+        $messages = \App\Models\WhatsappChat::where('customer_id', $customerId)
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -351,7 +352,7 @@ class TenantController extends Controller
      */
     public function deleteChat(Request $request, Admin $admin, $messageId)
     {
-        $message = \App\Models\ChatMessage::where('id', $messageId)
+        $message = \App\Models\WhatsappChat::where('id', $messageId)
             ->whereHas('customer', function ($q) use ($admin) {
                 $q->where('admin_id', $admin->id);
             })
@@ -379,8 +380,8 @@ class TenantController extends Controller
             return back()->with('error', 'Customer not found');
         }
 
-        // Clear chat messages
-        \App\Models\ChatMessage::where('customer_id', $customerId)->delete();
+        // Clear WhatsApp chat messages
+        \App\Models\WhatsappChat::where('customer_id', $customerId)->delete();
 
         // Reset questionnaire state (clears completed product fields)
         $state = $customer->questionnaireState;
@@ -414,8 +415,8 @@ class TenantController extends Controller
         $customers = \App\Models\Customer::where('admin_id', $admin->id)->get();
 
         foreach ($customers as $customer) {
-            // Clear chat messages
-            \App\Models\ChatMessage::where('customer_id', $customer->id)->delete();
+            // Clear WhatsApp chat messages
+            \App\Models\WhatsappChat::where('customer_id', $customer->id)->delete();
 
             // Reset questionnaire state
             $state = $customer->questionnaireState;

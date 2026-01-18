@@ -72,9 +72,9 @@
                             </div>
 
                             <!-- Message count badge -->
-                            @if($customer->chat_messages_count > 0)
+                            @if($customer->whatsapp_chats_count > 0)
                                 <div class="px-2 py-1 bg-primary-500/20 text-primary-400 text-xs font-medium rounded-full">
-                                    {{ $customer->chat_messages_count }} messages
+                                    {{ $customer->whatsapp_chats_count }} messages
                                 </div>
                             @endif
 
