@@ -972,7 +972,7 @@ IMPORTANT: You MUST detect the language of user's message and respond in THE EXA
             "model": "Model number if mentioned",
             "size": "Size if mentioned",
             "finish": "Finish/color if mentioned",
-            "qty": 1,
+            "qty": null,
             "material": "Material if mentioned",
             "packaging": "Packaging if mentioned"
         }

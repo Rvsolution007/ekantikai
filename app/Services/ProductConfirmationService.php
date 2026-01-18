@@ -215,10 +215,14 @@ class ProductConfirmationService
             }
         }
 
-        // Handle qty separately
-        $normalized['qty'] = intval($confirmation['qty'] ?? $confirmation['quantity'] ?? 1);
-        if ($normalized['qty'] < 1)
-            $normalized['qty'] = 1;
+        // Handle qty separately - only set if user mentioned it
+        $qtyValue = $confirmation['qty'] ?? $confirmation['quantity'] ?? null;
+        if ($qtyValue !== null && $qtyValue !== '' && $qtyValue !== 0) {
+            $normalized['qty'] = intval($qtyValue);
+            if ($normalized['qty'] < 1) {
+                $normalized['qty'] = null; // Don't default to 1
+            }
+        }
 
         return $normalized;
     }
@@ -363,7 +367,7 @@ class ProductConfirmationService
             'admin_id' => $lead->admin_id,
             'unique_key' => $uniqueKey,
             'confirmed_at' => now(),
-            'qty' => 1,
+            // qty will be set from $data if user mentioned it
         ];
 
         foreach ($data as $field => $value) {
