@@ -425,67 +425,88 @@ class AIService
 
     /**
      * Get catalogue context for AI (product categories, types, sample models)
+     * UPDATED: Now reads from dynamic JSON 'data' field instead of static columns
      */
     protected function getCatalogueContext(int $adminId): array
     {
-        // Debug log to trace catalogue fetch
-        $catalogueCount = Catalogue::where('admin_id', $adminId)->where('is_active', true)->count();
+        // Get all catalogue items with data
+        $catalogueItems = Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->get();
+
+        $totalProducts = $catalogueItems->count();
+
         Log::debug('getCatalogueContext called', [
             'admin_id' => $adminId,
-            'total_active_products' => $catalogueCount,
+            'total_active_products' => $totalProducts,
         ]);
 
-        // Get unique product types/categories from catalogue
-        $productTypes = Catalogue::where('admin_id', $adminId)
-            ->where('is_active', true)
-            ->distinct()
-            ->pluck('product_type')
-            ->filter()
-            ->values()
-            ->toArray();
+        if ($totalProducts === 0) {
+            return [
+                'product_types' => [],
+                'categories' => [],
+                'sample_models' => [],
+                'sample_products' => [],
+                'total_products' => 0,
+                'field_options' => [],
+            ];
+        }
 
-        // Get unique categories
-        $categories = Catalogue::where('admin_id', $adminId)
-            ->where('is_active', true)
-            ->distinct()
-            ->pluck('category')
-            ->filter()
-            ->values()
-            ->toArray();
+        // Get catalogue fields for this admin
+        $catalogueFields = CatalogueField::forTenant($adminId)->ordered()->get();
 
-        // Get sample model codes (first 20)
-        $sampleModels = Catalogue::where('admin_id', $adminId)
-            ->where('is_active', true)
-            ->whereNotNull('model_code')
-            ->limit(20)
-            ->pluck('model_code')
-            ->filter()
-            ->values()
-            ->toArray();
+        // Extract unique values for each field from the JSON data
+        $fieldOptions = [];
+        $productTypes = [];
+        $categories = [];
+        $sampleModels = [];
 
-        // Get sample products with details (first 10 for context)
-        $sampleProducts = Catalogue::where('admin_id', $adminId)
-            ->where('is_active', true)
-            ->limit(10)
-            ->get(['product_type', 'model_code', 'category', 'sizes', 'finishes', 'material'])
-            ->map(function ($item) {
-                return [
-                    'type' => $item->product_type,
-                    'model' => $item->model_code,
-                    'category' => $item->category,
-                    'sizes' => $item->sizes,
-                    'finishes' => $item->finishes,
-                    'material' => $item->material,
+        foreach ($catalogueFields as $field) {
+            $fieldKey = $field->field_key;
+            $uniqueValues = $catalogueItems->map(function ($item) use ($fieldKey) {
+                return $item->data[$fieldKey] ?? null;
+            })->filter()->unique()->values()->toArray();
+
+            if (!empty($uniqueValues)) {
+                $fieldOptions[$fieldKey] = [
+                    'name' => $field->field_name,
+                    'values' => $uniqueValues,
                 ];
-            })
-            ->toArray();
+
+                // Try to identify category/product_type/model fields
+                $keyLower = strtolower($fieldKey);
+                if (str_contains($keyLower, 'category') || str_contains($keyLower, 'product_type') || str_contains($keyLower, 'type')) {
+                    $productTypes = array_merge($productTypes, $uniqueValues);
+                }
+                if (str_contains($keyLower, 'model') || str_contains($keyLower, 'code') || str_contains($keyLower, 'number')) {
+                    $sampleModels = array_merge($sampleModels, array_slice($uniqueValues, 0, 20));
+                }
+            }
+        }
+
+        $productTypes = array_unique($productTypes);
+        $sampleModels = array_unique($sampleModels);
+
+        // Get sample products with ALL their data (first 15)
+        $sampleProducts = $catalogueItems->take(15)->map(function ($item) {
+            return $item->data ?? [];
+        })->toArray();
+
+        Log::debug('getCatalogueContext result', [
+            'admin_id' => $adminId,
+            'field_options_count' => count($fieldOptions),
+            'product_types' => $productTypes,
+            'sample_models_count' => count($sampleModels),
+            'sample_products' => array_slice($sampleProducts, 0, 3), // Log first 3 for debug
+        ]);
 
         return [
-            'product_types' => $productTypes,
+            'product_types' => array_values($productTypes),
             'categories' => $categories,
-            'sample_models' => $sampleModels,
+            'sample_models' => array_values($sampleModels),
             'sample_products' => $sampleProducts,
-            'total_products' => Catalogue::where('admin_id', $adminId)->where('is_active', true)->count(),
+            'total_products' => $totalProducts,
+            'field_options' => $fieldOptions,
         ];
     }
 
@@ -602,28 +623,38 @@ class AIService
             $catalogueSection = "## YOUR PRODUCT CATALOGUE\n";
             $catalogueSection .= "IMPORTANT: Only mention products from this list. Do NOT make up products.\n\n";
 
+            // Show field options from dynamic JSON data
+            if (!empty($cat['field_options'])) {
+                $catalogueSection .= "### Available Options by Field:\n";
+                foreach ($cat['field_options'] as $fieldKey => $fieldData) {
+                    $values = array_slice($fieldData['values'], 0, 30); // Limit to 30 values
+                    $catalogueSection .= "• {$fieldData['name']}: " . implode(', ', $values) . "\n";
+                }
+                $catalogueSection .= "\n";
+            }
+
             if (!empty($cat['product_types'])) {
                 $catalogueSection .= "Product Types Available: " . implode(', ', $cat['product_types']) . "\n";
             }
-            if (!empty($cat['categories'])) {
-                $catalogueSection .= "Categories: " . implode(', ', $cat['categories']) . "\n";
-            }
             if (!empty($cat['sample_models'])) {
-                $catalogueSection .= "Sample Model Codes: " . implode(', ', array_slice($cat['sample_models'], 0, 15)) . "\n";
+                $catalogueSection .= "Sample Model Codes: " . implode(', ', array_slice($cat['sample_models'], 0, 25)) . "\n";
             }
+
+            // Show sample products with all their data
             if (!empty($cat['sample_products'])) {
-                $catalogueSection .= "\nSample Products:\n";
+                $catalogueSection .= "\nSample Products (first 5):\n";
                 foreach (array_slice($cat['sample_products'], 0, 5) as $product) {
-                    $details = [];
-                    if ($product['type'])
-                        $details[] = "Type: {$product['type']}";
-                    if ($product['model'])
-                        $details[] = "Model: {$product['model']}";
-                    if ($product['sizes'])
-                        $details[] = "Sizes: {$product['sizes']}";
-                    if ($product['finishes'])
-                        $details[] = "Finishes: {$product['finishes']}";
-                    $catalogueSection .= "- " . implode(', ', $details) . "\n";
+                    if (!empty($product)) {
+                        $details = [];
+                        foreach ($product as $key => $value) {
+                            if (!empty($value)) {
+                                $details[] = "{$key}: {$value}";
+                            }
+                        }
+                        if (!empty($details)) {
+                            $catalogueSection .= "- " . implode(', ', $details) . "\n";
+                        }
+                    }
                 }
             }
             $catalogueSection .= "\nTotal Products in Catalogue: {$cat['total_products']}\n";
