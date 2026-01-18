@@ -212,6 +212,12 @@ class AIService
             $context['mentioned_products'] = $mentionedModels;
         }
 
+        // *** NEW: Find products by mentioned category (like "Profile handles") ***
+        $categoryProducts = $this->findProductsByCategory($admin->id, $message);
+        if (!empty($categoryProducts)) {
+            $context['category_products'] = $categoryProducts;
+        }
+
         // *** NEW: Dynamic catalogue filtering based on confirmed workflow answers ***
         $filteredOptions = $this->getFilteredCatalogueOptions($admin->id, $context);
         if (!empty($filteredOptions)) {
@@ -219,6 +225,89 @@ class AIService
         }
 
         return $context;
+    }
+
+    /**
+     * Find products by mentioned category in message
+     * Searches the JSON data for matching category values
+     */
+    protected function findProductsByCategory(int $adminId, string $message): array
+    {
+        $messageLower = strtolower($message);
+        $result = [];
+
+        // Get all catalogue fields for this admin
+        $catalogueFields = CatalogueField::forTenant($adminId)->ordered()->get();
+        $categoryFieldKeys = [];
+        foreach ($catalogueFields as $field) {
+            $keyLower = strtolower($field->field_key);
+            // Fields that might contain category info
+            if (str_contains($keyLower, 'category') || str_contains($keyLower, 'type') || str_contains($keyLower, 'product')) {
+                $categoryFieldKeys[$field->field_key] = $field->field_name;
+            }
+        }
+
+        if (empty($categoryFieldKeys)) {
+            return [];
+        }
+
+        // Get all catalogue items
+        $catalogueItems = Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->get();
+
+        // Get unique category values
+        $allCategories = [];
+        foreach ($catalogueItems as $item) {
+            foreach ($categoryFieldKeys as $fieldKey => $fieldName) {
+                $categoryValue = $item->data[$fieldKey] ?? null;
+                if ($categoryValue && !empty(trim($categoryValue))) {
+                    if (!isset($allCategories[$categoryValue])) {
+                        $allCategories[$categoryValue] = [];
+                    }
+                    $allCategories[$categoryValue][] = $item;
+                }
+            }
+        }
+
+        // Check if any category is mentioned in message
+        foreach ($allCategories as $category => $items) {
+            if (stripos($messageLower, strtolower($category)) !== false) {
+                // Found a matching category! Get all models in this category
+                $models = [];
+                foreach ($items as $item) {
+                    $modelValue = null;
+                    // Find model number in data
+                    foreach ($item->data as $key => $value) {
+                        $keyLower = strtolower($key);
+                        if ((str_contains($keyLower, 'model') || str_contains($keyLower, 'number') || str_contains($keyLower, 'code')) && !empty($value)) {
+                            $modelValue = $value;
+                            break;
+                        }
+                    }
+                    if ($modelValue) {
+                        $models[] = $modelValue;
+                    }
+                }
+
+                $result = [
+                    'category' => $category,
+                    'models' => array_unique($models),
+                    'count' => count($items),
+                    'sample_products' => array_slice(array_map(fn($i) => $i->data, $items), 0, 10),
+                ];
+
+                Log::info('Found products by category', [
+                    'category' => $category,
+                    'models_count' => count($models),
+                    'models' => array_slice($models, 0, 20),
+                ]);
+
+                break; // Only match first category
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -359,64 +448,77 @@ class AIService
 
     /**
      * Find mentioned models from message and collected_data, then fetch their exact catalogue data
+     * UPDATED: Now reads from dynamic JSON 'data' field instead of static model_code column
      */
     protected function findMentionedModels(int $adminId, string $message, array $context): array
     {
         $mentionedProducts = [];
 
-        // Get all model codes from catalogue for this admin
-        $allModels = Catalogue::where('admin_id', $adminId)
+        // Get catalogue fields that might contain model info
+        $catalogueFields = CatalogueField::forTenant($adminId)->ordered()->get();
+        $modelFieldKeys = [];
+        foreach ($catalogueFields as $field) {
+            $keyLower = strtolower($field->field_key);
+            if (str_contains($keyLower, 'model') || str_contains($keyLower, 'number') || str_contains($keyLower, 'code')) {
+                $modelFieldKeys[] = $field->field_key;
+            }
+        }
+
+        // Get all catalogue items for this admin
+        $allCatalogueItems = Catalogue::where('admin_id', $adminId)
             ->where('is_active', true)
-            ->pluck('model_code')
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
+            ->get();
+
+        // Extract all model values from JSON data
+        $allModels = [];
+        foreach ($allCatalogueItems as $item) {
+            foreach ($modelFieldKeys as $fieldKey) {
+                $modelValue = $item->data[$fieldKey] ?? null;
+                if ($modelValue && !empty(trim($modelValue))) {
+                    $allModels[trim($modelValue)] = $item;
+                }
+            }
+            // Also try legacy model_code column as fallback
+            if (!empty($item->model_code)) {
+                $allModels[trim($item->model_code)] = $item;
+            }
+        }
 
         // Check if any model is mentioned in the current message
         $messageLower = strtolower($message);
-        foreach ($allModels as $model) {
+        foreach ($allModels as $model => $item) {
             if (stripos($messageLower, strtolower($model)) !== false) {
-                // Fetch this model's exact catalogue data
-                $product = Catalogue::where('admin_id', $adminId)
-                    ->where('is_active', true)
-                    ->where('model_code', $model)
-                    ->first();
-                if ($product) {
-                    $mentionedProducts[$model] = [
-                        'model' => $product->model_code,
-                        'product_type' => $product->product_type,
-                        'category' => $product->category,
-                        'sizes' => $product->sizes,
-                        'finishes' => $product->finishes,
-                        'material' => $product->material,
-                        'price' => $product->price,
-                    ];
-                    Log::debug('Found mentioned model in message', ['model' => $model, 'data' => $mentionedProducts[$model]]);
-                }
+                $mentionedProducts[$model] = [
+                    'model' => $model,
+                    'data' => $item->data ?? [],
+                    // Also include legacy fields for backward compatibility
+                    'product_type' => $item->data['product_category'] ?? $item->product_type ?? null,
+                    'category' => $item->category ?? null,
+                    'sizes' => $item->data['size'] ?? $item->sizes ?? null,
+                    'finishes' => $item->data['finish_color'] ?? $item->finishes ?? null,
+                ];
+                Log::debug('Found mentioned model in message', ['model' => $model, 'data' => $mentionedProducts[$model]]);
             }
         }
 
         // Also check model from collected_data (global_questions or product_confirmations)
         $collectedModel = $context['collected_data']['global_questions']['model'] ??
-            $context['customer_fields']['model'] ?? null;
+            $context['collected_data']['global_questions']['model_number'] ??
+            $context['customer_fields']['model'] ??
+            $context['customer_fields']['model_number'] ?? null;
 
         if ($collectedModel && !isset($mentionedProducts[$collectedModel])) {
-            $product = Catalogue::where('admin_id', $adminId)
-                ->where('is_active', true)
-                ->where('model_code', $collectedModel)
-                ->first();
-            if ($product) {
-                $mentionedProducts[$collectedModel] = [
-                    'model' => $product->model_code,
-                    'product_type' => $product->product_type,
-                    'category' => $product->category,
-                    'sizes' => $product->sizes,
-                    'finishes' => $product->finishes,
-                    'material' => $product->material,
-                    'price' => $product->price,
+            $model = trim($collectedModel);
+            if (isset($allModels[$model])) {
+                $item = $allModels[$model];
+                $mentionedProducts[$model] = [
+                    'model' => $model,
+                    'data' => $item->data ?? [],
+                    'product_type' => $item->data['product_category'] ?? $item->product_type ?? null,
+                    'sizes' => $item->data['size'] ?? $item->sizes ?? null,
+                    'finishes' => $item->data['finish_color'] ?? $item->finishes ?? null,
                 ];
-                Log::debug('Found model from collected_data', ['model' => $collectedModel, 'data' => $mentionedProducts[$collectedModel]]);
+                Log::debug('Found model from collected_data', ['model' => $model, 'data' => $mentionedProducts[$model]]);
             }
         }
 
@@ -667,16 +769,24 @@ class AIService
             $currentProductSection .= "CRITICAL: The customer is asking about these specific products. Use ONLY these exact options:\n\n";
             foreach ($context['mentioned_products'] as $model => $data) {
                 $currentProductSection .= "### Model: {$model}\n";
-                if ($data['product_type'])
-                    $currentProductSection .= "- Product Type: {$data['product_type']}\n";
-                if ($data['category'])
-                    $currentProductSection .= "- Category: {$data['category']}\n";
-                if ($data['sizes'])
-                    $currentProductSection .= "- Available Sizes: {$data['sizes']}\n";
-                if ($data['finishes'])
-                    $currentProductSection .= "- Available Finishes: {$data['finishes']}\n";
-                if ($data['material'])
-                    $currentProductSection .= "- Material: {$data['material']}\n";
+
+                // Show ALL data from JSON field
+                if (!empty($data['data']) && is_array($data['data'])) {
+                    foreach ($data['data'] as $key => $value) {
+                        if (!empty($value)) {
+                            $displayKey = ucwords(str_replace('_', ' ', $key));
+                            $currentProductSection .= "- {$displayKey}: {$value}\n";
+                        }
+                    }
+                } else {
+                    // Fallback to legacy fields
+                    if (!empty($data['product_type']))
+                        $currentProductSection .= "- Product Type: {$data['product_type']}\n";
+                    if (!empty($data['sizes']))
+                        $currentProductSection .= "- Available Sizes: {$data['sizes']}\n";
+                    if (!empty($data['finishes']))
+                        $currentProductSection .= "- Available Finishes: {$data['finishes']}\n";
+                }
                 $currentProductSection .= "\n";
             }
             $currentProductSection .= "IMPORTANT: When asking about size or finish for these models, ONLY offer the options listed above. Do NOT make up options.\n";
@@ -722,6 +832,33 @@ class AIService
             }
         }
 
+        // *** NEW: Add CATEGORY PRODUCTS section when user asks about a category ***
+        $categoryProductsSection = '';
+        if (!empty($context['category_products'])) {
+            $catData = $context['category_products'];
+            $categoryProductsSection = "\n## PRODUCTS IN '{$catData['category']}' CATEGORY (THESE ARE AVAILABLE!)\n";
+            $categoryProductsSection .= "CRITICAL: Customer is asking about '{$catData['category']}'. Here are ALL available models:\n\n";
+            $categoryProductsSection .= "**Available Model Numbers:** " . implode(', ', array_slice($catData['models'], 0, 50)) . "\n";
+            $categoryProductsSection .= "**Total Products:** {$catData['count']}\n\n";
+
+            if (!empty($catData['sample_products'])) {
+                $categoryProductsSection .= "**Sample Products:**\n";
+                foreach (array_slice($catData['sample_products'], 0, 5) as $product) {
+                    $details = [];
+                    foreach ($product as $key => $value) {
+                        if (!empty($value)) {
+                            $displayKey = ucwords(str_replace('_', ' ', $key));
+                            $details[] = "{$displayKey}: {$value}";
+                        }
+                    }
+                    if (!empty($details)) {
+                        $categoryProductsSection .= "- " . implode(', ', $details) . "\n";
+                    }
+                }
+            }
+            $categoryProductsSection .= "\nIMPORTANT: When customer asks about '{$catData['category']}' models, tell them about the available model numbers listed above. Do NOT say 'no models available'!\n";
+        }
+
         return <<<PROMPT
 You are a sales assistant for {$tenantName}. You must communicate naturally like a human sales person.
 
@@ -749,6 +886,8 @@ IMPORTANT: You MUST detect the language of user's message and respond in THE EXA
 {$catalogueSection}
 
 {$currentProductSection}
+
+{$categoryProductsSection}
 
 {$availableOptionsSection}
 
