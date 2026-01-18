@@ -268,6 +268,51 @@
                 {{ $connectedCount >= 4 ? '✓ Bot is fully configured' : ($connectedCount >= 2 ? '⚠ Partial configuration' : '✗ Setup required') }}
             </div>
         </div>
+
+        <!-- Dynamic Catalogue Fields Status -->
+        @if(!empty($catalogueFieldsStatus))
+        <div class="mt-6 pt-4 border-t border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="text-white font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                    </svg>
+                    Catalogue Field Connections
+                </h4>
+                <div class="flex items-center gap-4 text-xs">
+                    <span class="flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span> Connected
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Disconnected
+                    </span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                @foreach($catalogueFieldsStatus as $field)
+                <div class="relative bg-gray-800/50 border rounded-lg p-3 {{ $field['connected'] ? 'border-green-500/30' : 'border-yellow-500/30' }}">
+                    <div class="absolute top-2 right-2 w-2 h-2 rounded-full {{ $field['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="w-8 h-8 rounded-lg {{ $field['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
+                            <svg class="w-4 h-4 {{ $field['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h5 class="text-white text-sm font-medium truncate" title="{{ $field['field_name'] }}">{{ $field['field_name'] }}</h5>
+                    <p class="text-xs {{ $field['connected'] ? 'text-green-400' : 'text-gray-500' }}">
+                        @if($field['connected'])
+                            {{ $field['unique_values'] }} options
+                        @else
+                            No data
+                        @endif
+                    </p>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
     </div>
 
 

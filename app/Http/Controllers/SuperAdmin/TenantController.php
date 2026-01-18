@@ -148,7 +148,33 @@ class TenantController extends Controller
             ],
         ];
 
-        return view('superadmin.admins.show', compact('tenant', 'stats', 'workflowStatus'));
+        // Get dynamic CatalogueFields with data status
+        $catalogueFields = \App\Models\CatalogueField::where('admin_id', $admin->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        $catalogueFieldsStatus = [];
+        $catalogueItems = $catalogueCount > 0 ? \App\Models\Catalogue::where('admin_id', $admin->id)->where('is_active', true)->get() : collect();
+
+        foreach ($catalogueFields as $field) {
+            // Check if this field has any data in catalogue items
+            $hasData = $catalogueItems->contains(function ($item) use ($field) {
+                $value = $item->data[$field->field_key] ?? null;
+                return !empty($value);
+            });
+
+            // Count unique values for this field
+            $uniqueValues = $catalogueItems->pluck('data.' . $field->field_key)->filter()->unique()->count();
+
+            $catalogueFieldsStatus[] = [
+                'field_key' => $field->field_key,
+                'field_name' => $field->field_name,
+                'connected' => $hasData && $uniqueValues > 0,
+                'unique_values' => $uniqueValues,
+            ];
+        }
+
+        return view('superadmin.admins.show', compact('tenant', 'stats', 'workflowStatus', 'catalogueFieldsStatus'));
     }
 
     public function edit(Admin $admin)
