@@ -113,6 +113,13 @@ class LeadController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        // DEBUG: Log how many fields found
+        \Log::info('CatalogueFields for Product Quotation', [
+            'admin_id' => $adminId,
+            'fields_count' => $catalogueFields->count(),
+            'field_names' => $catalogueFields->pluck('field_name')->toArray(),
+        ]);
+
         // Map to expected format for view (field_name, display_name)
         $productFields = $catalogueFields->map(function ($field) {
             return (object) [
@@ -123,19 +130,15 @@ class LeadController extends Controller
 
         // Also check if fields exist in QuestionnaireField as backup
         if ($productFields->isEmpty()) {
+            \Log::info('Using QuestionnaireField as backup for Product Quotation');
             $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->get(['field_name', 'display_name', 'field_type']);
         }
 
-        // Get global question keys to exclude from product table (like City)
-        $globalKeys = array_keys($lead->collected_data['global_questions'] ?? []);
-        if (!empty($globalKeys)) {
-            $productFields = $productFields->reject(function ($field) use ($globalKeys) {
-                return in_array(strtolower($field->field_name), array_map('strtolower', $globalKeys));
-            });
-        }
+        // NOTE: Removed global_questions filter - all product fields should show
+        // The filter was incorrectly removing some fields
 
         return view('admin.leads.show', compact('lead', 'chats', 'productFields'));
     }
