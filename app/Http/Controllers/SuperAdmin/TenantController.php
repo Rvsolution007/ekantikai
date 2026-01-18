@@ -336,6 +336,13 @@ class TenantController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
+        \Log::info('ViewChat debug', [
+            'customer_id' => $customerId,
+            'customer_phone' => $customer->phone,
+            'messages_count' => $messages->count(),
+            'messages_sample' => $messages->take(2)->toArray(),
+        ]);
+
         return view('superadmin.admins.chat-view', compact('admin', 'customer', 'messages'));
     }
 
