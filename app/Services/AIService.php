@@ -856,7 +856,11 @@ class AIService
                     }
                 }
             }
-            $categoryProductsSection .= "\nIMPORTANT: When customer asks about '{$catData['category']}' models, tell them about the available model numbers listed above. Do NOT say 'no models available'!\n";
+            $categoryProductsSection .= "\n### ⚠️ MANDATORY BEHAVIOR - FIRST RESPONSE RULE:\n";
+            $categoryProductsSection .= "1. IMMEDIATELY list ALL model numbers above when customer asks about '{$catData['category']}'\n";
+            $categoryProductsSection .= "2. Do NOT ask follow-up questions like 'koi specific model chahiye?' BEFORE giving the list\n";
+            $categoryProductsSection .= "3. FIRST give model list, THEN ask which one they want\n";
+            $categoryProductsSection .= "4. Example: 'Ji, {$catData['category']} me ye models available hain: [MODEL LIST]. Kaunsa dekhenge?'\n";
         }
 
         return <<<PROMPT
