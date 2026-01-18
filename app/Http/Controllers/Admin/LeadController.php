@@ -109,9 +109,17 @@ class LeadController extends Controller
 
         // Get Product fields from CatalogueField for table columns
         // CatalogueField has all product attributes like Model Number, Size, Finish/Color, etc.
-        $productFields = \App\Models\CatalogueField::where('admin_id', $adminId)
+        $catalogueFields = \App\Models\CatalogueField::where('admin_id', $adminId)
             ->orderBy('sort_order')
-            ->get(['field_key as field_name', 'field_name as display_name', 'sort_order']);
+            ->get();
+
+        // Map to expected format for view (field_name, display_name)
+        $productFields = $catalogueFields->map(function ($field) {
+            return (object) [
+                'field_name' => $field->field_key,  // field_key is the actual key used in product data
+                'display_name' => $field->field_name,  // field_name is the display name
+            ];
+        });
 
         // Also check if fields exist in QuestionnaireField as backup
         if ($productFields->isEmpty()) {
