@@ -163,6 +163,25 @@ class WebhookController extends Controller
             // Get response message
             $responseMessage = $aiResponse['response_message'] ?? '';
 
+            // DEBUG: Log when response is empty
+            if (empty($responseMessage)) {
+                Log::warning('AI returned empty response_message', [
+                    'admin_id' => $tenant->id,
+                    'phone' => $messageData['phone'],
+                    'user_message' => $messageData['content'],
+                    'ai_success' => $aiResponse['success'] ?? false,
+                    'ai_response' => json_encode($aiResponse),
+                ]);
+
+                // FALLBACK: Always send a response if AI returns empty
+                $detectedLang = $aiResponse['detected_language'] ?? 'hi';
+                $responseMessage = match ($detectedLang) {
+                    'en' => "I'm here to help! Could you please tell me more about what you're looking for?",
+                    'hi', 'hinglish' => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
+                    default => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
+                };
+            }
+
             // CHECK FOR CATALOGUE IMAGE (Point 12)
             $catalogueMedia = null;
             if (!empty($aiResponse['unique_field_mentioned'])) {
@@ -172,7 +191,7 @@ class WebhookController extends Controller
                 );
             }
 
-            // Send response if any
+            // Send response (now always has a message due to fallback)
             if (!empty($responseMessage)) {
                 // Send catalogue image first if available
                 if ($catalogueMedia && !empty($catalogueMedia['image_url'])) {
@@ -189,7 +208,8 @@ class WebhookController extends Controller
             }
 
             // CHECK IF ALL REQUIRED QUESTIONS COMPLETE (Point 7)
-            if ($aiResponse['all_required_complete'] ?? false) {
+            // Only mark complete if AI explicitly says so AND we actually sent a response
+            if (($aiResponse['all_required_complete'] ?? false) && !empty($aiResponse['response_message'])) {
                 $lead->markBotComplete();
             }
 
