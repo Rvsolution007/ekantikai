@@ -329,4 +329,76 @@ class LeadController extends Controller
 
         return response()->json(['success' => false, 'message' => 'Product not found'], 404);
     }
+
+    /**
+     * Update product in Product Quotation
+     */
+    public function updateProduct(Request $request, Lead $lead)
+    {
+        $request->validate([
+            'source' => 'required|string',
+            'product_id' => 'required',
+            'product_data' => 'required|array',
+        ]);
+
+        $source = $request->source;
+        $productId = $request->product_id;
+        $productData = $request->product_data;
+        $collectedData = $lead->collected_data ?? [];
+
+        if ($source === 'lead_products') {
+            // Update LeadProduct
+            $leadProduct = \App\Models\LeadProduct::where('lead_id', $lead->id)
+                ->where('id', $productId)
+                ->first();
+
+            if ($leadProduct) {
+                // Merge new data with existing
+                $existingData = $leadProduct->product_data ?? [];
+                $mergedData = array_merge($existingData, $productData);
+                $leadProduct->product_data = $mergedData;
+                $leadProduct->save();
+                return response()->json(['success' => true, 'message' => 'Product updated successfully']);
+            }
+        } elseif ($source === 'confirmation') {
+            // Update product_confirmations
+            $confirmations = $lead->product_confirmations ?? [];
+            $index = (int) $productId;
+            if (isset($confirmations[$index])) {
+                // Merge new data with existing
+                foreach ($productData as $key => $value) {
+                    $confirmations[$index][$key] = $value;
+                }
+                $lead->product_confirmations = $confirmations;
+                $lead->save();
+                return response()->json(['success' => true, 'message' => 'Product updated successfully']);
+            }
+        } elseif ($source === 'workflow') {
+            // Update workflow_questions in collected_data
+            if (!isset($collectedData['workflow_questions'])) {
+                $collectedData['workflow_questions'] = [];
+            }
+            foreach ($productData as $key => $value) {
+                $collectedData['workflow_questions'][$key] = $value;
+            }
+            $lead->collected_data = $collectedData;
+            $lead->save();
+            return response()->json(['success' => true, 'message' => 'Product updated successfully']);
+        } elseif ($source === 'collected') {
+            // Update collected_data.products array
+            if (isset($collectedData['products']) && is_array($collectedData['products'])) {
+                $index = (int) $productId;
+                if (isset($collectedData['products'][$index])) {
+                    foreach ($productData as $key => $value) {
+                        $collectedData['products'][$index][$key] = $value;
+                    }
+                    $lead->collected_data = $collectedData;
+                    $lead->save();
+                    return response()->json(['success' => true, 'message' => 'Product updated successfully']);
+                }
+            }
+        }
+
+        return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+    }
 }

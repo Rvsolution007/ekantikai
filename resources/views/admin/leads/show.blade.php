@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                                                @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                                                @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                                                @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                                    @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                                    @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                                    @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                                        {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                                            {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -131,15 +131,15 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                                                                                                                        {{ $lead->stage === $stageOption
+                                                                                                                                                                                            {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span
                                                 class="w-3 h-3 rounded-full mr-3 
-                                                                                                                                                                        @if($stageOption === 'New Lead') bg-yellow-500
-                                                                                                                                                                        @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                                                                                                                        @elseif($stageOption === 'Confirm') bg-green-500
-                                                                                                                                                                        @else bg-red-500 @endif"></span>
+                                                                                                                                                                                            @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                                                                                                                            @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                                                                                                                            @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                                                                                                                            @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,15 +326,32 @@
                                                     </td>
                                                 @endforeach
                                                 <td class="px-4 py-4 text-center">
-                                                    <button type="button"
-                                                        onclick="confirmDeleteProduct('{{ $product['_source'] ?? 'collected' }}', '{{ $product['_id'] ?? $index }}')"
-                                                        class="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                                                        title="Delete Product">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
+                                                    <div class="flex items-center justify-center gap-2">
+                                                        <!-- Edit Button -->
+                                                        <button type="button"
+                                                            onclick="openEditProductModal({{ $index }}, '{{ $product['_source'] ?? 'collected' }}', '{{ $product['_id'] ?? $index }}', {{ json_encode($product) }})"
+                                                            class="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                                                            title="Edit Product">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                        <!-- Delete Button -->
+                                                        <button type="button"
+                                                            onclick="confirmDeleteProduct('{{ $product['_source'] ?? 'collected' }}', '{{ $product['_id'] ?? $index }}')"
+                                                            class="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                                                            title="Delete Product">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -436,7 +453,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                                                                                                                        {{ $role === 'user'
+                                                                                                                                                                                            {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
@@ -559,6 +576,120 @@
                         document.getElementById('passcodeError').textContent = 'An error occurred. Please try again.';
                         document.getElementById('passcodeError').classList.remove('hidden');
                     });
+            }
+        </script>
+
+        <!-- Edit Product Modal -->
+        <div id="editProductModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="glass rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">✏️ Edit Product</h3>
+                    <button onclick="closeEditProductModal()" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <form id="editProductForm" onsubmit="saveProduct(event)">
+                    <input type="hidden" id="editProductIndex" value="">
+                    <input type="hidden" id="editProductSource" value="">
+                    <input type="hidden" id="editProductId" value="">
+                    <div id="editProductFields" class="space-y-4">
+                        <!-- Dynamic fields will be inserted here -->
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button type="button" onclick="closeEditProductModal()"
+                            class="flex-1 px-4 py-3 rounded-xl bg-gray-700 text-white font-medium hover:bg-gray-600 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            // Product fields for edit modal
+            const productFieldsList = @json($productFields->map(fn($f) => ['field_name' => $f->field_name, 'display_name' => $f->display_name])->values());
+
+            function openEditProductModal(index, source, id, productData) {
+                document.getElementById('editProductIndex').value = index;
+                document.getElementById('editProductSource').value = source;
+                document.getElementById('editProductId').value = id;
+
+                // Build form fields dynamically
+                const fieldsContainer = document.getElementById('editProductFields');
+                fieldsContainer.innerHTML = '';
+
+                productFieldsList.forEach(field => {
+                    const fieldName = field.field_name;
+                    const displayName = field.display_name;
+                    let value = productData[fieldName] || productData[fieldName.toLowerCase()] || '';
+                    
+                    // Skip internal fields
+                    if (fieldName.startsWith('_')) return;
+
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.innerHTML = `
+                        <label class="block text-sm font-medium text-gray-300 mb-1">${displayName}</label>
+                        <input type="text" name="${fieldName}" value="${value}"
+                            class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    `;
+                    fieldsContainer.appendChild(fieldDiv);
+                });
+
+                document.getElementById('editProductModal').classList.remove('hidden');
+            }
+
+            function closeEditProductModal() {
+                document.getElementById('editProductModal').classList.add('hidden');
+            }
+
+            function saveProduct(event) {
+                event.preventDefault();
+                
+                const source = document.getElementById('editProductSource').value;
+                const productId = document.getElementById('editProductId').value;
+                const form = document.getElementById('editProductForm');
+                const formData = new FormData(form);
+                
+                // Build product data object
+                const productData = {};
+                formData.forEach((value, key) => {
+                    if (!key.startsWith('edit')) {
+                        productData[key] = value;
+                    }
+                });
+
+                // Send update request
+                fetch('{{ route("admin.leads.update-product", $lead->id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        source: source,
+                        product_id: productId,
+                        product_data: productData
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closeEditProductModal();
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to update product'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to update product');
+                });
             }
         </script>
 

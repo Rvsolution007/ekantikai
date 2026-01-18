@@ -66,6 +66,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/leads/{lead}/update-stage', [LeadController::class, 'updateStage'])->name('leads.update-stage');
         Route::post('/leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
         Route::delete('/leads/{lead}/product/{index}', [LeadController::class, 'deleteProduct'])->name('leads.delete-product');
+        Route::post('/leads/{lead}/update-product', [LeadController::class, 'updateProduct'])->name('leads.update-product');
         Route::get('/leads/export/csv', [LeadController::class, 'export'])->name('leads.export');
 
         // Clients Management
