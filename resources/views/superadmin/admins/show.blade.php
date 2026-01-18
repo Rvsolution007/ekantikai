@@ -147,170 +147,129 @@
         </div>
     </div>
 
-    <!-- Bot Workflow Diagram Section -->
+    <!-- Bot Workflow Status Section - Clean Professional Design -->
     <div class="glass-card p-6 rounded-xl mb-8">
-        <h3 class="text-lg font-semibold text-white mb-6 flex items-center">
-            <svg class="w-5 h-5 mr-2 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-            </svg>
-            Bot Workflow Connections
-            <span class="ml-auto text-sm text-gray-400 font-normal">
-                🟢 Connected &nbsp; 🟡 Disconnected
-            </span>
-        </h3>
-
-        <!-- Visual Workflow Diagram -->
-        <div class="relative py-8">
-            <!-- SVG Lines connecting nodes -->
-            <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 0;">
-                <!-- Bot to Catalogue -->
-                <line x1="50%" y1="45%" x2="20%" y2="15%" 
-                    stroke="{{ $workflowStatus['catalogue']['connected'] ? '#22c55e' : '#eab308' }}" 
-                    stroke-width="2" stroke-dasharray="{{ $workflowStatus['catalogue']['connected'] ? '' : '5,5' }}" />
-                <!-- Bot to System Prompt -->
-                <line x1="50%" y1="45%" x2="50%" y2="15%" 
-                    stroke="{{ $workflowStatus['system_prompt']['connected'] ? '#22c55e' : '#eab308' }}" 
-                    stroke-width="2" stroke-dasharray="{{ $workflowStatus['system_prompt']['connected'] ? '' : '5,5' }}" />
-                <!-- Bot to Flowchart -->
-                <line x1="50%" y1="45%" x2="80%" y2="15%" 
-                    stroke="{{ $workflowStatus['flowchart']['connected'] ? '#22c55e' : '#eab308' }}" 
-                    stroke-width="2" stroke-dasharray="{{ $workflowStatus['flowchart']['connected'] ? '' : '5,5' }}" />
-                <!-- Flowchart to Product Questions -->
-                <line x1="80%" y1="20%" x2="65%" y2="85%" 
-                    stroke="{{ $workflowStatus['product_questions']['connected'] ? '#22c55e' : '#eab308' }}" 
-                    stroke-width="2" stroke-dasharray="{{ $workflowStatus['product_questions']['connected'] ? '' : '5,5' }}" />
-                <!-- Flowchart to Global Questions -->
-                <line x1="80%" y1="20%" x2="90%" y2="85%" 
-                    stroke="{{ $workflowStatus['global_questions']['connected'] ? '#22c55e' : '#eab308' }}" 
-                    stroke-width="2" stroke-dasharray="{{ $workflowStatus['global_questions']['connected'] ? '' : '5,5' }}" />
-            </svg>
-
-            <div class="flex flex-wrap justify-center items-start gap-4" style="position: relative; z-index: 1;">
-                <!-- Top Row: Catalogue, System Prompt, Flowchart -->
-                <div class="flex justify-center gap-8 w-full mb-12">
-                    <!-- Catalogue Node -->
-                    <div class="flex flex-col items-center">
-                        <div class="relative">
-                            <div class="w-20 h-20 rounded-2xl {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500/20 border-green-500' : 'bg-yellow-500/20 border-yellow-500' }} border-2 flex items-center justify-center transition-all hover:scale-110">
-                                <svg class="w-8 h-8 {{ $workflowStatus['catalogue']['connected'] ? 'text-green-400' : 'text-yellow-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                </svg>
-                            </div>
-                            <!-- Status Light -->
-                            <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500 animate-pulse' : 'bg-yellow-500' }} shadow-lg"></div>
-                        </div>
-                        <span class="text-white text-sm mt-2 font-medium">Catalogue</span>
-                        <span class="text-gray-400 text-xs">{{ $workflowStatus['catalogue']['count'] }} products</span>
-                    </div>
-
-                    <!-- System Prompt Node -->
-                    <div class="flex flex-col items-center">
-                        <div class="relative">
-                            <div class="w-20 h-20 rounded-2xl {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500/20 border-green-500' : 'bg-yellow-500/20 border-yellow-500' }} border-2 flex items-center justify-center transition-all hover:scale-110">
-                                <svg class="w-8 h-8 {{ $workflowStatus['system_prompt']['connected'] ? 'text-green-400' : 'text-yellow-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                            <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500 animate-pulse' : 'bg-yellow-500' }} shadow-lg"></div>
-                        </div>
-                        <span class="text-white text-sm mt-2 font-medium">System Prompt</span>
-                        <span class="text-gray-400 text-xs">{{ $workflowStatus['system_prompt']['connected'] ? 'Configured' : 'Not Set' }}</span>
-                    </div>
-
-                    <!-- Flowchart Node -->
-                    <div class="flex flex-col items-center">
-                        <div class="relative">
-                            <div class="w-20 h-20 rounded-2xl {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500/20 border-green-500' : 'bg-yellow-500/20 border-yellow-500' }} border-2 flex items-center justify-center transition-all hover:scale-110">
-                                <svg class="w-8 h-8 {{ $workflowStatus['flowchart']['connected'] ? 'text-green-400' : 'text-yellow-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                                </svg>
-                            </div>
-                            <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500 animate-pulse' : 'bg-yellow-500' }} shadow-lg"></div>
-                        </div>
-                        <span class="text-white text-sm mt-2 font-medium">Flowchart</span>
-                        <span class="text-gray-400 text-xs">{{ $workflowStatus['flowchart']['count'] }} questions</span>
-                    </div>
-                </div>
-
-                <!-- Center: BOT Node (Large) -->
-                <div class="flex justify-center w-full mb-12">
-                    <div class="flex flex-col items-center">
-                        <div class="relative">
-                            <div class="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/30 to-blue-500/30 border-4 border-purple-500 flex items-center justify-center shadow-lg shadow-purple-500/20 transition-all hover:scale-105">
-                                <div class="text-center">
-                                    <svg class="w-12 h-12 text-purple-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                    <span class="text-white font-bold text-lg">BOT</span>
-                                </div>
-                            </div>
-                            <!-- Bot status indicator -->
-                            <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                                <span class="px-3 py-1 rounded-full text-xs font-medium {{ $tenant->is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
-                                    {{ $tenant->is_active ? 'Active' : 'Inactive' }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bottom Row: Product Questions & Global Questions -->
-                <div class="flex justify-center gap-16 w-full">
-                    <!-- Product Questions Node -->
-                    <div class="flex flex-col items-center">
-                        <div class="relative">
-                            <div class="w-20 h-20 rounded-2xl {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500/20 border-green-500' : 'bg-yellow-500/20 border-yellow-500' }} border-2 flex items-center justify-center transition-all hover:scale-110">
-                                <svg class="w-8 h-8 {{ $workflowStatus['product_questions']['connected'] ? 'text-green-400' : 'text-yellow-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                </svg>
-                            </div>
-                            <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500 animate-pulse' : 'bg-yellow-500' }} shadow-lg"></div>
-                        </div>
-                        <span class="text-white text-sm mt-2 font-medium">Product Questions</span>
-                        <span class="text-gray-400 text-xs">{{ $workflowStatus['product_questions']['count'] }} active</span>
-                    </div>
-
-                    <!-- Global Questions Node -->
-                    <div class="flex flex-col items-center">
-                        <div class="relative">
-                            <div class="w-20 h-20 rounded-2xl {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500/20 border-green-500' : 'bg-yellow-500/20 border-yellow-500' }} border-2 flex items-center justify-center transition-all hover:scale-110">
-                                <svg class="w-8 h-8 {{ $workflowStatus['global_questions']['connected'] ? 'text-green-400' : 'text-yellow-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500 animate-pulse' : 'bg-yellow-500' }} shadow-lg"></div>
-                        </div>
-                        <span class="text-white text-sm mt-2 font-medium">Global Questions</span>
-                        <span class="text-gray-400 text-xs">{{ $workflowStatus['global_questions']['count'] }} active</span>
-                    </div>
-                </div>
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-semibold text-white flex items-center">
+                <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+                Bot Configuration Status
+            </h3>
+            <div class="flex items-center gap-4 text-sm">
+                <span class="flex items-center gap-1">
+                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                    <span class="text-gray-400">Connected</span>
+                </span>
+                <span class="flex items-center gap-1">
+                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                    <span class="text-gray-400">Not Configured</span>
+                </span>
             </div>
         </div>
 
-        <!-- Quick Summary -->
-        <div class="mt-6 pt-6 border-t border-gray-700">
-            <div class="flex flex-wrap justify-center gap-4">
-                @php
-                    $connectedCount = collect($workflowStatus)->filter(fn($s) => $s['connected'])->count();
-                    $totalComponents = count($workflowStatus);
-                @endphp
-                <div class="text-center px-4 py-2 rounded-lg bg-gray-800/50">
-                    <span class="text-2xl font-bold text-green-400">{{ $connectedCount }}</span>
-                    <span class="text-gray-400">/{{ $totalComponents }}</span>
-                    <p class="text-xs text-gray-500">Components Connected</p>
+        <!-- Status Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <!-- Catalogue -->
+            <div class="relative p-4 rounded-xl {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
+                        <svg class="w-5 h-5 {{ $workflowStatus['catalogue']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                    </div>
+                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
                 </div>
-                <div class="text-center px-4 py-2 rounded-lg bg-gray-800/50">
-                    <span class="text-2xl font-bold text-white">{{ $workflowStatus['catalogue']['count'] }}</span>
-                    <p class="text-xs text-gray-500">Products</p>
+                <h4 class="text-white font-medium text-sm">Catalogue</h4>
+                <p class="text-xs {{ $workflowStatus['catalogue']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
+                    {{ $workflowStatus['catalogue']['count'] }} products
+                </p>
+            </div>
+
+            <!-- System Prompt -->
+            <div class="relative p-4 rounded-xl {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
+                        <svg class="w-5 h-5 {{ $workflowStatus['system_prompt']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
                 </div>
-                <div class="text-center px-4 py-2 rounded-lg bg-gray-800/50">
-                    <span class="text-2xl font-bold text-white">{{ $workflowStatus['flowchart']['count'] }}</span>
-                    <p class="text-xs text-gray-500">Workflow Questions</p>
+                <h4 class="text-white font-medium text-sm">System Prompt</h4>
+                <p class="text-xs {{ $workflowStatus['system_prompt']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
+                    {{ $workflowStatus['system_prompt']['connected'] ? 'Configured' : 'Not Set' }}
+                </p>
+            </div>
+
+            <!-- Flowchart -->
+            <div class="relative p-4 rounded-xl {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
+                        <svg class="w-5 h-5 {{ $workflowStatus['flowchart']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                        </svg>
+                    </div>
+                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
                 </div>
+                <h4 class="text-white font-medium text-sm">Flowchart</h4>
+                <p class="text-xs {{ $workflowStatus['flowchart']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
+                    {{ $workflowStatus['flowchart']['count'] }} questions
+                </p>
+            </div>
+
+            <!-- Product Questions -->
+            <div class="relative p-4 rounded-xl {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
+                        <svg class="w-5 h-5 {{ $workflowStatus['product_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
+                </div>
+                <h4 class="text-white font-medium text-sm">Product Questions</h4>
+                <p class="text-xs {{ $workflowStatus['product_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
+                    {{ $workflowStatus['product_questions']['count'] }} active
+                </p>
+            </div>
+
+            <!-- Global Questions -->
+            <div class="relative p-4 rounded-xl {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
+                        <svg class="w-5 h-5 {{ $workflowStatus['global_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
+                </div>
+                <h4 class="text-white font-medium text-sm">Global Questions</h4>
+                <p class="text-xs {{ $workflowStatus['global_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
+                    {{ $workflowStatus['global_questions']['count'] }} active
+                </p>
+            </div>
+        </div>
+
+        <!-- Summary Bar -->
+        @php
+            $connectedCount = collect($workflowStatus)->filter(fn($s) => $s['connected'])->count();
+            $totalComponents = count($workflowStatus);
+        @endphp
+        <div class="mt-6 pt-4 border-t border-gray-700 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400 text-sm">Configuration Status:</span>
+                <span class="px-3 py-1 rounded-full text-sm font-medium {{ $connectedCount >= 4 ? 'bg-green-500/20 text-green-400' : ($connectedCount >= 2 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400') }}">
+                    {{ $connectedCount }}/{{ $totalComponents }} Ready
+                </span>
+            </div>
+            <div class="text-sm text-gray-500">
+                {{ $connectedCount >= 4 ? '✓ Bot is fully configured' : ($connectedCount >= 2 ? '⚠ Partial configuration' : '✗ Setup required') }}
             </div>
         </div>
     </div>
+
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Company Information -->
