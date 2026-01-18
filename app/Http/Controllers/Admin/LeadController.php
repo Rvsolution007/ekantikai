@@ -143,7 +143,13 @@ class LeadController extends Controller
 
         // NOTE: Removed global_questions filter - all product fields should show
 
-        return view('admin.leads.show', compact('lead', 'chats', 'productFields'));
+        // Get client data for this customer (if exists)
+        $client = null;
+        if ($lead->customer) {
+            $client = \App\Models\Client::where('customer_id', $lead->customer_id)->first();
+        }
+
+        return view('admin.leads.show', compact('lead', 'chats', 'productFields', 'client'));
     }
 
     /**

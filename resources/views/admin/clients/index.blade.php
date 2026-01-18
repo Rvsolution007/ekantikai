@@ -11,7 +11,7 @@
                 <h1 class="text-2xl font-bold text-white">Clients</h1>
                 <p class="text-gray-400 mt-1">Manage your confirmed clients</p>
             </div>
-            <div class="flex gap-4">
+            <div class="flex items-center gap-4">
                 <div class="glass-light rounded-xl px-4 py-2">
                     <span class="text-gray-400 text-sm">Total:</span>
                     <span class="text-white font-bold ml-1">{{ $stats['total'] }}</span>
@@ -20,6 +20,13 @@
                     <span class="text-gray-400 text-sm">This Month:</span>
                     <span class="text-green-400 font-bold ml-1">+{{ $stats['this_month'] }}</span>
                 </div>
+                <a href="{{ route('admin.clients.create') }}"
+                    class="btn-gradient px-4 py-2 rounded-lg flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Client
+                </a>
             </div>
         </div>
 

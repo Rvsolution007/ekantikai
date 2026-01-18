@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                                                    @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                                                    @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                                                    @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                                        @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                                        @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                                        @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                                            {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                                                {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -116,6 +116,47 @@
                                 {{ $collectedCount + $confirmCount + $leadProductCount }} items
                             </span>
                         </div>
+
+                        @if($client)
+                            <!-- Client Info Section -->
+                            <div class="pt-3 mt-3 border-t border-white/10">
+                                <p class="text-xs uppercase tracking-wider text-gray-500 mb-3">Client Details</p>
+                                @if($client->business_name)
+                                    <div class="flex items-center justify-between py-2">
+                                        <span class="text-gray-400 text-sm">Business</span>
+                                        <span class="text-white text-sm font-medium">{{ $client->business_name }}</span>
+                                    </div>
+                                @endif
+                                @if($client->gst_number)
+                                    <div class="flex items-center justify-between py-2">
+                                        <span class="text-gray-400 text-sm">GST No.</span>
+                                        <span class="text-white text-sm">{{ $client->gst_number }}</span>
+                                    </div>
+                                @endif
+                                @if($client->email)
+                                    <div class="flex items-center justify-between py-2">
+                                        <span class="text-gray-400 text-sm">Email</span>
+                                        <span class="text-white text-sm">{{ $client->email }}</span>
+                                    </div>
+                                @endif
+                                @if($client->address)
+                                    <div class="flex items-center justify-between py-2">
+                                        <span class="text-gray-400 text-sm">Address</span>
+                                        <span class="text-white text-sm text-right max-w-[60%]">{{ $client->address }}</span>
+                                    </div>
+                                @endif
+                                <div class="mt-2">
+                                    <a href="{{ route('admin.clients.show', $client) }}"
+                                        class="text-primary-400 text-sm hover:text-primary-300 flex items-center gap-1">
+                                        View Client Profile
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -131,15 +172,15 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                                                                                                                                            {{ $lead->stage === $stageOption
+                                                                                                                                                                                                                {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span
                                                 class="w-3 h-3 rounded-full mr-3 
-                                                                                                                                                                                            @if($stageOption === 'New Lead') bg-yellow-500
-                                                                                                                                                                                            @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                                                                                                                                            @elseif($stageOption === 'Confirm') bg-green-500
-                                                                                                                                                                                            @else bg-red-500 @endif"></span>
+                                                                                                                                                                                                                @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                                                                                                                                                @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                                                                                                                                                @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                                                                                                                                                @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -453,7 +494,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                                                                                                                                            {{ $role === 'user'
+                                                                                                                                                                                                                {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
@@ -628,16 +669,16 @@
                     const fieldName = field.field_name;
                     const displayName = field.display_name;
                     let value = productData[fieldName] || productData[fieldName.toLowerCase()] || '';
-                    
+
                     // Skip internal fields
                     if (fieldName.startsWith('_')) return;
 
                     const fieldDiv = document.createElement('div');
                     fieldDiv.innerHTML = `
-                        <label class="block text-sm font-medium text-gray-300 mb-1">${displayName}</label>
-                        <input type="text" name="${fieldName}" value="${value}"
-                            class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                    `;
+                                <label class="block text-sm font-medium text-gray-300 mb-1">${displayName}</label>
+                                <input type="text" name="${fieldName}" value="${value}"
+                                    class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                            `;
                     fieldsContainer.appendChild(fieldDiv);
                 });
 
@@ -650,12 +691,12 @@
 
             function saveProduct(event) {
                 event.preventDefault();
-                
+
                 const source = document.getElementById('editProductSource').value;
                 const productId = document.getElementById('editProductId').value;
                 const form = document.getElementById('editProductForm');
                 const formData = new FormData(form);
-                
+
                 // Build product data object
                 const productData = {};
                 formData.forEach((value, key) => {
@@ -677,19 +718,19 @@
                         product_data: productData
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        closeEditProductModal();
-                        location.reload();
-                    } else {
-                        alert('Error: ' + (data.message || 'Failed to update product'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to update product');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            closeEditProductModal();
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (data.message || 'Failed to update product'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to update product');
+                    });
             }
         </script>
 
