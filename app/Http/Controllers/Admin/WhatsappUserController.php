@@ -3,21 +3,31 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\WhatsappUser;
 use Illuminate\Http\Request;
 
 class WhatsappUserController extends Controller
 {
     /**
-     * Display users listing
+     * Display users listing - now using Customer model
      */
     public function index(Request $request)
     {
-        $query = WhatsappUser::with('latestLead');
+        $admin = auth()->guard('admin')->user();
+
+        $query = Customer::where('admin_id', $admin->id)
+            ->with('leads');
 
         // Filter by bot status
         if ($request->filled('bot_status')) {
-            $query->where('bot_enabled', $request->bot_status === 'enabled');
+            if ($request->bot_status === 'active') {
+                $query->where('bot_enabled', true)->where('bot_stopped_by_user', false);
+            } else {
+                $query->where(function ($q) {
+                    $q->where('bot_enabled', false)->orWhere('bot_stopped_by_user', true);
+                });
+            }
         }
 
         // Search
@@ -25,8 +35,7 @@ class WhatsappUserController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('number', 'like', "%{$search}%")
-                    ->orWhere('city', 'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 

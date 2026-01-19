@@ -9,7 +9,7 @@
         <div class="glass rounded-xl p-4">
             <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-wrap gap-4 items-center">
                 <input type="text" name="search" value="{{ request('search') }}"
-                    placeholder="Search by name, number or city..."
+                    placeholder="Search by name or number..."
                     class="input-dark flex-1 min-w-[200px] px-4 py-2 rounded-xl text-white placeholder-gray-500">
                 <select name="bot_status" class="input-dark px-4 py-2 rounded-xl text-white">
                     <option value="">All Bot Status</option>
@@ -29,7 +29,6 @@
                 <thead class="bg-white/5">
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">User</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">City</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Lead</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Bot Status</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Last Activity</th>
@@ -38,6 +37,10 @@
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse($users ?? [] as $user)
+                        @php
+                            $botActive = $user->bot_enabled && !$user->bot_stopped_by_user;
+                            $latestLead = $user->leads->first();
+                        @endphp
                         <tr class="table-row">
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-3">
@@ -51,11 +54,10 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-gray-300">{{ $user->city ?? '-' }}</td>
                             <td class="px-6 py-4">
-                                @if($user->lead)
+                                @if($latestLead)
                                     <span class="px-3 py-1 text-xs font-medium rounded-lg bg-primary-500/20 text-primary-400">
-                                        {{ ucfirst($user->lead->stage) }}
+                                        {{ ucfirst($latestLead->stage) }}
                                     </span>
                                 @else
                                     <span class="text-gray-500">No lead</span>
@@ -63,14 +65,14 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span
-                                    class="flex items-center text-sm {{ $user->bot_active ? 'text-green-400' : 'text-gray-500' }}">
+                                    class="flex items-center text-sm {{ $botActive ? 'text-green-400' : 'text-gray-500' }}">
                                     <span
-                                        class="w-2 h-2 rounded-full mr-2 {{ $user->bot_active ? 'bg-green-400 animate-pulse' : 'bg-gray-500' }}"></span>
-                                    {{ $user->bot_active ? 'Active' : 'Inactive' }}
+                                        class="w-2 h-2 rounded-full mr-2 {{ $botActive ? 'bg-green-400 animate-pulse' : 'bg-gray-500' }}"></span>
+                                    {{ $botActive ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-gray-400">
-                                {{ $user->last_active_at ? $user->last_active_at->diffForHumans() : 'Never' }}</td>
+                                {{ $user->last_activity_at ? $user->last_activity_at->diffForHumans() : 'Never' }}</td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end space-x-2">
                                     <a href="{{ route('admin.chats.show', $user) }}"
@@ -83,7 +85,7 @@
                                     <form action="{{ route('admin.users.toggle-bot', $user) }}" method="POST" class="inline">
                                         @csrf
                                         <button type="submit"
-                                            class="p-2 {{ $user->bot_active ? 'text-green-400 hover:text-red-400' : 'text-gray-400 hover:text-green-400' }} transition-colors"
+                                            class="p-2 {{ $botActive ? 'text-green-400 hover:text-red-400' : 'text-gray-400 hover:text-green-400' }} transition-colors"
                                             title="Toggle Bot">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -96,7 +98,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
                                 <svg class="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
