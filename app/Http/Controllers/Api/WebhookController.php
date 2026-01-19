@@ -84,6 +84,12 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'ignored', 'reason' => 'self message']);
             }
 
+            // Skip group messages - only process 1-on-1 chats
+            if (!empty($messageData['isGroupMessage'])) {
+                Log::debug('Skipping group message', ['phone' => $messageData['phone']]);
+                return response()->json(['status' => 'ignored', 'reason' => 'group message']);
+            }
+
             // DEDUPLICATION: Skip if message already processed
             $cacheKey = 'processed_msg_' . ($messageData['messageId'] ?? md5($messageData['phone'] . $messageData['content'] . $messageData['timestamp']));
             if (Cache::has($cacheKey)) {
@@ -303,6 +309,9 @@ class WebhookController extends Controller
             $remoteJid = $message['key']['remoteJid'] ?? '';
             $phone = $this->cleanPhone($remoteJid);
 
+            // Detect if this is a group message (JID ends with @g.us)
+            $isGroupMessage = str_contains($remoteJid, '@g.us');
+
             $msgContent = $message['message'] ?? [];
 
             // REPLY DETECTION (Point 4)
@@ -329,6 +338,7 @@ class WebhookController extends Controller
                 'isReply' => !empty($replyToMessageId),
                 'replyToMessageId' => $replyToMessageId,
                 'replyToContent' => $replyToContent,
+                'isGroupMessage' => $isGroupMessage,
             ];
         }
 
@@ -337,6 +347,10 @@ class WebhookController extends Controller
             $msg = $message['messages'][0] ?? null;
             if ($msg) {
                 $msgContent = $msg['message'] ?? [];
+                $remoteJid = $msg['key']['remoteJid'] ?? '';
+
+                // Detect if this is a group message (JID ends with @g.us)
+                $isGroupMessage = str_contains($remoteJid, '@g.us');
 
                 // Reply detection for legacy
                 $replyToContent = null;
@@ -348,7 +362,7 @@ class WebhookController extends Controller
                 }
 
                 return [
-                    'phone' => $this->cleanPhone($msg['key']['remoteJid'] ?? ''),
+                    'phone' => $this->cleanPhone($remoteJid),
                     'name' => $msg['pushName'] ?? '',
                     'content' => $this->extractContent($msgContent),
                     'fromMe' => $msg['key']['fromMe'] ?? false,
@@ -358,6 +372,7 @@ class WebhookController extends Controller
                     'isReply' => !empty($replyToMessageId),
                     'replyToMessageId' => $replyToMessageId,
                     'replyToContent' => $replyToContent,
+                    'isGroupMessage' => $isGroupMessage,
                 ];
             }
         }
