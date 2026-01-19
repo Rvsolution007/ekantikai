@@ -115,19 +115,14 @@
         </div>
 
         <!-- Search & Filter Bar -->
-        <div class="glass rounded-xl p-4">
+        <div class="glass rounded-xl p-4 relative z-20">
             <form action="{{ route('admin.leads.index') }}" method="GET" id="filterForm">
                 <div class="flex items-center gap-4">
                     <!-- Search Input -->
-                    <div class="flex-1 relative">
-                        <svg class="w-5 h-5 text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                    <div class="flex-1">
                         <input type="text" name="search" value="{{ request('search') }}"
                             placeholder="Search by name or number..."
-                            class="input-dark w-full pl-12 pr-4 py-3 rounded-xl text-white placeholder-gray-500"
+                            class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
                             onkeypress="if(event.key==='Enter') document.getElementById('filterForm').submit()">
                     </div>
 
@@ -151,7 +146,7 @@
 
                         <!-- Dropdown Panel -->
                         <div x-show="open" @click.away="open = false" x-transition
-                            class="absolute right-0 mt-2 w-72 bg-dark-100 border border-gray-700 rounded-xl shadow-xl z-50 p-4 space-y-4">
+                            class="absolute right-0 mt-2 w-72 bg-dark-100 border border-gray-700 rounded-xl shadow-2xl p-4 space-y-4" style="z-index: 9999;">
 
                             <!-- Stage Filter -->
                             <div>
