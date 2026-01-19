@@ -195,6 +195,10 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::patch('/admins/{admin}/toggle-product-images', [TenantController::class, 'toggleProductImages'])->name('admins.toggle-product-images');
     Route::post('/admins/{admin}/reset-password', [TenantController::class, 'resetPassword'])->name('admins.reset-password');
 
+    // Bot Diagnostic Flowchart & Testing
+    Route::get('/admins/{admin}/flowchart-data', [TenantController::class, 'getFlowchartData'])->name('admins.flowchart-data');
+    Route::post('/admins/{admin}/test-bot-flow', [TenantController::class, 'testBotFlow'])->name('admins.test-bot-flow');
+
     // Chat Management for Admin
     Route::get('/admins/{admin}/chats', [TenantController::class, 'chats'])->name('admins.chats');
     Route::get('/admins/{admin}/chats/{customer}', [TenantController::class, 'viewChat'])->name('admins.chat-view');

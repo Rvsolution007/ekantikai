@@ -442,4 +442,26 @@ class TenantController extends Controller
 
         return back()->with('success', 'All chats and product data cleared for ' . $admin->name);
     }
+
+    /**
+     * Get flowchart connection data for visualization
+     */
+    public function getFlowchartData(Admin $admin)
+    {
+        $service = new \App\Services\BotFlowTesterService();
+        $data = $service->getConnectionsData($admin->id);
+
+        return response()->json($data);
+    }
+
+    /**
+     * Run bot flow validation test
+     */
+    public function testBotFlow(Admin $admin)
+    {
+        $service = new \App\Services\BotFlowTesterService();
+        $results = $service->runFlowValidation($admin->id);
+
+        return response()->json($results);
+    }
 }

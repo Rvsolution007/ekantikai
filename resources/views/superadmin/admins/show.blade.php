@@ -147,7 +147,7 @@
         </div>
     </div>
 
-    <!-- Bot Workflow Status Section - Clean Professional Design -->
+    <!-- Interactive Bot Flowchart (n8n Style) -->
     <div class="glass-card p-6 rounded-xl mb-8">
         <div class="flex items-center justify-between mb-6">
             <h3 class="text-lg font-semibold text-white flex items-center">
@@ -155,165 +155,523 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                 </svg>
-                Bot Configuration Status
+                Bot Configuration Flowchart
             </h3>
-            <div class="flex items-center gap-4 text-sm">
-                <span class="flex items-center gap-1">
-                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                    <span class="text-gray-400">Connected</span>
-                </span>
-                <span class="flex items-center gap-1">
-                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
-                    <span class="text-gray-400">Not Configured</span>
-                </span>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-4 text-sm">
+                    <span class="flex items-center gap-1">
+                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                        <span class="text-gray-400">Connected</span>
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                        <span class="text-gray-400">Disconnected</span>
+                    </span>
+                </div>
+                <button onclick="runFlowTest()" id="testFlowBtn"
+                    class="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    Run Flow Test
+                </button>
             </div>
         </div>
 
-        <!-- Status Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <!-- Catalogue -->
-            <div class="relative p-4 rounded-xl {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
-                        <svg class="w-5 h-5 {{ $workflowStatus['catalogue']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                    </div>
-                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['catalogue']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
-                </div>
-                <h4 class="text-white font-medium text-sm">Catalogue</h4>
-                <p class="text-xs {{ $workflowStatus['catalogue']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
-                    {{ $workflowStatus['catalogue']['count'] }} products
-                </p>
-            </div>
+        <!-- Flowchart Canvas -->
+        <div id="flowchartCanvas" class="relative bg-gray-900/50 rounded-xl border border-gray-700 overflow-hidden"
+            style="height: 520px;">
+            <!-- SVG for connection lines -->
+            <svg id="connectionsSvg" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 1;">
+                <defs>
+                    <linearGradient id="activeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="inactiveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#6b7280;stop-opacity:0.5" />
+                        <stop offset="100%" style="stop-color:#4b5563;stop-opacity:0.5" />
+                    </linearGradient>
+                </defs>
+            </svg>
 
-            <!-- System Prompt -->
-            <div class="relative p-4 rounded-xl {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
-                        <svg class="w-5 h-5 {{ $workflowStatus['system_prompt']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['system_prompt']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
-                </div>
-                <h4 class="text-white font-medium text-sm">System Prompt</h4>
-                <p class="text-xs {{ $workflowStatus['system_prompt']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
-                    {{ $workflowStatus['system_prompt']['connected'] ? 'Configured' : 'Not Set' }}
-                </p>
-            </div>
+            <!-- Nodes will be dynamically inserted here -->
+            <div id="nodesContainer" class="absolute inset-0" style="z-index: 2;"></div>
 
-            <!-- Flowchart -->
-            <div class="relative p-4 rounded-xl {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
-                        <svg class="w-5 h-5 {{ $workflowStatus['flowchart']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                        </svg>
-                    </div>
-                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['flowchart']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
+            <!-- Loading overlay -->
+            <div id="flowchartLoading" class="absolute inset-0 flex items-center justify-center bg-gray-900/80">
+                <div class="text-center">
+                    <svg class="w-8 h-8 text-purple-400 animate-spin mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                    <p class="text-gray-400 text-sm">Loading flowchart...</p>
                 </div>
-                <h4 class="text-white font-medium text-sm">Flowchart</h4>
-                <p class="text-xs {{ $workflowStatus['flowchart']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
-                    {{ $workflowStatus['flowchart']['count'] }} questions
-                </p>
             </div>
+        </div>
 
-            <!-- Product Questions -->
-            <div class="relative p-4 rounded-xl {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
-                        <svg class="w-5 h-5 {{ $workflowStatus['product_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                    </div>
-                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['product_questions']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
-                </div>
-                <h4 class="text-white font-medium text-sm">Product Questions</h4>
-                <p class="text-xs {{ $workflowStatus['product_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
-                    {{ $workflowStatus['product_questions']['count'] }} active
-                </p>
+        <!-- Test Results Section (Below Flowchart) -->
+        <div id="testResultsSection" class="hidden mt-4 pt-4 border-t border-gray-700">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-white font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Test Results
+                </h4>
+                <span id="testSummaryBadge" class="px-3 py-1 rounded-full text-sm font-medium"></span>
             </div>
-
-            <!-- Global Questions -->
-            <div class="relative p-4 rounded-xl {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/50 border border-gray-700' }} transition-all hover:scale-105">
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 rounded-lg {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
-                        <svg class="w-5 h-5 {{ $workflowStatus['global_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full {{ $workflowStatus['global_questions']['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
-                </div>
-                <h4 class="text-white font-medium text-sm">Global Questions</h4>
-                <p class="text-xs {{ $workflowStatus['global_questions']['connected'] ? 'text-green-400' : 'text-gray-500' }}">
-                    {{ $workflowStatus['global_questions']['count'] }} active
-                </p>
-            </div>
+            <div id="testResultsContent" class="space-y-2 max-h-48 overflow-y-auto"></div>
         </div>
 
         <!-- Summary Bar -->
-        @php
-            $connectedCount = collect($workflowStatus)->filter(fn($s) => $s['connected'])->count();
-            $totalComponents = count($workflowStatus);
-        @endphp
-        <div class="mt-6 pt-4 border-t border-gray-700 flex items-center justify-between">
+        <div id="flowchartSummary" class="mt-4 pt-4 border-t border-gray-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <span class="text-gray-400 text-sm">Configuration Status:</span>
-                <span class="px-3 py-1 rounded-full text-sm font-medium {{ $connectedCount >= 4 ? 'bg-green-500/20 text-green-400' : ($connectedCount >= 2 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400') }}">
-                    {{ $connectedCount }}/{{ $totalComponents }} Ready
-                </span>
+                <span id="configStatusBadge"
+                    class="px-3 py-1 rounded-full text-sm font-medium bg-gray-700/50 text-gray-400">Loading...</span>
             </div>
-            <div class="text-sm text-gray-500">
-                {{ $connectedCount >= 4 ? '✓ Bot is fully configured' : ($connectedCount >= 2 ? '⚠ Partial configuration' : '✗ Setup required') }}
-            </div>
+            <div id="configStatusText" class="text-sm text-gray-500">Analyzing configuration...</div>
         </div>
-
-        <!-- Dynamic Catalogue Fields Status -->
-        @if(!empty($catalogueFieldsStatus))
-        <div class="mt-6 pt-4 border-t border-gray-700">
-            <div class="flex items-center justify-between mb-4">
-                <h4 class="text-white font-medium flex items-center gap-2">
-                    <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                    </svg>
-                    Catalogue Field Connections
-                </h4>
-                <div class="flex items-center gap-4 text-xs">
-                    <span class="flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-green-500"></span> Connected
-                    </span>
-                    <span class="flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Disconnected
-                    </span>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                @foreach($catalogueFieldsStatus as $field)
-                <div class="relative bg-gray-800/50 border rounded-lg p-3 {{ $field['connected'] ? 'border-green-500/30' : 'border-yellow-500/30' }}">
-                    <div class="absolute top-2 right-2 w-2 h-2 rounded-full {{ $field['connected'] ? 'bg-green-500' : 'bg-yellow-500' }}"></div>
-                    <div class="flex items-center gap-2 mb-1">
-                        <div class="w-8 h-8 rounded-lg {{ $field['connected'] ? 'bg-green-500/20' : 'bg-gray-700' }} flex items-center justify-center">
-                            <svg class="w-4 h-4 {{ $field['connected'] ? 'text-green-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <h5 class="text-white text-sm font-medium truncate" title="{{ $field['field_name'] }}">{{ $field['field_name'] }}</h5>
-                    <p class="text-xs {{ $field['connected'] ? 'text-green-400' : 'text-gray-500' }}">
-                        @if($field['connected'])
-                            {{ $field['unique_values'] }} options
-                        @else
-                            No data
-                        @endif
-                    </p>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
     </div>
+
+    <!-- Test Results Modal -->
+    <div id="testResultsModal"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="glass-card p-6 rounded-2xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    Bot Flow Test Results
+                </h3>
+                <button onclick="closeTestModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Summary Cards -->
+            <div id="modalSummaryCards" class="grid grid-cols-3 gap-4 mb-4"></div>
+
+            <!-- Results List -->
+            <div class="flex-1 overflow-y-auto space-y-3" id="modalResultsList"></div>
+
+            <div class="mt-4 pt-4 border-t border-gray-700 flex justify-end">
+                <button onclick="closeTestModal()"
+                    class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .flowchart-node {
+            position: absolute;
+            width: 140px;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: grab;
+            transition: box-shadow 0.3s, transform 0.2s;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .flowchart-node:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        .flowchart-node.connected {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .flowchart-node.disconnected {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%);
+            border: 2px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .flowchart-node:hover {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .node-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .node-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .node-subtitle {
+            font-size: 10px;
+            color: #9ca3af;
+        }
+
+        .node-status-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .connection-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-dasharray: 8, 4;
+            animation: flowAnimation 1s linear infinite;
+        }
+
+        .connection-line.active {
+            stroke: url(#activeGradient);
+        }
+
+        .connection-line.inactive {
+            stroke: url(#inactiveGradient);
+            stroke-dasharray: 4, 4;
+            animation: none;
+        }
+
+        @keyframes flowAnimation {
+            0% {
+                stroke-dashoffset: 12;
+            }
+
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+
+    <script>
+        let flowchartData = null;
+        let isDragging = false;
+        let dragNode = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadFlowchartData();
+        });
+
+        async function loadFlowchartData() {
+            try {
+                const response = await fetch('{{ route("superadmin.admins.flowchart-data", $tenant) }}');
+                flowchartData = await response.json();
+                renderFlowchart();
+                document.getElementById('flowchartLoading').classList.add('hidden');
+            } catch (error) {
+                console.error('Error loading flowchart:', error);
+                document.getElementById('flowchartLoading').innerHTML = '<p class="text-red-400">Error loading flowchart</p>';
+            }
+        }
+
+        function renderFlowchart() {
+            const container = document.getElementById('nodesContainer');
+            const svg = document.getElementById('connectionsSvg');
+
+            container.innerHTML = '';
+
+            // Clear existing paths
+            const existingPaths = svg.querySelectorAll('path');
+            existingPaths.forEach(p => p.remove());
+
+            // Render nodes
+            Object.values(flowchartData.nodes).forEach(node => {
+                const nodeEl = createNodeElement(node);
+                container.appendChild(nodeEl);
+            });
+
+            // Render connections
+            renderConnections();
+            updateSummary();
+        }
+
+        function createNodeElement(node) {
+            const div = document.createElement('div');
+            div.className = `flowchart-node ${node.connected ? 'connected' : 'disconnected'}`;
+            div.id = `node-${node.id}`;
+            div.style.left = `${node.x}px`;
+            div.style.top = `${node.y}px`;
+
+            div.innerHTML = `
+                    <div class="node-status-dot ${node.connected ? 'bg-green-500 pulse-dot' : 'bg-yellow-500'}"></div>
+                    <div class="node-icon">${node.icon}</div>
+                    <div class="node-label">${node.label}</div>
+                    <div class="node-subtitle">${node.subtitle}</div>
+                `;
+
+            // Dragging functionality
+            div.addEventListener('mousedown', startDrag);
+
+            return div;
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            dragNode = e.currentTarget;
+            const rect = dragNode.getBoundingClientRect();
+            const containerRect = document.getElementById('flowchartCanvas').getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            dragNode.style.zIndex = 100;
+
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function doDrag(e) {
+            if (!isDragging || !dragNode) return;
+
+            const container = document.getElementById('flowchartCanvas');
+            const containerRect = container.getBoundingClientRect();
+
+            let newX = e.clientX - containerRect.left - dragOffset.x;
+            let newY = e.clientY - containerRect.top - dragOffset.y;
+
+            // Keep within bounds
+            newX = Math.max(0, Math.min(newX, containerRect.width - 140));
+            newY = Math.max(0, Math.min(newY, containerRect.height - 80));
+
+            dragNode.style.left = `${newX}px`;
+            dragNode.style.top = `${newY}px`;
+
+            // Update node data
+            const nodeId = dragNode.id.replace('node-', '');
+            if (flowchartData.nodes[nodeId]) {
+                flowchartData.nodes[nodeId].x = newX;
+                flowchartData.nodes[nodeId].y = newY;
+            }
+
+            renderConnections();
+        }
+
+        function stopDrag() {
+            if (dragNode) {
+                dragNode.style.zIndex = 10;
+            }
+            isDragging = false;
+            dragNode = null;
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function renderConnections() {
+            const svg = document.getElementById('connectionsSvg');
+            const existingPaths = svg.querySelectorAll('path');
+            existingPaths.forEach(p => p.remove());
+
+            flowchartData.connections.forEach(conn => {
+                const fromNode = flowchartData.nodes[conn.from];
+                const toNode = flowchartData.nodes[conn.to];
+
+                if (!fromNode || !toNode) return;
+
+                const fromX = fromNode.x + 70; // Center of node
+                const fromY = fromNode.y + 60; // Bottom of node
+                const toX = toNode.x + 70;
+                const toY = toNode.y;
+
+                // Create curved path
+                const midY = (fromY + toY) / 2;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`);
+                path.classList.add('connection-line', conn.active ? 'active' : 'inactive');
+
+                svg.appendChild(path);
+            });
+        }
+
+        function updateSummary() {
+            const connectedCount = Object.values(flowchartData.nodes).filter(n => n.connected).length;
+            const totalCount = Object.values(flowchartData.nodes).length;
+
+            const badge = document.getElementById('configStatusBadge');
+            const text = document.getElementById('configStatusText');
+
+            if (connectedCount >= 5) {
+                badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400';
+                badge.textContent = `${connectedCount}/${totalCount} Ready`;
+                text.textContent = '✓ Bot is fully configured';
+            } else if (connectedCount >= 3) {
+                badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-500/20 text-yellow-400';
+                badge.textContent = `${connectedCount}/${totalCount} Ready`;
+                text.textContent = '⚠ Partial configuration';
+            } else {
+                badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400';
+                badge.textContent = `${connectedCount}/${totalCount} Ready`;
+                text.textContent = '✗ Setup required';
+            }
+        }
+
+        async function runFlowTest() {
+            const btn = document.getElementById('testFlowBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Testing...';
+
+            try {
+                const response = await fetch('{{ route("superadmin.admins.test-bot-flow", $tenant) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                const results = await response.json();
+                showTestResults(results);
+                showTestModal(results);
+            } catch (error) {
+                alert('Error running test: ' + error.message);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> Run Flow Test';
+        }
+
+        function showTestResults(results) {
+            const section = document.getElementById('testResultsSection');
+            const content = document.getElementById('testResultsContent');
+            const badge = document.getElementById('testSummaryBadge');
+
+            section.classList.remove('hidden');
+
+            // Update badge
+            if (results.valid) {
+                badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400';
+                badge.textContent = '✓ All tests passed';
+            } else {
+                badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400';
+                badge.textContent = `✗ ${results.summary.failed} issues found`;
+            }
+
+            // Show inline results
+            content.innerHTML = '';
+            [...results.errors, ...results.warnings].slice(0, 3).forEach(item => {
+                const div = document.createElement('div');
+                div.className = `flex items-start gap-2 p-2 rounded-lg ${item.type === 'error' ? 'bg-red-500/10' : 'bg-yellow-500/10'}`;
+                div.innerHTML = `
+                        <span class="${item.type === 'error' ? 'text-red-400' : 'text-yellow-400'}">${item.type === 'error' ? '✗' : '⚠'}</span>
+                        <div>
+                            <span class="text-xs text-gray-500">${item.code}</span>
+                            <p class="text-sm text-white">${item.message}</p>
+                        </div>
+                    `;
+                content.appendChild(div);
+            });
+
+            if (results.errors.length + results.warnings.length > 3) {
+                const more = document.createElement('p');
+                more.className = 'text-gray-400 text-sm text-center';
+                more.textContent = `+ ${results.errors.length + results.warnings.length - 3} more issues`;
+                content.appendChild(more);
+            }
+        }
+
+        function showTestModal(results) {
+            const modal = document.getElementById('testResultsModal');
+            const summaryCards = document.getElementById('modalSummaryCards');
+            const resultsList = document.getElementById('modalResultsList');
+
+            // Summary cards
+            summaryCards.innerHTML = `
+                    <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-green-400">${results.summary.passed}</div>
+                        <div class="text-xs text-gray-400">Passed</div>
+                    </div>
+                    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-yellow-400">${results.summary.warnings}</div>
+                        <div class="text-xs text-gray-400">Warnings</div>
+                    </div>
+                    <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-red-400">${results.summary.failed}</div>
+                        <div class="text-xs text-gray-400">Errors</div>
+                    </div>
+                `;
+
+            // Results list
+            resultsList.innerHTML = '';
+
+            // Errors first
+            results.errors.forEach(item => {
+                resultsList.appendChild(createResultItem(item, 'error'));
+            });
+
+            // Warnings
+            results.warnings.forEach(item => {
+                resultsList.appendChild(createResultItem(item, 'warning'));
+            });
+
+            // Success
+            results.success.forEach(item => {
+                resultsList.appendChild(createResultItem(item, 'success'));
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function createResultItem(item, type) {
+            const div = document.createElement('div');
+            const colors = {
+                error: 'bg-red-500/10 border-red-500/30 text-red-400',
+                warning: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
+                success: 'bg-green-500/10 border-green-500/30 text-green-400'
+            };
+            const icons = {
+                error: '✗',
+                warning: '⚠',
+                success: '✓'
+            };
+
+            div.className = `flex items-start gap-3 p-3 rounded-lg border ${colors[type]}`;
+            div.innerHTML = `
+                    <span class="text-lg">${icons[type]}</span>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-gray-700/50 px-2 py-0.5 rounded text-gray-400">${item.code}</span>
+                        </div>
+                        <p class="text-sm text-white mt-1">${item.message}</p>
+                    </div>
+                `;
+            return div;
+        }
+
+        function closeTestModal() {
+            document.getElementById('testResultsModal').classList.add('hidden');
+        }
+    </script>
+
 
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
