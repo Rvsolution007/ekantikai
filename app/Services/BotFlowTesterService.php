@@ -313,26 +313,18 @@ class BotFlowTesterService
         foreach ($nodes as $node) {
             // Check for orphan nodes (not connected from anywhere except start)
             if ($node->node_type !== 'start') {
-                $hasIncoming = QuestionnaireNode::where('admin_id', $adminId)
-                    ->where('next_node_id', $node->id)
-                    ->exists();
+                // Use incoming connections relationship
+                $hasIncoming = $node->incomingConnections()->exists();
 
                 if (!$hasIncoming) {
-                    // Check conditions
-                    $hasConditionIncoming = QuestionnaireNode::where('admin_id', $adminId)
-                        ->whereJsonContains('conditions', ['next_node_id' => $node->id])
-                        ->exists();
-
-                    if (!$hasConditionIncoming) {
-                        $orphanCount++;
-                    }
+                    $orphanCount++;
                 }
             }
 
-            // Check for dead ends (question nodes without next)
-            if ($node->node_type === 'question' && !$node->next_node_id) {
-                $hasConditions = !empty($node->conditions);
-                if (!$hasConditions) {
+            // Check for dead ends (question nodes without outgoing connections)
+            if ($node->node_type === 'question') {
+                $hasOutgoing = $node->outgoingConnections()->exists();
+                if (!$hasOutgoing) {
                     $deadEndCount++;
                 }
             }
