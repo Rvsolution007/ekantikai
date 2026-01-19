@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Admin;
 use App\Models\QuestionnaireNode;
 use App\Models\QuestionnaireField;
+use App\Models\GlobalQuestion;
 use App\Models\CatalogueField;
 use App\Models\Catalogue;
 use App\Models\Lead;
@@ -83,12 +84,10 @@ class BotFlowTesterService
         $customersCount = Customer::where('admin_id', $adminId)->count();
 
         $productQuestions = QuestionnaireField::where('admin_id', $adminId)
-            ->where('field_type', 'product')
             ->where('is_active', true)
             ->count();
 
-        $globalQuestions = QuestionnaireField::where('admin_id', $adminId)
-            ->where('field_type', 'global')
+        $globalQuestions = GlobalQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->count();
 
@@ -257,7 +256,6 @@ class BotFlowTesterService
     private function validateProductQuestions(int $adminId): array
     {
         $fields = QuestionnaireField::where('admin_id', $adminId)
-            ->where('field_type', 'product')
             ->where('is_active', true)
             ->get();
 
@@ -288,8 +286,7 @@ class BotFlowTesterService
      */
     private function validateGlobalQuestions(int $adminId): array
     {
-        $fields = QuestionnaireField::where('admin_id', $adminId)
-            ->where('field_type', 'global')
+        $fields = GlobalQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->count();
 
@@ -352,7 +349,6 @@ class BotFlowTesterService
     private function validateCatalogueQuestionIntegration(int $adminId): array
     {
         $productFields = QuestionnaireField::where('admin_id', $adminId)
-            ->where('field_type', 'product')
             ->where('is_active', true)
             ->get();
 
@@ -542,7 +538,6 @@ class BotFlowTesterService
     private function getProductQuestionsDetails(int $adminId): array
     {
         $fields = QuestionnaireField::where('admin_id', $adminId)
-            ->where('field_type', 'product')
             ->get();
 
         $catalogueFields = CatalogueField::where('admin_id', $adminId)->pluck('field_key')->toArray();
@@ -576,20 +571,14 @@ class BotFlowTesterService
 
     private function getGlobalQuestionsDetails(int $adminId): array
     {
-        $fields = QuestionnaireField::where('admin_id', $adminId)
-            ->where('field_type', 'global')
+        $fields = GlobalQuestion::where('admin_id', $adminId)
             ->get();
 
-        $fieldsList = $fields->map(function ($f) use ($adminId) {
-            $inFlowchart = QuestionnaireNode::where('admin_id', $adminId)
-                ->where('questionnaire_field_id', $f->id)
-                ->exists();
-
+        $fieldsList = $fields->map(function ($f) {
             return [
-                'label' => $f->display_name ?? $f->field_name,
-                'value' => $f->field_key,
-                'connected' => $f->is_active && $inFlowchart,
-                'inFlowchart' => $inFlowchart,
+                'label' => $f->display_name ?? $f->question_name,
+                'value' => $f->field_name ?? 'N/A',
+                'connected' => $f->is_active,
                 'active' => $f->is_active,
             ];
         })->toArray();
@@ -599,10 +588,9 @@ class BotFlowTesterService
             'icon' => '🌐',
             'status' => $fields->where('is_active', true)->count() > 0 ? 'connected' : 'disconnected',
             'fields' => array_merge([
-                ['label' => 'Total Fields', 'value' => $fields->count(), 'connected' => $fields->count() > 0],
-                ['label' => 'Active Fields', 'value' => $fields->where('is_active', true)->count(), 'connected' => $fields->where('is_active', true)->count() > 0],
+                ['label' => 'Total Questions', 'value' => $fields->count(), 'connected' => $fields->count() > 0],
+                ['label' => 'Active Questions', 'value' => $fields->where('is_active', true)->count(), 'connected' => $fields->where('is_active', true)->count() > 0],
             ], $fieldsList),
         ];
     }
 }
-
