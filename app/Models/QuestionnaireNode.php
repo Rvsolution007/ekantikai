@@ -43,7 +43,7 @@ class QuestionnaireNode extends Model
 
     public function questionnaireField(): BelongsTo
     {
-        return $this->belongsTo(QuestionnaireField::class);
+        return $this->belongsTo(ProductQuestion::class);
     }
 
     public function outgoingConnections(): HasMany
@@ -194,7 +194,7 @@ class QuestionnaireNode extends Model
     }
 
     /**
-     * Sync this node to its linked QuestionnaireField
+     * Sync this node to its linked ProductQuestion
      */
     public function syncToField(): void
     {
@@ -219,7 +219,7 @@ class QuestionnaireNode extends Model
     }
 
     /**
-     * Sync from linked QuestionnaireField
+     * Sync from linked ProductQuestion
      */
     public function syncFromField(): void
     {

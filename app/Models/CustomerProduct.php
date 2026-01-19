@@ -53,7 +53,7 @@ class CustomerProduct extends Model
     // Build unique key from field values based on tenant config
     public static function buildUniqueKey(int $tenantId, array $fieldValues): string
     {
-        $uniqueFields = QuestionnaireField::where('admin_id', $tenantId)
+        $uniqueFields = ProductQuestion::where('admin_id', $tenantId)
             ->where('is_unique_key', true)
             ->orderBy('unique_key_order')
             ->pluck('field_name')

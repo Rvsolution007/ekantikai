@@ -112,7 +112,7 @@ class TenantController extends Controller
         $catalogueFieldsCount = \App\Models\CatalogueField::where('admin_id', $admin->id)->count();
 
         // Count questionnaire fields (no context_type column - all fields are counted together)
-        $workflowQuestionsCount = \App\Models\QuestionnaireField::where('admin_id', $admin->id)
+        $workflowQuestionsCount = \App\Models\ProductQuestion::where('admin_id', $admin->id)
             ->where('is_active', true)
             ->count();
 

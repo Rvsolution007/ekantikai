@@ -34,7 +34,7 @@ class FollowupTemplate extends Model
      */
     public static function getAvailableFields(int $adminId): array
     {
-        $fields = QuestionnaireField::where('admin_id', $adminId)
+        $fields = ProductQuestion::where('admin_id', $adminId)
             ->where('is_required', true)
             ->pluck('display_name', 'field_name')
             ->toArray();

@@ -8,7 +8,7 @@ use App\Models\Catalogue;
 use App\Models\CatalogueField;
 use App\Models\Customer;
 use App\Models\Lead;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use App\Models\QuestionnaireNode;
 use App\Models\QuestionTemplate;
 use App\Models\Setting;
@@ -1719,7 +1719,7 @@ PROMPT;
     protected function buildSystemPromptLegacy($tenant, Customer $customer, array $context): string
     {
         $tenantId = is_object($tenant) ? $tenant->id : $tenant;
-        $fields = QuestionnaireField::where('admin_id', $tenantId)
+        $fields = ProductQuestion::where('admin_id', $tenantId)
             ->where('is_active', true)
             ->orderBy('order')
             ->get();

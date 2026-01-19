@@ -107,9 +107,9 @@ class LeadController extends Controller
             $chats = $lead->whatsappUser->chats()->orderBy('created_at', 'asc')->get();
         }
 
-        // Get Product fields from QuestionnaireField (Product Questions) for table columns
+        // Get Product fields from ProductQuestion (Product Questions) for table columns
         // These are the fields defined in Workflow -> Product Questions
-        $productFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+        $productFields = \App\Models\ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get()

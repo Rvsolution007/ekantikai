@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Customer;
 use App\Models\CustomerProduct;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use Illuminate\Support\Collection;
 
 class ActionProcessorService

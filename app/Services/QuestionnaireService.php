@@ -7,7 +7,7 @@ use App\Models\CustomerProduct;
 use App\Models\CustomerQuestionnaireState;
 use App\Models\GlobalQuestion;
 use App\Models\Lead;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use App\Models\QuestionTemplate;
 
 class QuestionnaireService
@@ -102,7 +102,7 @@ class QuestionnaireService
         }
 
         // It's a questionnaire field
-        $field = QuestionnaireField::where('tenant_id', $this->tenantId)
+        $field = ProductQuestion::where('tenant_id', $this->tenantId)
             ->where('field_name', $fieldName)
             ->first();
 
@@ -135,7 +135,7 @@ class QuestionnaireService
      */
     protected function areUniqueKeyFieldsComplete(): bool
     {
-        $uniqueFields = QuestionnaireField::where('tenant_id', $this->tenantId)
+        $uniqueFields = ProductQuestion::where('tenant_id', $this->tenantId)
             ->where('is_unique_key', true)
             ->pluck('field_name')
             ->toArray();
@@ -239,9 +239,9 @@ class QuestionnaireService
     /**
      * Get next questionnaire field
      */
-    protected function getNextField(): ?QuestionnaireField
+    protected function getNextField(): ?ProductQuestion
     {
-        $fields = QuestionnaireField::where('tenant_id', $this->tenantId)
+        $fields = ProductQuestion::where('tenant_id', $this->tenantId)
             ->active()
             ->ordered()
             ->get();
@@ -509,7 +509,7 @@ class QuestionnaireService
             $fieldName = $config['field_name'] ?? 'field_' . $currentNode->id;
             $fields[$fieldName] = $answer;
 
-            // Also save to linked QuestionnaireField if exists for sync
+            // Also save to linked ProductQuestion if exists for sync
             if ($currentNode->questionnaire_field_id) {
                 $this->state->setCompletedField($fieldName, $answer);
             }

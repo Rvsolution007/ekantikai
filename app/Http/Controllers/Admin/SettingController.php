@@ -352,7 +352,7 @@ class SettingController extends Controller
         ];
 
         // 5. Check Workflow/Questionnaire Fields
-        $fieldsCount = \App\Models\QuestionnaireField::where('admin_id', $admin->id)
+        $fieldsCount = \App\Models\ProductQuestion::where('admin_id', $admin->id)
             ->where('is_active', true)
             ->count();
 

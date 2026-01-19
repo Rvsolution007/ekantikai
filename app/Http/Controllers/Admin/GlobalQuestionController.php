@@ -31,7 +31,7 @@ class GlobalQuestionController extends Controller
     {
         $adminId = $this->getAdminId();
 
-        $fields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+        $fields = \App\Models\ProductQuestion::where('admin_id', $adminId)
             ->active()
             ->ordered()
             ->pluck('display_name', 'field_name');
@@ -97,7 +97,7 @@ class GlobalQuestionController extends Controller
 
         $adminId = $this->getAdminId();
 
-        $fields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+        $fields = \App\Models\ProductQuestion::where('admin_id', $adminId)
             ->active()
             ->ordered()
             ->pluck('display_name', 'field_name');

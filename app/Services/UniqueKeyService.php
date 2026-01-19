@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\CustomerProduct;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 
 class UniqueKeyService
 {
@@ -12,7 +12,7 @@ class UniqueKeyService
      */
     public static function buildKey(int $tenantId, array $fieldValues): string
     {
-        $uniqueFields = QuestionnaireField::where('tenant_id', $tenantId)
+        $uniqueFields = ProductQuestion::where('tenant_id', $tenantId)
             ->where('is_unique_key', true)
             ->orderBy('unique_key_order')
             ->pluck('field_name')
@@ -41,7 +41,7 @@ class UniqueKeyService
      */
     public static function parseKey(int $tenantId, string $key): array
     {
-        $uniqueFields = QuestionnaireField::where('tenant_id', $tenantId)
+        $uniqueFields = ProductQuestion::where('tenant_id', $tenantId)
             ->where('is_unique_key', true)
             ->orderBy('unique_key_order')
             ->pluck('field_name')

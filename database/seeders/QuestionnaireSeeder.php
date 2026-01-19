@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use App\Models\GlobalQuestion;
 use App\Models\QuestionTemplate;
 use App\Models\Admin;
@@ -103,7 +103,7 @@ class QuestionnaireSeeder extends Seeder
         ];
 
         foreach ($fields as $field) {
-            QuestionnaireField::updateOrCreate(
+            ProductQuestion::updateOrCreate(
                 ['admin_id' => $adminId, 'field_name' => $field['field_name']],
                 array_merge($field, ['admin_id' => $adminId, 'is_active' => true])
             );

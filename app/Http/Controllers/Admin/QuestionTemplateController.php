@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\QuestionTemplate;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use App\Models\GlobalQuestion;
 use Illuminate\Http\Request;
 
@@ -18,7 +18,7 @@ class QuestionTemplateController extends Controller
         $adminId = $this->getAdminId();
 
         // Get all fields (questionnaire + global)
-        $questionnaireFields = QuestionnaireField::where('admin_id', $adminId)
+        $questionnaireFields = ProductQuestion::where('admin_id', $adminId)
             ->active()
             ->get(['field_name', 'display_name']);
 

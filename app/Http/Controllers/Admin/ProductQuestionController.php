@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 
-class QuestionnaireFieldController extends Controller
+class ProductQuestionController extends Controller
 {
     /**
      * Display questionnaire fields configuration
@@ -16,7 +16,7 @@ class QuestionnaireFieldController extends Controller
     {
         $adminId = $this->getAdminId();
 
-        $fields = QuestionnaireField::where('admin_id', $adminId)
+        $fields = ProductQuestion::where('admin_id', $adminId)
             ->orderBy('sort_order')
             ->get();
 
@@ -58,14 +58,14 @@ class QuestionnaireFieldController extends Controller
         $adminId = $this->getAdminId();
 
         // Check if field name already exists
-        if (QuestionnaireField::where('admin_id', $adminId)->where('field_name', $validated['field_name'])->exists()) {
+        if (ProductQuestion::where('admin_id', $adminId)->where('field_name', $validated['field_name'])->exists()) {
             return back()->withErrors(['field_name' => 'This field name already exists'])->withInput();
         }
 
         // Get max sort order
-        $maxSort = QuestionnaireField::where('admin_id', $adminId)->max('sort_order') ?? 0;
+        $maxSort = ProductQuestion::where('admin_id', $adminId)->max('sort_order') ?? 0;
 
-        QuestionnaireField::create([
+        ProductQuestion::create([
             'admin_id' => $adminId,
             'field_name' => $validated['field_name'],
             'display_name' => $validated['display_name'],
@@ -88,7 +88,7 @@ class QuestionnaireFieldController extends Controller
     /**
      * Show edit form
      */
-    public function edit(QuestionnaireField $field)
+    public function edit(ProductQuestion $field)
     {
         $this->authorizeField($field);
 
@@ -102,7 +102,7 @@ class QuestionnaireFieldController extends Controller
     /**
      * Update field
      */
-    public function update(Request $request, QuestionnaireField $field)
+    public function update(Request $request, ProductQuestion $field)
     {
         $this->authorizeField($field);
 
@@ -133,7 +133,7 @@ class QuestionnaireFieldController extends Controller
     /**
      * Delete field
      */
-    public function destroy(QuestionnaireField $field)
+    public function destroy(ProductQuestion $field)
     {
         $this->authorizeField($field);
 
@@ -150,13 +150,13 @@ class QuestionnaireFieldController extends Controller
     {
         $validated = $request->validate([
             'order' => 'required|array',
-            'order.*' => 'integer|exists:questionnaire_fields,id',
+            'order.*' => 'integer|exists:product_questions,id',
         ]);
 
         $adminId = $this->getAdminId();
 
         foreach ($validated['order'] as $position => $id) {
-            QuestionnaireField::where('id', $id)
+            ProductQuestion::where('id', $id)
                 ->where('admin_id', $adminId)
                 ->update(['sort_order' => $position + 1]);
         }
@@ -167,7 +167,7 @@ class QuestionnaireFieldController extends Controller
     /**
      * Toggle unique key status
      */
-    public function toggleUniqueKey(QuestionnaireField $field)
+    public function toggleUniqueKey(ProductQuestion $field)
     {
         $this->authorizeField($field);
 
@@ -175,7 +175,7 @@ class QuestionnaireFieldController extends Controller
 
         if ($field->is_unique_key) {
             // Set unique key order
-            $maxOrder = QuestionnaireField::where('admin_id', $field->admin_id)
+            $maxOrder = ProductQuestion::where('admin_id', $field->admin_id)
                 ->where('is_unique_key', true)
                 ->max('unique_key_order') ?? 0;
             $field->unique_key_order = $maxOrder + 1;
@@ -191,7 +191,7 @@ class QuestionnaireFieldController extends Controller
     /**
      * Toggle unique field status (for identifying unique products like Model Number)
      */
-    public function toggleUniqueField(QuestionnaireField $field)
+    public function toggleUniqueField(ProductQuestion $field)
     {
         $this->authorizeField($field);
 
@@ -215,7 +215,7 @@ class QuestionnaireFieldController extends Controller
     /**
      * Authorize field belongs to tenant
      */
-    protected function authorizeField(QuestionnaireField $field): void
+    protected function authorizeField(ProductQuestion $field): void
     {
         if ($field->admin_id !== $this->getAdminId()) {
             abort(403);

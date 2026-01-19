@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Admin;
 use App\Models\QuestionnaireNode;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use App\Models\GlobalQuestion;
 use App\Models\CatalogueField;
 use App\Models\Catalogue;
@@ -83,7 +83,7 @@ class BotFlowTesterService
         $chatsCount = WhatsappChat::where('admin_id', $adminId)->count();
         $customersCount = Customer::where('admin_id', $adminId)->count();
 
-        $productQuestions = QuestionnaireField::where('admin_id', $adminId)
+        $productQuestions = ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->count();
 
@@ -255,7 +255,7 @@ class BotFlowTesterService
      */
     private function validateProductQuestions(int $adminId): array
     {
-        $fields = QuestionnaireField::where('admin_id', $adminId)
+        $fields = ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->get();
 
@@ -348,7 +348,7 @@ class BotFlowTesterService
      */
     private function validateCatalogueQuestionIntegration(int $adminId): array
     {
-        $productFields = QuestionnaireField::where('admin_id', $adminId)
+        $productFields = ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->get();
 
@@ -537,7 +537,7 @@ class BotFlowTesterService
 
     private function getProductQuestionsDetails(int $adminId): array
     {
-        $fields = QuestionnaireField::where('admin_id', $adminId)
+        $fields = ProductQuestion::where('admin_id', $adminId)
             ->get();
 
         $catalogueFields = CatalogueField::where('admin_id', $adminId)->pluck('field_key')->toArray();

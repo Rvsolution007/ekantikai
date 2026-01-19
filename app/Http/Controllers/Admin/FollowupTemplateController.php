@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\FollowupTemplate;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use Illuminate\Http\Request;
 
 class FollowupTemplateController extends Controller

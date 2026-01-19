@@ -80,9 +80,9 @@ class CustomerQuestionnaireState extends Model
     }
 
     // Get next empty required field
-    public function getNextField(int $tenantId): ?QuestionnaireField
+    public function getNextField(int $tenantId): ?ProductQuestion
     {
-        $fields = QuestionnaireField::where('admin_id', $tenantId)
+        $fields = ProductQuestion::where('admin_id', $tenantId)
             ->active()
             ->ordered()
             ->get();

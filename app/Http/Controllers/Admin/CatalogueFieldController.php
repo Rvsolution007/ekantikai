@@ -154,7 +154,7 @@ class CatalogueFieldController extends Controller
         }
 
         // Get all questionnaire fields for this tenant
-        $questionnaireFields = \App\Models\QuestionnaireField::where('admin_id', $adminId)
+        $questionnaireFields = \App\Models\ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->ordered()
             ->get();

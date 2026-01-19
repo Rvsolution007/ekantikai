@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Lead;
 use App\Models\LeadProduct;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -15,7 +15,7 @@ class ProductConfirmationService
      */
     public function getUniqueKeyFields(int $adminId): Collection
     {
-        return QuestionnaireField::where('admin_id', $adminId)
+        return ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->where('is_unique_key', true)
             ->orderBy('unique_key_order')
@@ -27,7 +27,7 @@ class ProductConfirmationService
      */
     public function getAllProductFields(int $adminId): Collection
     {
-        return QuestionnaireField::where('admin_id', $adminId)
+        return ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get(['field_name', 'display_name', 'is_unique_key', 'unique_key_order', 'is_unique_field']);
@@ -36,9 +36,9 @@ class ProductConfirmationService
     /**
      * Get the unique field (e.g., model)
      */
-    public function getUniqueField(int $adminId): ?QuestionnaireField
+    public function getUniqueField(int $adminId): ?ProductQuestion
     {
-        return QuestionnaireField::where('admin_id', $adminId)
+        return ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->where('is_unique_field', true)
             ->first();
@@ -423,7 +423,7 @@ class ProductConfirmationService
      * Determine if row should be deleted based on specified fields
      * DELETE = unique_field is specified + all unique_keys up to its order
      */
-    protected function shouldDeleteRow(array $specifiedFields, Collection $uniqueFields, ?QuestionnaireField $uniqueFieldInfo): bool
+    protected function shouldDeleteRow(array $specifiedFields, Collection $uniqueFields, ?ProductQuestion $uniqueFieldInfo): bool
     {
         if (!$uniqueFieldInfo) {
             return false;

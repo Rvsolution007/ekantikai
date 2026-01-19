@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\QuestionnaireNode;
 use App\Models\QuestionnaireConnection;
-use App\Models\QuestionnaireField;
+use App\Models\ProductQuestion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +19,7 @@ class FlowchartController extends Controller
         $adminId = auth('admin')->id();
 
         // Get all questions for dropdown
-        $productQuestions = QuestionnaireField::where('admin_id', $adminId)
+        $productQuestions = ProductQuestion::where('admin_id', $adminId)
             ->active()
             ->ordered()
             ->get(['id', 'field_name', 'display_name']);
@@ -147,7 +147,7 @@ class FlowchartController extends Controller
 
             // Delete linked field if exists
             if ($node->questionnaire_field_id) {
-                QuestionnaireField::where('id', $node->questionnaire_field_id)->delete();
+                ProductQuestion::where('id', $node->questionnaire_field_id)->delete();
             }
 
             $node->delete();
@@ -349,7 +349,7 @@ class FlowchartController extends Controller
      */
     protected function initializeFromFields(int $adminId): void
     {
-        $fields = QuestionnaireField::where('admin_id', $adminId)
+        $fields = ProductQuestion::where('admin_id', $adminId)
             ->active()
             ->ordered()
             ->get();
@@ -443,7 +443,7 @@ class FlowchartController extends Controller
     }
 
     /**
-     * Create a linked QuestionnaireField for a question node
+     * Create a linked ProductQuestion for a question node
      */
     protected function createLinkedField(QuestionnaireNode $node): void
     {
@@ -453,10 +453,10 @@ class FlowchartController extends Controller
         $adminId = $node->admin_id;
 
         // Get max sort order
-        $maxOrder = QuestionnaireField::where('admin_id', $adminId)->max('sort_order') ?? 0;
+        $maxOrder = ProductQuestion::where('admin_id', $adminId)->max('sort_order') ?? 0;
 
         // Use updateOrCreate to avoid duplicate key errors
-        $field = QuestionnaireField::updateOrCreate(
+        $field = ProductQuestion::updateOrCreate(
             [
                 'admin_id' => $adminId,
                 'field_name' => $fieldName,
@@ -499,7 +499,7 @@ class FlowchartController extends Controller
             $visited[] = $currentNode->id;
 
             if ($currentNode->questionnaire_field_id) {
-                QuestionnaireField::where('id', $currentNode->questionnaire_field_id)
+                ProductQuestion::where('id', $currentNode->questionnaire_field_id)
                     ->update(['sort_order' => $order]);
                 $order++;
             }
