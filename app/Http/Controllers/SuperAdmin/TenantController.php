@@ -448,10 +448,17 @@ class TenantController extends Controller
      */
     public function getFlowchartData(Admin $admin)
     {
-        $service = new \App\Services\BotFlowTesterService();
-        $data = $service->getConnectionsData($admin->id);
+        try {
+            $service = new \App\Services\BotFlowTesterService();
+            $data = $service->getConnectionsData($admin->id);
 
-        return response()->json($data);
+            return response()->json($data);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to load flowchart data',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -459,9 +466,20 @@ class TenantController extends Controller
      */
     public function testBotFlow(Admin $admin)
     {
-        $service = new \App\Services\BotFlowTesterService();
-        $results = $service->runFlowValidation($admin->id);
+        try {
+            $service = new \App\Services\BotFlowTesterService();
+            $results = $service->runFlowValidation($admin->id);
 
-        return response()->json($results);
+            return response()->json($results);
+        } catch (\Exception $e) {
+            return response()->json([
+                'valid' => false,
+                'error' => 'Test failed: ' . $e->getMessage(),
+                'errors' => [['type' => 'error', 'code' => 'SYS_ERR', 'message' => $e->getMessage()]],
+                'warnings' => [],
+                'success' => [],
+                'summary' => ['total_checks' => 0, 'passed' => 0, 'warnings' => 0, 'failed' => 1]
+            ], 200);
+        }
     }
 }
