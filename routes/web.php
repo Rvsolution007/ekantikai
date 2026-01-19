@@ -198,6 +198,7 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     // Bot Diagnostic Flowchart & Testing
     Route::get('/admins/{admin}/flowchart-data', [TenantController::class, 'getFlowchartData'])->name('admins.flowchart-data');
     Route::post('/admins/{admin}/test-bot-flow', [TenantController::class, 'testBotFlow'])->name('admins.test-bot-flow');
+    Route::get('/admins/{admin}/node-details/{nodeType}', [TenantController::class, 'getNodeDetails'])->name('admins.node-details');
 
     // Chat Management for Admin
     Route::get('/admins/{admin}/chats', [TenantController::class, 'chats'])->name('admins.chats');

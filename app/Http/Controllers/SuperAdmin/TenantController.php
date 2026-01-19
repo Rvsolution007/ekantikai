@@ -482,4 +482,23 @@ class TenantController extends Controller
             ], 200);
         }
     }
+
+    /**
+     * Get detailed node information for flowchart click
+     */
+    public function getNodeDetails(Admin $admin, $nodeType)
+    {
+        try {
+            $service = new \App\Services\BotFlowTesterService();
+            $details = $service->getNodeDetails($admin->id, $nodeType);
+
+            return response()->json($details);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to load node details',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
+

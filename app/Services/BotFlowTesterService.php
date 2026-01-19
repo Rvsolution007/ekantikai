@@ -98,7 +98,7 @@ class BotFlowTesterService
                 'id' => 'bot',
                 'label' => 'WhatsApp Bot',
                 'icon' => '🤖',
-                'connected' => !empty($admin->whatsapp_instance_name),
+                'connected' => !empty($admin->whatsapp_instance) && $admin->whatsapp_connected,
                 'count' => $customersCount,
                 'subtitle' => $customersCount . ' users',
                 'x' => 400,
@@ -183,7 +183,7 @@ class BotFlowTesterService
             'admin' => [
                 'id' => $admin->id,
                 'name' => $admin->name,
-                'instance' => $admin->whatsapp_instance_name ?? 'Not connected',
+                'instance' => $admin->whatsapp_instance ?? 'Not connected',
             ]
         ];
     }
@@ -199,11 +199,15 @@ class BotFlowTesterService
             return ['type' => 'error', 'code' => 'BOT_001', 'message' => 'Admin not found'];
         }
 
-        if (empty($admin->whatsapp_instance_name)) {
+        if (empty($admin->whatsapp_instance)) {
             return ['type' => 'warning', 'code' => 'BOT_002', 'message' => 'WhatsApp instance not configured'];
         }
 
-        return ['type' => 'success', 'code' => 'BOT_OK', 'message' => 'WhatsApp Bot connected: ' . $admin->whatsapp_instance_name];
+        if (!$admin->whatsapp_connected) {
+            return ['type' => 'warning', 'code' => 'BOT_003', 'message' => 'WhatsApp instance configured but not connected: ' . $admin->whatsapp_instance];
+        }
+
+        return ['type' => 'success', 'code' => 'BOT_OK', 'message' => 'WhatsApp Bot connected: ' . $admin->whatsapp_instance];
     }
 
     /**
@@ -393,4 +397,212 @@ class BotFlowTesterService
                 break;
         }
     }
+
+    /**
+     * Get detailed information for a specific node type
+     */
+    public function getNodeDetails(int $adminId, string $nodeType): array
+    {
+        $admin = Admin::find($adminId);
+        if (!$admin) {
+            return ['error' => 'Admin not found'];
+        }
+
+        switch ($nodeType) {
+            case 'bot':
+                return $this->getBotDetails($admin);
+            case 'flowchart':
+                return $this->getFlowchartDetails($adminId);
+            case 'catalogue':
+                return $this->getCatalogueDetails($adminId);
+            case 'leads':
+                return $this->getLeadsDetails($adminId);
+            case 'chats':
+                return $this->getChatsDetails($adminId);
+            case 'product_questions':
+                return $this->getProductQuestionsDetails($adminId);
+            case 'global_questions':
+                return $this->getGlobalQuestionsDetails($adminId);
+            default:
+                return ['error' => 'Unknown node type'];
+        }
+    }
+
+    private function getBotDetails($admin): array
+    {
+        return [
+            'title' => 'WhatsApp Bot Configuration',
+            'icon' => '🤖',
+            'status' => !empty($admin->whatsapp_instance) && $admin->whatsapp_connected ? 'connected' : 'disconnected',
+            'fields' => [
+                ['label' => 'Instance Name', 'value' => $admin->whatsapp_instance ?? 'Not set', 'connected' => !empty($admin->whatsapp_instance)],
+                ['label' => 'API URL', 'value' => $admin->whatsapp_api_url ? 'Configured' : 'Not set', 'connected' => !empty($admin->whatsapp_api_url)],
+                ['label' => 'API Key', 'value' => $admin->whatsapp_api_key ? '••••••••' : 'Not set', 'connected' => !empty($admin->whatsapp_api_key)],
+                ['label' => 'Connection Status', 'value' => $admin->whatsapp_connected ? 'Connected' : 'Disconnected', 'connected' => $admin->whatsapp_connected],
+                ['label' => 'AI Model', 'value' => $admin->ai_model ?? 'Default', 'connected' => true],
+                ['label' => 'System Prompt', 'value' => !empty($admin->ai_system_prompt) ? 'Configured' : 'Not set', 'connected' => !empty($admin->ai_system_prompt)],
+            ],
+        ];
+    }
+
+    private function getFlowchartDetails(int $adminId): array
+    {
+        $nodes = QuestionnaireNode::where('admin_id', $adminId)->get();
+        $connections = \App\Models\QuestionnaireConnection::whereHas('sourceNode', fn($q) => $q->where('admin_id', $adminId))->count();
+
+        $nodesByType = $nodes->groupBy('node_type');
+
+        $fields = [];
+        $fields[] = ['label' => 'Total Nodes', 'value' => $nodes->count(), 'connected' => $nodes->count() > 0];
+        $fields[] = ['label' => 'Total Connections', 'value' => $connections, 'connected' => $connections > 0];
+        $fields[] = ['label' => 'Start Nodes', 'value' => $nodesByType->get('start', collect())->count(), 'connected' => $nodesByType->get('start', collect())->count() > 0];
+        $fields[] = ['label' => 'Question Nodes', 'value' => $nodesByType->get('question', collect())->count(), 'connected' => $nodesByType->get('question', collect())->count() > 0];
+        $fields[] = ['label' => 'End Nodes', 'value' => $nodesByType->get('end', collect())->count(), 'connected' => true];
+
+        // List individual nodes
+        $nodesList = $nodes->map(fn($n) => [
+            'id' => $n->id,
+            'label' => $n->label,
+            'type' => $n->node_type,
+            'hasOutgoing' => $n->outgoingConnections()->exists(),
+            'hasIncoming' => $n->incomingConnections()->exists() || $n->node_type === 'start',
+            'fieldLinked' => !empty($n->questionnaire_field_id),
+        ])->toArray();
+
+        return [
+            'title' => 'Flowchart Builder',
+            'icon' => '📊',
+            'status' => $nodes->count() > 0 ? 'connected' : 'disconnected',
+            'fields' => $fields,
+            'nodes' => $nodesList,
+        ];
+    }
+
+    private function getCatalogueDetails(int $adminId): array
+    {
+        $products = Catalogue::where('admin_id', $adminId)->count();
+        $fields = CatalogueField::where('admin_id', $adminId)->get();
+
+        $fieldsList = $fields->map(fn($f) => [
+            'label' => $f->display_name ?? $f->field_key,
+            'value' => $f->field_key,
+            'connected' => true,
+        ])->toArray();
+
+        return [
+            'title' => 'Catalogue Data',
+            'icon' => '📦',
+            'status' => $products > 0 ? 'connected' : 'disconnected',
+            'fields' => array_merge([
+                ['label' => 'Total Products', 'value' => $products, 'connected' => $products > 0],
+                ['label' => 'Catalogue Fields', 'value' => $fields->count(), 'connected' => $fields->count() > 0],
+            ], $fieldsList),
+        ];
+    }
+
+    private function getLeadsDetails(int $adminId): array
+    {
+        $leads = Lead::where('admin_id', $adminId)->get();
+        $byStage = $leads->groupBy('stage');
+        $byQuality = $leads->groupBy('lead_quality');
+
+        return [
+            'title' => 'Leads',
+            'icon' => '👥',
+            'status' => $leads->count() > 0 ? 'connected' : 'disconnected',
+            'fields' => [
+                ['label' => 'Total Leads', 'value' => $leads->count(), 'connected' => $leads->count() > 0],
+                ['label' => 'New', 'value' => $byStage->get('new_lead', collect())->count(), 'connected' => true],
+                ['label' => 'Qualified', 'value' => $byStage->get('qualified', collect())->count(), 'connected' => true],
+                ['label' => 'Hot Leads', 'value' => $byQuality->get('hot', collect())->count(), 'connected' => true],
+                ['label' => 'Warm Leads', 'value' => $byQuality->get('warm', collect())->count(), 'connected' => true],
+                ['label' => 'Cold Leads', 'value' => $byQuality->get('cold', collect())->count(), 'connected' => true],
+            ],
+        ];
+    }
+
+    private function getChatsDetails(int $adminId): array
+    {
+        $chats = WhatsappChat::where('admin_id', $adminId)->count();
+        $customers = Customer::where('admin_id', $adminId)->count();
+        $today = WhatsappChat::where('admin_id', $adminId)->whereDate('created_at', today())->count();
+
+        return [
+            'title' => 'Chat History',
+            'icon' => '💬',
+            'status' => $chats > 0 ? 'connected' : 'disconnected',
+            'fields' => [
+                ['label' => 'Total Messages', 'value' => $chats, 'connected' => $chats > 0],
+                ['label' => 'Total Customers', 'value' => $customers, 'connected' => $customers > 0],
+                ['label' => 'Messages Today', 'value' => $today, 'connected' => true],
+            ],
+        ];
+    }
+
+    private function getProductQuestionsDetails(int $adminId): array
+    {
+        $fields = QuestionnaireField::where('admin_id', $adminId)
+            ->where('field_type', 'product')
+            ->get();
+
+        $catalogueFields = CatalogueField::where('admin_id', $adminId)->pluck('field_key')->toArray();
+
+        $fieldsList = $fields->map(function ($f) use ($catalogueFields, $adminId) {
+            $inFlowchart = QuestionnaireNode::where('admin_id', $adminId)
+                ->where('questionnaire_field_id', $f->id)
+                ->exists();
+            $matchesCatalogue = in_array($f->field_key, $catalogueFields);
+
+            return [
+                'label' => $f->display_name ?? $f->field_name,
+                'value' => $f->field_key,
+                'connected' => $f->is_active && $inFlowchart,
+                'inFlowchart' => $inFlowchart,
+                'matchesCatalogue' => $matchesCatalogue,
+                'active' => $f->is_active,
+            ];
+        })->toArray();
+
+        return [
+            'title' => 'Product Questions',
+            'icon' => '🏷️',
+            'status' => $fields->where('is_active', true)->count() > 0 ? 'connected' : 'disconnected',
+            'fields' => array_merge([
+                ['label' => 'Total Fields', 'value' => $fields->count(), 'connected' => $fields->count() > 0],
+                ['label' => 'Active Fields', 'value' => $fields->where('is_active', true)->count(), 'connected' => $fields->where('is_active', true)->count() > 0],
+            ], $fieldsList),
+        ];
+    }
+
+    private function getGlobalQuestionsDetails(int $adminId): array
+    {
+        $fields = QuestionnaireField::where('admin_id', $adminId)
+            ->where('field_type', 'global')
+            ->get();
+
+        $fieldsList = $fields->map(function ($f) use ($adminId) {
+            $inFlowchart = QuestionnaireNode::where('admin_id', $adminId)
+                ->where('questionnaire_field_id', $f->id)
+                ->exists();
+
+            return [
+                'label' => $f->display_name ?? $f->field_name,
+                'value' => $f->field_key,
+                'connected' => $f->is_active && $inFlowchart,
+                'inFlowchart' => $inFlowchart,
+                'active' => $f->is_active,
+            ];
+        })->toArray();
+
+        return [
+            'title' => 'Global Questions',
+            'icon' => '🌐',
+            'status' => $fields->where('is_active', true)->count() > 0 ? 'connected' : 'disconnected',
+            'fields' => array_merge([
+                ['label' => 'Total Fields', 'value' => $fields->count(), 'connected' => $fields->count() > 0],
+                ['label' => 'Active Fields', 'value' => $fields->where('is_active', true)->count(), 'connected' => $fields->where('is_active', true)->count() > 0],
+            ], $fieldsList),
+        ];
+    }
 }
+

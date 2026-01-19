@@ -273,6 +273,43 @@
         </div>
     </div>
 
+    <!-- Node Details Modal -->
+    <div id="nodeDetailsModal"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="glass-card p-6 rounded-2xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="nodeDetailsTitle" class="text-xl font-bold text-white flex items-center gap-2">
+                    <span id="nodeDetailsIcon" class="text-2xl"></span>
+                    <span id="nodeDetailsTitleText">Node Details</span>
+                </h3>
+                <button onclick="closeNodeDetailsModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Status Badge -->
+            <div id="nodeDetailsStatus" class="mb-4"></div>
+
+            <!-- Fields List -->
+            <div class="flex-1 overflow-y-auto space-y-2" id="nodeDetailsFields"></div>
+
+            <!-- Nodes List (for flowchart) -->
+            <div id="nodeDetailsList" class="hidden mt-4 pt-4 border-t border-gray-700">
+                <h4 class="text-white font-medium mb-2">Individual Nodes:</h4>
+                <div id="nodeDetailsNodesContainer" class="space-y-2 max-h-40 overflow-y-auto"></div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-700 flex justify-end">
+                <button onclick="closeNodeDetailsModal()"
+                    class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <style>
         .flowchart-node {
             position: absolute;
@@ -422,6 +459,7 @@
             const div = document.createElement('div');
             div.className = `flowchart-node ${node.connected ? 'connected' : 'disconnected'}`;
             div.id = `node-${node.id}`;
+            div.dataset.nodeType = node.id;
             div.style.left = `${node.x}px`;
             div.style.top = `${node.y}px`;
 
@@ -430,6 +468,7 @@
                     <div class="node-icon">${node.icon}</div>
                     <div class="node-label">${node.label}</div>
                     <div class="node-subtitle">${node.subtitle}</div>
+                    <div class="text-xs text-center text-purple-400 mt-1 opacity-0 hover:opacity-100 transition-opacity">Click for details</div>
                 `;
 
             // Dragging functionality
@@ -438,9 +477,15 @@
             return div;
         }
 
+
+        let dragStartPos = { x: 0, y: 0 };
+        let hasDragged = false;
+
         function startDrag(e) {
             isDragging = true;
+            hasDragged = false;
             dragNode = e.currentTarget;
+            dragStartPos = { x: e.clientX, y: e.clientY };
             const rect = dragNode.getBoundingClientRect();
             const containerRect = document.getElementById('flowchartCanvas').getBoundingClientRect();
             dragOffset.x = e.clientX - rect.left;
@@ -453,6 +498,13 @@
 
         function doDrag(e) {
             if (!isDragging || !dragNode) return;
+
+            // Check if actually moved (to distinguish from click)
+            const dx = Math.abs(e.clientX - dragStartPos.x);
+            const dy = Math.abs(e.clientY - dragStartPos.y);
+            if (dx > 5 || dy > 5) {
+                hasDragged = true;
+            }
 
             const container = document.getElementById('flowchartCanvas');
             const containerRect = container.getBoundingClientRect();
@@ -480,8 +532,17 @@
         function stopDrag() {
             if (dragNode) {
                 dragNode.style.zIndex = 10;
+                
+                // If no drag happened, treat as click
+                if (!hasDragged) {
+                    const nodeType = dragNode.dataset.nodeType;
+                    if (nodeType) {
+                        showNodeDetails(nodeType);
+                    }
+                }
             }
             isDragging = false;
+            hasDragged = false;
             dragNode = null;
             document.removeEventListener('mousemove', doDrag);
             document.removeEventListener('mouseup', stopDrag);
@@ -669,6 +730,103 @@
 
         function closeTestModal() {
             document.getElementById('testResultsModal').classList.add('hidden');
+        }
+
+        async function showNodeDetails(nodeType) {
+            const modal = document.getElementById('nodeDetailsModal');
+            const icon = document.getElementById('nodeDetailsIcon');
+            const title = document.getElementById('nodeDetailsTitleText');
+            const status = document.getElementById('nodeDetailsStatus');
+            const fieldsContainer = document.getElementById('nodeDetailsFields');
+            const nodesList = document.getElementById('nodeDetailsList');
+            const nodesContainer = document.getElementById('nodeDetailsNodesContainer');
+
+            // Show loading
+            title.textContent = 'Loading...';
+            fieldsContainer.innerHTML = '<div class="text-center text-gray-400">Loading details...</div>';
+            modal.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`{{ url('superadmin/admins/' . $tenant->id . '/node-details') }}/${nodeType}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    fieldsContainer.innerHTML = `<div class="text-center text-red-400">${data.error}</div>`;
+                    return;
+                }
+
+                // Set header
+                icon.textContent = data.icon;
+                title.textContent = data.title;
+
+                // Set status badge
+                status.innerHTML = `
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${data.status === 'connected' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}">
+                        <span class="w-2 h-2 rounded-full ${data.status === 'connected' ? 'bg-green-400' : 'bg-yellow-400'}"></span>
+                        ${data.status === 'connected' ? 'Connected' : 'Disconnected'}
+                    </span>
+                `;
+
+                // Render fields
+                fieldsContainer.innerHTML = '';
+                data.fields.forEach(field => {
+                    const div = document.createElement('div');
+                    div.className = `flex items-center justify-between p-3 rounded-lg border ${field.connected ? 'bg-green-500/5 border-green-500/20' : 'bg-yellow-500/5 border-yellow-500/20'}`;
+                    
+                    let extras = '';
+                    if (field.inFlowchart !== undefined) {
+                        extras += field.inFlowchart ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">In Flowchart</span>' : '<span class="text-xs bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded">Not in Flowchart</span>';
+                    }
+                    if (field.matchesCatalogue !== undefined) {
+                        extras += field.matchesCatalogue ? '<span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded ml-1">Matches Catalogue</span>' : '';
+                    }
+                    if (field.active !== undefined) {
+                        extras += field.active ? '' : '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded ml-1">Inactive</span>';
+                    }
+
+                    div.innerHTML = `
+                        <div class="flex-1">
+                            <div class="text-white font-medium text-sm">${field.label}</div>
+                            <div class="text-gray-400 text-xs">${field.value}</div>
+                            ${extras ? `<div class="mt-1">${extras}</div>` : ''}
+                        </div>
+                        <span class="w-3 h-3 rounded-full ${field.connected ? 'bg-green-500' : 'bg-yellow-500'}"></span>
+                    `;
+                    fieldsContainer.appendChild(div);
+                });
+
+                // Render individual nodes if available
+                if (data.nodes && data.nodes.length > 0) {
+                    nodesList.classList.remove('hidden');
+                    nodesContainer.innerHTML = '';
+                    data.nodes.forEach(node => {
+                        const hasIssue = !node.hasOutgoing || (!node.hasIncoming && node.type !== 'start');
+                        const div = document.createElement('div');
+                        div.className = `flex items-center justify-between p-2 rounded ${hasIssue ? 'bg-yellow-500/10' : 'bg-gray-700/30'}`;
+                        div.innerHTML = `
+                            <div>
+                                <span class="text-white text-sm">${node.label}</span>
+                                <span class="text-xs text-gray-500 ml-2">(${node.type})</span>
+                            </div>
+                            <div class="flex gap-1">
+                                ${node.hasIncoming || node.type === 'start' ? '<span class="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">→In</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">No In</span>'}
+                                ${node.hasOutgoing ? '<span class="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">Out→</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">No Out</span>'}
+                                ${node.fieldLinked ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">Field</span>' : ''}
+                            </div>
+                        `;
+                        nodesContainer.appendChild(div);
+                    });
+                } else {
+                    nodesList.classList.add('hidden');
+                }
+
+            } catch (error) {
+                fieldsContainer.innerHTML = `<div class="text-center text-red-400">Error loading details: ${error.message}</div>`;
+            }
+        }
+
+        function closeNodeDetailsModal() {
+            document.getElementById('nodeDetailsModal').classList.add('hidden');
         }
     </script>
 
