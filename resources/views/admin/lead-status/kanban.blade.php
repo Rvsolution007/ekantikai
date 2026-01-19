@@ -75,7 +75,111 @@
             </div>
         </div>
 
-        <!-- Kanban Board -->
+        <!-- Search & Filter Bar -->
+        <div class="glass rounded-xl p-4 relative z-20">
+            <form action="{{ route('admin.lead-status.kanban') }}" method="GET" id="kanbanFilterForm">
+                <div class="flex items-center gap-4">
+                    <!-- Search Input -->
+                    <div class="flex-1">
+                        <input type="text" name="search" value="{{ request('search') }}"
+                            placeholder="Search by name or phone..."
+                            class="input-dark w-full px-4 py-3 rounded-xl text-white placeholder-gray-500"
+                            onkeypress="if(event.key==='Enter') document.getElementById('kanbanFilterForm').submit()">
+                    </div>
+
+                    <!-- Filter Dropdown -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button type="button" @click="open = !open"
+                            class="flex items-center gap-2 px-5 py-3 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600 rounded-xl text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
+                            Filter
+                            @if(request('quality') || request('bot_status'))
+                                <span class="w-2 h-2 bg-primary-500 rounded-full"></span>
+                            @endif
+                            <svg class="w-4 h-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown Panel -->
+                        <div x-show="open" @click.away="open = false" x-transition
+                            class="absolute right-0 mt-2 w-72 bg-dark-100 border border-gray-700 rounded-xl shadow-2xl p-4 space-y-4"
+                            style="z-index: 9999;">
+
+                            <!-- Quality Filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Lead Quality</label>
+                                <select name="quality" class="input-dark w-full px-4 py-2.5 rounded-lg text-white">
+                                    <option value="">All Qualities</option>
+                                    <option value="hot" {{ request('quality') === 'hot' ? 'selected' : '' }}>🔥 Hot</option>
+                                    <option value="warm" {{ request('quality') === 'warm' ? 'selected' : '' }}>🌡️ Warm
+                                    </option>
+                                    <option value="cold" {{ request('quality') === 'cold' ? 'selected' : '' }}>❄️ Cold
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Bot Status Filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Bot Status</label>
+                                <select name="bot_status" class="input-dark w-full px-4 py-2.5 rounded-lg text-white">
+                                    <option value="">All Bot Status</option>
+                                    <option value="active" {{ request('bot_status') === 'active' ? 'selected' : '' }}>🟢
+                                        Active</option>
+                                    <option value="inactive" {{ request('bot_status') === 'inactive' ? 'selected' : '' }}>⚪
+                                        Inactive</option>
+                                </select>
+                            </div>
+
+                            <!-- Filter Actions -->
+                            <div class="flex gap-3 pt-2 border-t border-gray-700">
+                                <button type="submit" @click="open = false"
+                                    class="flex-1 btn-primary px-4 py-2.5 rounded-lg text-white font-medium text-sm">
+                                    Apply Filters
+                                </button>
+                                <a href="{{ route('admin.lead-status.kanban') }}"
+                                    class="px-4 py-2.5 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg text-gray-300 text-sm font-medium transition-colors">
+                                    Reset
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Filters Display -->
+                @if(request('search') || request('quality') || request('bot_status'))
+                    <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/5">
+                        <span class="text-sm text-gray-500">Active filters:</span>
+                        @if(request('search'))
+                            <span class="px-2 py-1 bg-primary-500/20 text-primary-400 text-xs rounded-lg flex items-center gap-1">
+                                Search: "{{ request('search') }}"
+                                <a href="{{ route('admin.lead-status.kanban', array_merge(request()->except('search'))) }}"
+                                    class="hover:text-white">×</a>
+                            </span>
+                        @endif
+                        @if(request('quality'))
+                            <span class="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded-lg flex items-center gap-1">
+                                Quality: {{ ucfirst(request('quality')) }}
+                                <a href="{{ route('admin.lead-status.kanban', array_merge(request()->except('quality'))) }}"
+                                    class="hover:text-white">×</a>
+                            </span>
+                        @endif
+                        @if(request('bot_status'))
+                            <span class="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-lg flex items-center gap-1">
+                                Bot: {{ ucfirst(request('bot_status')) }}
+                                <a href="{{ route('admin.lead-status.kanban', array_merge(request()->except('bot_status'))) }}"
+                                    class="hover:text-white">×</a>
+                            </span>
+                        @endif
+                    </div>
+                @endif
+            </form>
+        </div>
+
         <div class="kanban-board">
             @foreach($statuses as $status)
                 <div class="kanban-column" data-status-id="{{ $status->id }}">
@@ -111,9 +215,9 @@
                                     </div>
                                     <span
                                         class="px-2 py-1 text-xs rounded-lg
-                                                                {{ $lead->lead_quality === 'hot' ? 'bg-red-500/20 text-red-400' : '' }}
-                                                                {{ $lead->lead_quality === 'warm' ? 'bg-orange-500/20 text-orange-400' : '' }}
-                                                                {{ $lead->lead_quality === 'cold' ? 'bg-blue-500/20 text-blue-400' : '' }}">
+                                                                            {{ $lead->lead_quality === 'hot' ? 'bg-red-500/20 text-red-400' : '' }}
+                                                                            {{ $lead->lead_quality === 'warm' ? 'bg-orange-500/20 text-orange-400' : '' }}
+                                                                            {{ $lead->lead_quality === 'cold' ? 'bg-blue-500/20 text-blue-400' : '' }}">
                                         {{ ucfirst($lead->lead_quality ?? 'new') }}
                                     </span>
                                 </div>

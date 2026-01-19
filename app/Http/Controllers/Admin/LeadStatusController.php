@@ -26,9 +26,9 @@ class LeadStatusController extends Controller
     }
 
     /**
-     * Get Kanban board data
+     * Get Kanban board data with filters
      */
-    public function kanban()
+    public function kanban(Request $request)
     {
         $admin = auth('admin')->user();
 
@@ -41,12 +41,38 @@ class LeadStatusController extends Controller
         $defaultStatus = $statuses->first();
         $defaultStatusId = $defaultStatus ? $defaultStatus->id : null;
 
-        // Get all open leads
-        $allLeads = Lead::where('admin_id', $admin->id)
+        // Build query with filters
+        $query = Lead::where('admin_id', $admin->id)
             ->where('status', 'open')
             ->with(['customer', 'leadStatus'])
-            ->orderBy('updated_at', 'desc')
-            ->get();
+            ->orderBy('updated_at', 'desc');
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('customer', function ($sub) use ($search) {
+                    $sub->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Quality filter
+        if ($request->filled('quality')) {
+            $query->where('lead_quality', $request->quality);
+        }
+
+        // Bot Status filter
+        if ($request->filled('bot_status')) {
+            if ($request->bot_status === 'active') {
+                $query->where('bot_active', true);
+            } else {
+                $query->where('bot_active', false);
+            }
+        }
+
+        $allLeads = $query->get();
 
         // Group leads by status, putting leads without status into default
         $leads = collect();
