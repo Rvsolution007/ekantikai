@@ -255,21 +255,21 @@
                 <div>
                     <label class="block text-gray-300 text-sm font-medium mb-2">WhatsApp API URL</label>
                     <input type="url" name="whatsapp_api_url"
-                        value="{{ old('whatsapp_api_url', $tenant->settings['whatsapp_api_url'] ?? '') }}"
+                        value="{{ old('whatsapp_api_url', $tenant->whatsapp_api_url ?? '') }}"
                         class="dark-input" placeholder="https://api.evolution.com">
                 </div>
 
                 <div>
                     <label class="block text-gray-300 text-sm font-medium mb-2">WhatsApp API Key</label>
                     <input type="text" name="whatsapp_api_key"
-                        value="{{ old('whatsapp_api_key', $tenant->settings['whatsapp_api_key'] ?? '') }}"
+                        value="{{ old('whatsapp_api_key', $tenant->whatsapp_api_key ?? '') }}"
                         class="dark-input" placeholder="Enter API key">
                 </div>
 
                 <div>
                     <label class="block text-gray-300 text-sm font-medium mb-2">WhatsApp Instance</label>
                     <input type="text" name="whatsapp_instance"
-                        value="{{ old('whatsapp_instance', $tenant->settings['whatsapp_instance'] ?? '') }}"
+                        value="{{ old('whatsapp_instance', $tenant->whatsapp_instance ?? '') }}"
                         class="dark-input" placeholder="Instance name">
                 </div>
             </div>

@@ -203,16 +203,11 @@ class TenantController extends Controller
             'is_active' => $request->boolean('is_active', true),
             'subscription_ends_at' => $request->subscription_ends_at,
             'ai_system_prompt' => $request->ai_system_prompt,
+            // WhatsApp settings - save directly to Admin columns
+            'whatsapp_api_url' => $request->whatsapp_api_url,
+            'whatsapp_api_key' => $request->whatsapp_api_key,
+            'whatsapp_instance' => $request->whatsapp_instance,
         ]);
-
-        // Update WhatsApp settings if provided
-        if ($request->whatsapp_api_url || $request->whatsapp_api_key || $request->whatsapp_instance) {
-            $settings = $admin->settings ?? [];
-            $settings['whatsapp_api_url'] = $request->whatsapp_api_url;
-            $settings['whatsapp_api_key'] = $request->whatsapp_api_key;
-            $settings['whatsapp_instance'] = $request->whatsapp_instance;
-            $admin->update(['settings' => $settings]);
-        }
 
         return redirect()->route('superadmin.admins.show', $admin)
             ->with('success', 'Admin updated successfully!');
