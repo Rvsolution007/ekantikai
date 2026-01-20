@@ -179,7 +179,7 @@ class TenantController extends Controller
 
     public function edit(Admin $admin)
     {
-        return view('superadmin.admins.edit', compact('admin'));
+        return view('superadmin.admins.edit', ['tenant' => $admin]);
     }
 
     public function update(Request $request, Admin $admin)
