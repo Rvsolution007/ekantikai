@@ -179,10 +179,31 @@ class WebhookController extends Controller
                     'ai_response' => json_encode($aiResponse),
                 ]);
 
+                // IMPORTANT: Refresh lead to get latest collected_data after processAIResponse saved it
+                $lead->refresh();
+
+                // SMART EXTRACTION: Try to save user's message as answer to current pending question
+                // This handles cases where AI times out but user gave a valid answer
+                $currentPending = $this->getNextPendingQuestion($tenant->id, $lead);
+                if ($currentPending && !empty($messageData['content'])) {
+                    $userAnswer = trim($messageData['content']);
+                    // If user gave a short answer (likely answering the question), save it
+                    if (strlen($userAnswer) < 100) {
+                        $lead->addCollectedData($currentPending['field_name'], $userAnswer, 'workflow_questions');
+                        $lead->refresh(); // Refresh again after saving
+
+                        Log::info('Smart extraction saved user answer', [
+                            'field' => $currentPending['field_name'],
+                            'answer' => $userAnswer,
+                            'lead_id' => $lead->id,
+                        ]);
+                    }
+                }
+
                 // IMPROVED FALLBACK: Try to ask next pending question from flowchart
                 $detectedLang = $aiResponse['detected_language'] ?? 'hi';
 
-                // Get next pending question from flowchart
+                // Get next pending question from flowchart (now after smart extraction)
                 $pendingQuestion = $this->getNextPendingQuestion($tenant->id, $lead);
 
                 if ($pendingQuestion) {
@@ -193,11 +214,11 @@ class WebhookController extends Controller
                         default => "Ji, aapka " . $pendingQuestion['display_name'] . " bataiye?",
                     };
                 } else {
-                    // No pending questions - generic fallback
+                    // No pending questions - all answered, confirm order
                     $responseMessage = match ($detectedLang) {
-                        'en' => "I'm here to help! Could you please tell me more about what you're looking for?",
-                        'hi', 'hinglish' => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
-                        default => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
+                        'en' => "Got it! Your order has been noted. Is there anything else you need?",
+                        'hi', 'hinglish' => "Ji zaroor! Aapka order note ho gaya hai. Kuch aur chahiye?",
+                        default => "Ji, aapka order note ho gaya. Aur kuch?",
                     };
                 }
             }
