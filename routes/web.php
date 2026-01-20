@@ -142,15 +142,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             })->name('index');
 
             // Workflow Fields (Product Questions)
-            Route::get('/fields', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'index'])->name('fields.index');
-            Route::get('/fields/create', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'create'])->name('fields.create');
-            Route::post('/fields', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'store'])->name('fields.store');
-            Route::get('/fields/{field}/edit', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'edit'])->name('fields.edit');
-            Route::put('/fields/{field}', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'update'])->name('fields.update');
-            Route::delete('/fields/{field}', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'destroy'])->name('fields.destroy');
-            Route::post('/fields/reorder', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'reorder'])->name('fields.reorder');
-            Route::post('/fields/{field}/toggle-unique', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'toggleUniqueKey'])->name('fields.toggle-unique');
-            Route::post('/fields/{field}/toggle-unique-field', [\App\Http\Controllers\Admin\QuestionnaireFieldController::class, 'toggleUniqueField'])->name('fields.toggle-unique-field');
+            Route::get('/fields', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'index'])->name('fields.index');
+            Route::get('/fields/create', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'create'])->name('fields.create');
+            Route::post('/fields', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'store'])->name('fields.store');
+            Route::get('/fields/{field}/edit', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'edit'])->name('fields.edit');
+            Route::put('/fields/{field}', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'update'])->name('fields.update');
+            Route::delete('/fields/{field}', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'destroy'])->name('fields.destroy');
+            Route::post('/fields/reorder', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'reorder'])->name('fields.reorder');
+            Route::post('/fields/{field}/toggle-unique', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'toggleUniqueKey'])->name('fields.toggle-unique');
+            Route::post('/fields/{field}/toggle-unique-field', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'toggleUniqueField'])->name('fields.toggle-unique-field');
 
             // Global Questions
             Route::get('/global', [\App\Http\Controllers\Admin\GlobalQuestionController::class, 'index'])->name('global.index');
