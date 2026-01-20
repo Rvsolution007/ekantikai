@@ -1239,21 +1239,12 @@ When user asks for a list/options with phrases like:
     "extracted_data": {"field_name": "value"},
     "product_confirmations": [
         {
-            "category": "Product type if mentioned",
-            "model": "Model number if mentioned",
-            "size": "Size if mentioned",
-            "finish": "Finish/color if mentioned",
-            "qty": null,
-            "material": "Material if mentioned",
-            "packaging": "Packaging if mentioned"
+            "field_name": "extracted value from user message"
         }
     ],
     "product_rejections": [
         {
-            "category": "Product to remove (add * to delete)",
-            "model": "Model to remove (add * to delete)",
-            "size": "Size to clear",
-            "finish": "Finish to clear"
+            "field_name": "value to remove (add * to delete)"
         }
     ],
     "unique_field_mentioned": "unique field value if mentioned or null",
@@ -1264,8 +1255,8 @@ When user asks for a list/options with phrases like:
 
 ## RULES:
 1. ALWAYS respond in the SAME LANGUAGE as user's input - this is MANDATORY
-2. Extract ALL product fields into product_confirmations as objects with category, model, size, finish, qty, material, packaging
-3. DO NOT create separate confirmations for same product - combine into ONE object
+2. Extract ONLY the fields that are defined in FIELD RULES section above (from flowchart)
+3. DO NOT ask for fields that are NOT in FIELD RULES - follow flowchart strictly
 4. If user wants to remove/cancel something, add to product_rejections with * on the field
 5. Return ONLY valid JSON
 6. Check if all required questions are answered
