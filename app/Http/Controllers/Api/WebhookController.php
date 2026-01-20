@@ -182,31 +182,62 @@ class WebhookController extends Controller
                 // IMPORTANT: Refresh lead to get latest collected_data after processAIResponse saved it
                 $lead->refresh();
 
-                // SMART EXTRACTION: Try to save user's message as answer to current pending question
-                // This handles cases where AI times out but user gave a valid answer
+                // SMART EXTRACTION WITH VALIDATION: Try to save user's message as answer to current pending question
+                // Only save if the answer is valid in catalogue
                 $currentPending = $this->getNextPendingQuestion($tenant->id, $lead);
+                $validationResult = null;
+                $detectedLang = $aiResponse['detected_language'] ?? 'hi';
+
                 if ($currentPending && !empty($messageData['content'])) {
                     $userAnswer = trim($messageData['content']);
-                    // If user gave a short answer (likely answering the question), save it
-                    if (strlen($userAnswer) < 100) {
-                        $lead->addCollectedData($currentPending['field_name'], $userAnswer, 'workflow_questions');
-                        $lead->refresh(); // Refresh again after saving
 
-                        Log::info('Smart extraction saved user answer', [
-                            'field' => $currentPending['field_name'],
-                            'answer' => $userAnswer,
-                            'lead_id' => $lead->id,
-                        ]);
+                    // Validate against catalogue before saving
+                    if (strlen($userAnswer) < 100) {
+                        $validationResult = $this->validateUserAnswerWithCatalogue(
+                            $tenant->id,
+                            $currentPending['field_name'],
+                            $userAnswer,
+                            $lead
+                        );
+
+                        if ($validationResult['valid']) {
+                            // Valid answer - save it
+                            $lead->addCollectedData($currentPending['field_name'], $validationResult['value'], 'workflow_questions');
+                            $lead->refresh();
+
+                            Log::info('Smart extraction saved validated user answer', [
+                                'field' => $currentPending['field_name'],
+                                'answer' => $validationResult['value'],
+                                'lead_id' => $lead->id,
+                            ]);
+                        } else {
+                            // Invalid answer - show available options
+                            Log::warning('Smart extraction found invalid answer', [
+                                'field' => $currentPending['field_name'],
+                                'answer' => $userAnswer,
+                                'available' => $validationResult['available_options'] ?? [],
+                                'lead_id' => $lead->id,
+                            ]);
+                        }
                     }
                 }
 
-                // IMPROVED FALLBACK: Try to ask next pending question from flowchart
-                $detectedLang = $aiResponse['detected_language'] ?? 'hi';
-
+                // IMPROVED FALLBACK: Generate appropriate response
                 // Get next pending question from flowchart (now after smart extraction)
                 $pendingQuestion = $this->getNextPendingQuestion($tenant->id, $lead);
 
-                if ($pendingQuestion) {
+                if ($validationResult && !$validationResult['valid'] && !empty($validationResult['available_options'])) {
+                    // Invalid answer detected - ask user to choose from available options
+                    $options = implode(', ', array_slice($validationResult['available_options'], 0, 15));
+                    $invalidItems = $validationResult['invalid_items'] ?? [];
+                    $invalidText = !empty($invalidItems) ? implode(', ', $invalidItems) : $messageData['content'];
+
+                    $responseMessage = match ($detectedLang) {
+                        'en' => "Sorry, '{$invalidText}' is not available. Please choose from: {$options}",
+                        'hi', 'hinglish' => "Maaf kijiye, '{$invalidText}' available nahi hai. Yeh options available hain: {$options}",
+                        default => "'{$invalidText}' available nahi hai. Available options: {$options}",
+                    };
+                } elseif ($pendingQuestion) {
                     // Ask the next pending question
                     $responseMessage = match ($detectedLang) {
                         'en' => "Got it! Now, what is your " . strtolower($pendingQuestion['display_name']) . "?",
@@ -406,6 +437,129 @@ class WebhookController extends Controller
         }
 
         return null; // All questions answered
+    }
+
+    /**
+     * Validate user's answer against catalogue data
+     * Returns validation result with valid/invalid items and available options
+     */
+    protected function validateUserAnswerWithCatalogue(int $adminId, string $fieldName, string $userAnswer, Lead $lead): array
+    {
+        $fieldName = strtolower($fieldName);
+
+        // Get collected data to filter catalogue based on previous answers
+        $collectedData = $lead->collected_data ?? [];
+        $workflowAnswers = $collectedData['workflow_questions'] ?? [];
+        $globalAnswers = $collectedData['global_questions'] ?? [];
+        $allAnswers = array_merge(
+            array_change_key_case($workflowAnswers, CASE_LOWER),
+            array_change_key_case($globalAnswers, CASE_LOWER)
+        );
+
+        // Build catalogue query with filters from previous answers
+        $query = \App\Models\Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true);
+
+        // Apply category filter if already answered
+        if (!empty($allAnswers['category'])) {
+            $query->where('product_type', 'LIKE', '%' . $allAnswers['category'] . '%');
+        }
+
+        // Get available values for this field from catalogue
+        $availableOptions = [];
+
+        if ($fieldName === 'category' || $fieldName === 'product_type') {
+            // Get unique product types
+            $availableOptions = $query->distinct()->pluck('product_type')->filter()->unique()->values()->toArray();
+        } elseif ($fieldName === 'model' || $fieldName === 'model_code' || $fieldName === 'model_number') {
+            // Get unique model codes
+            $availableOptions = $query->distinct()->pluck('model_code')->filter()->unique()->values()->toArray();
+        } elseif ($fieldName === 'size') {
+            // Get sizes from all matching products
+            $products = $query->pluck('sizes')->filter()->toArray();
+            foreach ($products as $sizeStr) {
+                $sizes = array_map('trim', explode(',', $sizeStr));
+                $availableOptions = array_merge($availableOptions, $sizes);
+            }
+            $availableOptions = array_unique(array_filter($availableOptions));
+        } elseif ($fieldName === 'finish' || $fieldName === 'color') {
+            // Get finishes from all matching products
+            $products = $query->pluck('finishes')->filter()->toArray();
+            foreach ($products as $finishStr) {
+                $finishes = array_map('trim', explode(',', $finishStr));
+                $availableOptions = array_merge($availableOptions, $finishes);
+            }
+            $availableOptions = array_unique(array_filter($availableOptions));
+        } else {
+            // Try to get from dynamic 'data' JSON field
+            $products = $query->whereNotNull('data')->pluck('data')->toArray();
+            foreach ($products as $data) {
+                if (is_array($data) && isset($data[$fieldName])) {
+                    $value = $data[$fieldName];
+                    if (is_array($value)) {
+                        $availableOptions = array_merge($availableOptions, $value);
+                    } else {
+                        $availableOptions[] = $value;
+                    }
+                }
+            }
+            $availableOptions = array_unique(array_filter($availableOptions));
+        }
+
+        // Parse user answer (may contain multiple values separated by 'and', ',', '&')
+        $userValues = preg_split('/[,&]|\band\b/i', $userAnswer);
+        $userValues = array_map('trim', $userValues);
+        $userValues = array_filter($userValues);
+
+        // Validate each user-provided value
+        $validItems = [];
+        $invalidItems = [];
+
+        foreach ($userValues as $userValue) {
+            $found = false;
+            foreach ($availableOptions as $option) {
+                // Case-insensitive partial match
+                if (stripos($option, $userValue) !== false || stripos($userValue, $option) !== false) {
+                    $validItems[] = $option;
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $invalidItems[] = $userValue;
+            }
+        }
+
+        // Determine result
+        if (empty($invalidItems)) {
+            // All items are valid
+            return [
+                'valid' => true,
+                'value' => implode(', ', $validItems),
+                'valid_items' => $validItems,
+                'invalid_items' => [],
+                'available_options' => array_values($availableOptions),
+            ];
+        } elseif (!empty($validItems)) {
+            // Some valid, some invalid - save valid ones and warn about invalid
+            return [
+                'valid' => false, // Mark as invalid to show warning
+                'value' => implode(', ', $validItems),
+                'valid_items' => $validItems,
+                'invalid_items' => $invalidItems,
+                'available_options' => array_values($availableOptions),
+                'partial' => true, // Some items were valid
+            ];
+        } else {
+            // All invalid
+            return [
+                'valid' => false,
+                'value' => null,
+                'valid_items' => [],
+                'invalid_items' => $invalidItems,
+                'available_options' => array_values($availableOptions),
+            ];
+        }
     }
 
     /**
