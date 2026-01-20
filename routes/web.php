@@ -200,6 +200,10 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::post('/admins/{admin}/test-bot-flow', [TenantController::class, 'testBotFlow'])->name('admins.test-bot-flow');
     Route::get('/admins/{admin}/node-details/{nodeType}', [TenantController::class, 'getNodeDetails'])->name('admins.node-details');
 
+    // Run Demo - AI Powered Bot-to-Bot Conversation
+    Route::post('/admins/{admin}/start-demo', [TenantController::class, 'startDemo'])->name('admins.start-demo');
+    Route::post('/admins/{admin}/run-demo-step', [TenantController::class, 'runDemoStep'])->name('admins.run-demo-step');
+
     // Chat Management for Admin
     Route::get('/admins/{admin}/chats', [TenantController::class, 'chats'])->name('admins.chats');
     Route::get('/admins/{admin}/chats/{customer}', [TenantController::class, 'viewChat'])->name('admins.chat-view');

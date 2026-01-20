@@ -500,5 +500,54 @@ class TenantController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Start the AI-powered demo conversation
+     * Returns all conversation steps at once
+     */
+    public function startDemo(Admin $admin)
+    {
+        try {
+            $demoService = app(\App\Services\DemoConversationService::class);
+            $conversation = $demoService->runFullDemo($admin->id);
+
+            return response()->json([
+                'success' => true,
+                'conversation' => $conversation,
+                'total_steps' => count($conversation),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Demo start error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to start demo: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Run demo step by step (for progressive loading)
+     */
+    public function runDemoStep(Request $request, Admin $admin)
+    {
+        try {
+            $stepIndex = $request->input('step', 0);
+            $previousData = $request->input('previous_data', []);
+
+            $demoService = app(\App\Services\DemoConversationService::class);
+            $step = $demoService->runDemoStep($admin->id, $stepIndex, $previousData);
+
+            return response()->json([
+                'success' => true,
+                'step' => $step,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Demo step error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to run demo step: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 

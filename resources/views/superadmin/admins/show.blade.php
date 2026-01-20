@@ -10,6 +10,17 @@
                 <p class="text-gray-400">Admin Details & Statistics</p>
             </div>
             <div class="flex space-x-3">
+                <!-- Run Demo Button -->
+                <button onclick="openDemoModal()"
+                    class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg inline-flex items-center transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Run Demo
+                </button>
                 <a href="{{ route('superadmin.admins.edit', $tenant) }}"
                     class="btn-gradient px-4 py-2 rounded-lg inline-flex items-center">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -464,12 +475,12 @@
             div.style.top = `${node.y}px`;
 
             div.innerHTML = `
-                    <div class="node-status-dot ${node.connected ? 'bg-green-500 pulse-dot' : 'bg-yellow-500'}"></div>
-                    <div class="node-icon">${node.icon}</div>
-                    <div class="node-label">${node.label}</div>
-                    <div class="node-subtitle">${node.subtitle}</div>
-                    <div class="text-xs text-center text-purple-400 mt-1 opacity-0 hover:opacity-100 transition-opacity">Click for details</div>
-                `;
+                                    <div class="node-status-dot ${node.connected ? 'bg-green-500 pulse-dot' : 'bg-yellow-500'}"></div>
+                                    <div class="node-icon">${node.icon}</div>
+                                    <div class="node-label">${node.label}</div>
+                                    <div class="node-subtitle">${node.subtitle}</div>
+                                    <div class="text-xs text-center text-purple-400 mt-1 opacity-0 hover:opacity-100 transition-opacity">Click for details</div>
+                                `;
 
             // Dragging functionality
             div.addEventListener('mousedown', startDrag);
@@ -532,7 +543,7 @@
         function stopDrag() {
             if (dragNode) {
                 dragNode.style.zIndex = 10;
-                
+
                 // If no drag happened, treat as click
                 if (!hasDragged) {
                     const nodeType = dragNode.dataset.nodeType;
@@ -643,12 +654,12 @@
                 const div = document.createElement('div');
                 div.className = `flex items-start gap-2 p-2 rounded-lg ${item.type === 'error' ? 'bg-red-500/10' : 'bg-yellow-500/10'}`;
                 div.innerHTML = `
-                        <span class="${item.type === 'error' ? 'text-red-400' : 'text-yellow-400'}">${item.type === 'error' ? '✗' : '⚠'}</span>
-                        <div>
-                            <span class="text-xs text-gray-500">${item.code}</span>
-                            <p class="text-sm text-white">${item.message}</p>
-                        </div>
-                    `;
+                                        <span class="${item.type === 'error' ? 'text-red-400' : 'text-yellow-400'}">${item.type === 'error' ? '✗' : '⚠'}</span>
+                                        <div>
+                                            <span class="text-xs text-gray-500">${item.code}</span>
+                                            <p class="text-sm text-white">${item.message}</p>
+                                        </div>
+                                    `;
                 content.appendChild(div);
             });
 
@@ -667,19 +678,19 @@
 
             // Summary cards
             summaryCards.innerHTML = `
-                    <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-green-400">${results.summary.passed}</div>
-                        <div class="text-xs text-gray-400">Passed</div>
-                    </div>
-                    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-yellow-400">${results.summary.warnings}</div>
-                        <div class="text-xs text-gray-400">Warnings</div>
-                    </div>
-                    <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-red-400">${results.summary.failed}</div>
-                        <div class="text-xs text-gray-400">Errors</div>
-                    </div>
-                `;
+                                    <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-green-400">${results.summary.passed}</div>
+                                        <div class="text-xs text-gray-400">Passed</div>
+                                    </div>
+                                    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-yellow-400">${results.summary.warnings}</div>
+                                        <div class="text-xs text-gray-400">Warnings</div>
+                                    </div>
+                                    <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
+                                        <div class="text-2xl font-bold text-red-400">${results.summary.failed}</div>
+                                        <div class="text-xs text-gray-400">Errors</div>
+                                    </div>
+                                `;
 
             // Results list
             resultsList.innerHTML = '';
@@ -717,14 +728,14 @@
 
             div.className = `flex items-start gap-3 p-3 rounded-lg border ${colors[type]}`;
             div.innerHTML = `
-                    <span class="text-lg">${icons[type]}</span>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs bg-gray-700/50 px-2 py-0.5 rounded text-gray-400">${item.code}</span>
-                        </div>
-                        <p class="text-sm text-white mt-1">${item.message}</p>
-                    </div>
-                `;
+                                    <span class="text-lg">${icons[type]}</span>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs bg-gray-700/50 px-2 py-0.5 rounded text-gray-400">${item.code}</span>
+                                        </div>
+                                        <p class="text-sm text-white mt-1">${item.message}</p>
+                                    </div>
+                                `;
             return div;
         }
 
@@ -761,18 +772,18 @@
 
                 // Set status badge
                 status.innerHTML = `
-                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${data.status === 'connected' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}">
-                        <span class="w-2 h-2 rounded-full ${data.status === 'connected' ? 'bg-green-400' : 'bg-yellow-400'}"></span>
-                        ${data.status === 'connected' ? 'Connected' : 'Disconnected'}
-                    </span>
-                `;
+                                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${data.status === 'connected' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}">
+                                        <span class="w-2 h-2 rounded-full ${data.status === 'connected' ? 'bg-green-400' : 'bg-yellow-400'}"></span>
+                                        ${data.status === 'connected' ? 'Connected' : 'Disconnected'}
+                                    </span>
+                                `;
 
                 // Render fields
                 fieldsContainer.innerHTML = '';
                 data.fields.forEach(field => {
                     const div = document.createElement('div');
                     div.className = `flex items-center justify-between p-3 rounded-lg border ${field.connected ? 'bg-green-500/5 border-green-500/20' : 'bg-yellow-500/5 border-yellow-500/20'}`;
-                    
+
                     let extras = '';
                     if (field.inFlowchart !== undefined) {
                         extras += field.inFlowchart ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">In Flowchart</span>' : '<span class="text-xs bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded">Not in Flowchart</span>';
@@ -785,13 +796,13 @@
                     }
 
                     div.innerHTML = `
-                        <div class="flex-1">
-                            <div class="text-white font-medium text-sm">${field.label}</div>
-                            <div class="text-gray-400 text-xs">${field.value}</div>
-                            ${extras ? `<div class="mt-1">${extras}</div>` : ''}
-                        </div>
-                        <span class="w-3 h-3 rounded-full ${field.connected ? 'bg-green-500' : 'bg-yellow-500'}"></span>
-                    `;
+                                        <div class="flex-1">
+                                            <div class="text-white font-medium text-sm">${field.label}</div>
+                                            <div class="text-gray-400 text-xs">${field.value}</div>
+                                            ${extras ? `<div class="mt-1">${extras}</div>` : ''}
+                                        </div>
+                                        <span class="w-3 h-3 rounded-full ${field.connected ? 'bg-green-500' : 'bg-yellow-500'}"></span>
+                                    `;
                     fieldsContainer.appendChild(div);
                 });
 
@@ -804,16 +815,16 @@
                         const div = document.createElement('div');
                         div.className = `flex items-center justify-between p-2 rounded ${hasIssue ? 'bg-yellow-500/10' : 'bg-gray-700/30'}`;
                         div.innerHTML = `
-                            <div>
-                                <span class="text-white text-sm">${node.label}</span>
-                                <span class="text-xs text-gray-500 ml-2">(${node.type})</span>
-                            </div>
-                            <div class="flex gap-1">
-                                ${node.hasIncoming || node.type === 'start' ? '<span class="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">→In</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">No In</span>'}
-                                ${node.hasOutgoing ? '<span class="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">Out→</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">No Out</span>'}
-                                ${node.fieldLinked ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">Field</span>' : ''}
-                            </div>
-                        `;
+                                            <div>
+                                                <span class="text-white text-sm">${node.label}</span>
+                                                <span class="text-xs text-gray-500 ml-2">(${node.type})</span>
+                                            </div>
+                                            <div class="flex gap-1">
+                                                ${node.hasIncoming || node.type === 'start' ? '<span class="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">→In</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">No In</span>'}
+                                                ${node.hasOutgoing ? '<span class="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">Out→</span>' : '<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">No Out</span>'}
+                                                ${node.fieldLinked ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">Field</span>' : ''}
+                                            </div>
+                                        `;
                         nodesContainer.appendChild(div);
                     });
                 } else {
@@ -1253,4 +1264,329 @@
             </form>
         </div>
     </div>
+
+    <!-- Run Demo Modal -->
+    <div id="demoModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
+            <div class="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-90" onclick="closeDemoModal()"></div>
+
+            <div
+                class="relative inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform glass-card rounded-2xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            Bot Demo - {{ $tenant->name }}
+                        </h3>
+                        <p class="text-gray-400 text-sm mt-1">🤖 AI-powered bot-to-bot conversation based on flowchart nodes
+                            and system prompt
+                        </p>
+                    </div>
+                    <button onclick="closeDemoModal()" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Chat Container -->
+                <div id="demoChatContainer" class="h-96 overflow-y-auto bg-gray-900/50 rounded-xl p-4 mb-4 space-y-4">
+                    <!-- Messages will appear here -->
+                    <div class="text-center text-gray-500 py-8">
+                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <p>Click "Start Demo" to begin the simulated conversation</p>
+                    </div>
+                </div>
+
+                <!-- Status Bar -->
+                <div id="demoStatus" class="bg-gray-800/50 rounded-lg px-4 py-2 mb-4 flex items-center justify-between">
+                    <span class="text-gray-400 text-sm" id="demoStatusText">Ready to start</span>
+                    <span class="text-gray-500 text-xs" id="demoProgress">Step 0 of 0</span>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex space-x-3">
+                    <button id="btnStartDemo" onclick="startDemo()"
+                        class="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        </svg>
+                        Start Demo
+                    </button>
+                    <button id="btnPauseDemo" onclick="pauseDemo()"
+                        class="hidden flex-1 bg-yellow-600 hover:bg-yellow-500 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Pause
+                    </button>
+                    <button id="btnResumeDemo" onclick="resumeDemo()"
+                        class="hidden flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        </svg>
+                        Resume
+                    </button>
+                    <button onclick="restartDemo()"
+                        class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Restart
+                    </button>
+                    <button onclick="closeDemoModal()"
+                        class="bg-red-600/20 hover:bg-red-600/40 text-red-400 px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo Configuration
+        const adminId = {{ $tenant->id }};
+        let demoInterval = null;
+        let isPaused = false;
+        let currentStep = 0;
+        let demoData = [];
+        let isAIDemo = true; // Use AI-powered demo
+
+        function openDemoModal() {
+            document.getElementById('demoModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDemoModal() {
+            document.getElementById('demoModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            stopDemo();
+        }
+
+        function addMessage(type, message, node = null) {
+            const container = document.getElementById('demoChatContainer');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`;
+
+            const userIcon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
+            const botIcon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>';
+
+            const bgColor = type === 'user' ? 'bg-blue-600' : 'bg-gradient-to-r from-purple-600 to-pink-600';
+            const label = type === 'user' ? '👤 User Bot' : '🤖 AI Bot';
+            const icon = type === 'user' ? userIcon : botIcon;
+
+            // Add node info badge if available
+            let nodeInfo = '';
+            if (node && node.display_name) {
+                nodeInfo = `<span class="inline-block mt-1 px-2 py-0.5 bg-gray-800/50 rounded text-xs text-gray-400">📌 ${node.display_name}</span>`;
+            }
+
+            msgDiv.innerHTML = `
+                        <div class="max-w-md">
+                            <div class="flex items-center gap-2 mb-1 ${type === 'user' ? 'justify-end' : ''}">
+                                <div class="w-6 h-6 rounded-full ${type === 'user' ? 'bg-blue-600' : 'bg-purple-600'} flex items-center justify-center text-white">
+                                    ${icon}
+                                </div>
+                                <span class="text-xs ${type === 'user' ? 'text-blue-400' : 'text-purple-400'} font-medium">${label}</span>
+                            </div>
+                            <div class="${bgColor} text-white px-4 py-3 rounded-2xl ${type === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'} shadow-lg">
+                                ${message}
+                            </div>
+                            ${nodeInfo}
+                        </div>
+                    `;
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+            const container = document.getElementById('demoChatContainer');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'flex justify-start animate-fade-in';
+            typingDiv.innerHTML = `
+                        <div class="max-w-md">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                </div>
+                                <span class="text-xs text-purple-400 font-medium">🤖 AI Bot</span>
+                            </div>
+                            <div class="bg-gray-700 text-white px-4 py-3 rounded-2xl rounded-tl-sm">
+                                <div class="flex gap-1">
+                                    <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                                    <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                                    <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingDiv = document.getElementById('typingIndicator');
+            if (typingDiv) {
+                typingDiv.remove();
+            }
+        }
+
+        function updateStatus(text, step, total) {
+            document.getElementById('demoStatusText').textContent = text;
+            document.getElementById('demoProgress').textContent = `Step ${step} of ${total}`;
+        }
+
+        async function startDemo() {
+            currentStep = 0;
+            isPaused = false;
+            demoData = [];
+
+            // Clear chat
+            const container = document.getElementById('demoChatContainer');
+            container.innerHTML = '';
+
+            // Show/hide buttons
+            document.getElementById('btnStartDemo').classList.add('hidden');
+            document.getElementById('btnPauseDemo').classList.remove('hidden');
+            document.getElementById('btnResumeDemo').classList.add('hidden');
+
+            updateStatus('Loading AI demo...', 0, '?');
+
+            // Add loading message
+            addTypingIndicator();
+
+            try {
+                // Call API to get full conversation
+                const response = await fetch('{{ route("superadmin.admins.start-demo", $tenant) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                const data = await response.json();
+                removeTypingIndicator();
+
+                if (data.success && data.conversation) {
+                    demoData = data.conversation;
+                    updateStatus('Running AI demo...', 0, demoData.length);
+                    runNextStep();
+                } else {
+                    addMessage('bot', 'Sorry, there was an error starting the demo: ' + (data.error || 'Unknown error'));
+                    resetDemoButtons();
+                }
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('bot', 'Error connecting to AI service. Please try again.');
+                console.error('Demo error:', error);
+                resetDemoButtons();
+            }
+        }
+
+        function runNextStep() {
+            if (isPaused || currentStep >= demoData.length) {
+                if (currentStep >= demoData.length) {
+                    updateStatus('✅ Demo completed!', demoData.length, demoData.length);
+                    document.getElementById('btnPauseDemo').classList.add('hidden');
+                    document.getElementById('btnStartDemo').classList.remove('hidden');
+                }
+                return;
+            }
+
+            const item = demoData[currentStep];
+
+            // Add typing indicator for bot messages
+            if (item.type === 'bot') {
+                addTypingIndicator();
+                demoInterval = setTimeout(() => {
+                    removeTypingIndicator();
+                    addMessage(item.type, item.message, item.node);
+                    currentStep++;
+                    updateStatus(item.type === 'user' ? '👤 User asking...' : '🤖 AI responding...', currentStep, demoData.length);
+                    demoInterval = setTimeout(runNextStep, 1000);
+                }, 1500);
+            } else {
+                addMessage(item.type, item.message, item.node);
+                currentStep++;
+                updateStatus(item.type === 'user' ? '👤 User asking...' : '🤖 AI responding...', currentStep, demoData.length);
+                demoInterval = setTimeout(runNextStep, 2000);
+            }
+        }
+
+        function pauseDemo() {
+            isPaused = true;
+            clearTimeout(demoInterval);
+            document.getElementById('btnPauseDemo').classList.add('hidden');
+            document.getElementById('btnResumeDemo').classList.remove('hidden');
+            updateStatus('⏸️ Demo paused', currentStep, demoData.length);
+        }
+
+        function resumeDemo() {
+            isPaused = false;
+            document.getElementById('btnResumeDemo').classList.add('hidden');
+            document.getElementById('btnPauseDemo').classList.remove('hidden');
+            updateStatus('▶️ Resuming demo...', currentStep, demoData.length);
+            runNextStep();
+        }
+
+        function restartDemo() {
+            stopDemo();
+            startDemo();
+        }
+
+        function stopDemo() {
+            isPaused = true;
+            clearTimeout(demoInterval);
+            currentStep = 0;
+            resetDemoButtons();
+        }
+
+        function resetDemoButtons() {
+            document.getElementById('btnPauseDemo').classList.add('hidden');
+            document.getElementById('btnResumeDemo').classList.add('hidden');
+            document.getElementById('btnStartDemo').classList.remove('hidden');
+        }
+    </script>
+
+    <style>
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
+        }
+    </style>
 @endsection
