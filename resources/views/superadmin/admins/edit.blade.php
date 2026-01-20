@@ -146,7 +146,7 @@
                     <div>
                         <label class="block text-gray-300 text-sm font-medium mb-2">Address</label>
                         <textarea name="address" rows="3" class="dark-textarea"
-                            placeholder="Enter business address">{{ old('address', $admin->address) }}</textarea>
+                            placeholder="Enter business address">{{ old('address', $tenant->address) }}</textarea>
                     </div>
                 </div>
             </div>
