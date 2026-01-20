@@ -133,6 +133,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/settings/get-qr', [SettingController::class, 'getQrCode'])->name('settings.get-qr');
         Route::post('/settings/disconnect', [SettingController::class, 'disconnect'])->name('settings.disconnect');
         Route::post('/settings/diagnose', [SettingController::class, 'diagnoseWhatsApp'])->name('settings.diagnose');
+        Route::get('/settings/full-prompt-preview', [SettingController::class, 'getFullPromptPreview'])->name('settings.full-prompt-preview');
 
         // Workflow Builder Routes
         Route::prefix('workflow')->name('workflow.')->group(function () {

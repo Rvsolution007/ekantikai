@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\AIService;
 use App\Services\WhatsApp\EvolutionApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -29,8 +30,8 @@ class SettingController extends Controller
             'delete_passcode' => $admin->delete_passcode ?? '',
             // Followup settings
             'followup_delay_minutes' => Setting::getValue('followup_delay_minutes', 60),
-            // AI settings (global for now)
-            'ai_system_prompt' => Setting::getValue('ai_system_prompt', ''),
+            // AI settings - ai_system_prompt from Admin model (per-admin), others global
+            'ai_system_prompt' => $admin->ai_system_prompt ?? '',
             'ai_tone' => Setting::getValue('ai_tone', 'friendly'),
             'ai_max_length' => Setting::getValue('ai_max_length', 'medium'),
             // Business settings
@@ -53,6 +54,36 @@ class SettingController extends Controller
         }
 
         return view('admin.settings.index', compact('settings', 'whatsappConnected'));
+    }
+
+    /**
+     * Get full enhanced AI prompt preview (same as SuperAdmin sees)
+     */
+    public function getFullPromptPreview()
+    {
+        $admin = auth('admin')->user();
+
+        if (!$admin) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        try {
+            $aiService = app(AIService::class);
+            $promptData = $aiService->getSystemPromptPreview($admin);
+
+            return response()->json([
+                'success' => true,
+                'prompt' => $promptData['prompt'],
+                'context' => $promptData['context'] ?? [],
+                'catalogue' => $promptData['catalogue'] ?? [],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Prompt preview error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
