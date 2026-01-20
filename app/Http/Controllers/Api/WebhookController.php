@@ -509,6 +509,25 @@ class WebhookController extends Controller
             $availableOptions = array_unique(array_filter($availableOptions));
         }
 
+        // IMPORTANT: If no options available in catalogue, accept the user's answer as-is
+        // This handles cases where catalogue is empty or field not tracked in catalogue
+        if (empty($availableOptions)) {
+            Log::info('Validation: No catalogue options found, accepting user answer', [
+                'field' => $fieldName,
+                'user_answer' => $userAnswer,
+                'admin_id' => $adminId,
+            ]);
+
+            return [
+                'valid' => true,
+                'value' => $userAnswer,
+                'valid_items' => [$userAnswer],
+                'invalid_items' => [],
+                'available_options' => [],
+                'no_catalogue_data' => true,
+            ];
+        }
+
         // Parse user answer (may contain multiple values separated by 'and', ',', '&')
         $userValues = preg_split('/[,&]|\band\b/i', $userAnswer);
         $userValues = array_map('trim', $userValues);
@@ -532,6 +551,14 @@ class WebhookController extends Controller
                 $invalidItems[] = $userValue;
             }
         }
+
+        Log::debug('Validation result', [
+            'field' => $fieldName,
+            'user_answer' => $userAnswer,
+            'available_options_count' => count($availableOptions),
+            'valid_items' => $validItems,
+            'invalid_items' => $invalidItems,
+        ]);
 
         // Determine result
         if (empty($invalidItems)) {
