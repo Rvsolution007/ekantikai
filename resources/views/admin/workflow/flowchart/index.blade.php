@@ -383,6 +383,16 @@
                         <p class="text-xs text-gray-500 mt-1">Link this node to an existing question</p>
                     </div>
 
+                    <!-- Ask Question Template - Custom question format for bot -->
+                    <div class="mb-4" id="question-template-wrapper" style="display: none;">
+                        <label class="block text-sm text-gray-400 mb-2">📝 Ask Question Format</label>
+                        <textarea id="node-question-template" rows="3"
+                            class="w-full px-3 py-2 rounded-lg text-white text-sm bg-dark-300 border border-white/10 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                            placeholder="e.g., XYZ product with YZ model confirm, ab konsa Size chahiye?"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Bot will ask in this format. Write in any language (Hindi,
+                            Hinglish, English)</p>
+                    </div>
+
                     <!-- Required/Optional Dropdown - Only for Question nodes -->
                     <div class="mb-4" id="is-required-wrapper" style="display: none;">
                         <label class="block text-sm text-gray-400 mb-2">Field Type</label>
@@ -588,6 +598,24 @@
                     }
                 });
 
+                // Question Template textarea change
+                document.getElementById('node-question-template').addEventListener('input', (e) => {
+                    if (this.selectedNode) {
+                        const questionTemplate = e.target.value;
+                        const nodeInfo = this.editor.getNodeFromId(this.selectedNode);
+                        const currentData = nodeInfo.data || {};
+
+                        this.editor.updateNodeDataFromId(this.selectedNode, {
+                            ...currentData,
+                            config: {
+                                ...currentData.config,
+                                question_template: questionTemplate
+                            }
+                        });
+                        console.log('Question template updated:', questionTemplate);
+                    }
+                });
+
                 // Lead Status dropdown change
                 document.getElementById('node-lead-status').addEventListener('change', (e) => {
                     if (this.selectedNode) {
@@ -777,13 +805,20 @@
                 const uniqueFieldCheck = document.getElementById('node-unique-field');
                 const leadStatusWrapper = document.getElementById('lead-status-wrapper');
                 const leadStatusSelect = document.getElementById('node-lead-status');
+                const questionTemplateWrapper = document.getElementById('question-template-wrapper');
+                const questionTemplateInput = document.getElementById('node-question-template');
 
                 if (nodeInfo.name === 'question') {
                     displayNameWrapper.style.display = 'block';
                     leadStatusWrapper.style.display = 'block';
+                    questionTemplateWrapper.style.display = 'block';
 
                     // Restore saved question selection if exists
                     const config = nodeInfo.data?.config || {};
+
+                    // Populate question template
+                    questionTemplateInput.value = config.question_template || '';
+
                     if (config.question_type && config.question_id) {
                         const savedValue = `${config.question_type}_${config.question_id}`;
                         displayNameSelect.value = savedValue;
@@ -828,6 +863,7 @@
                     askDigitWrapper.style.display = 'none';
                     uniqueFieldWrapper.style.display = 'none';
                     leadStatusWrapper.style.display = 'none';
+                    questionTemplateWrapper.style.display = 'none';
                     displayNameSelect.value = '';
                 }
             },

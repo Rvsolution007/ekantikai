@@ -250,10 +250,10 @@ class FlowchartController extends Controller
             // Track old IDs to new IDs for edges
             $idMap = [];
 
-            // BACKUP: Save existing ProductQuestion settings (is_unique_key, unique_key_order, is_unique_field)
+            // BACKUP: Save existing ProductQuestion settings (is_unique_key, unique_key_order, is_unique_field, question_template)
             // These will be restored after recreating nodes to preserve admin's configuration
             $existingFieldSettings = ProductQuestion::where('admin_id', $adminId)
-                ->get(['field_name', 'is_unique_key', 'unique_key_order', 'is_unique_field', 'is_required', 'options_manual', 'options_source', 'catalogue_field'])
+                ->get(['field_name', 'is_unique_key', 'unique_key_order', 'is_unique_field', 'is_required', 'options_manual', 'options_source', 'catalogue_field', 'question_template'])
                 ->keyBy('field_name')
                 ->toArray();
 
@@ -306,7 +306,7 @@ class FlowchartController extends Controller
             }
 
             // RESTORE: Apply backed up ProductQuestion settings to recreated fields
-            // This preserves is_unique_key, unique_key_order, is_unique_field that admin had set
+            // This preserves is_unique_key, unique_key_order, is_unique_field, question_template that admin had set
             foreach ($existingFieldSettings as $fieldName => $settings) {
                 ProductQuestion::where('admin_id', $adminId)
                     ->where('field_name', $fieldName)
@@ -314,6 +314,7 @@ class FlowchartController extends Controller
                         'is_unique_key' => $settings['is_unique_key'] ?? false,
                         'unique_key_order' => $settings['unique_key_order'],
                         'is_unique_field' => $settings['is_unique_field'] ?? false,
+                        'question_template' => $settings['question_template'] ?? null,
                     ]);
             }
 
@@ -482,6 +483,7 @@ class FlowchartController extends Controller
             ],
             [
                 'display_name' => $config['display_name'] ?? $node->label,
+                'question_template' => $config['question_template'] ?? null,
                 'field_type' => $config['field_type'] ?? 'text',
                 'is_required' => $config['is_required'] ?? false,
                 'is_unique_key' => $config['is_unique_key'] ?? false,

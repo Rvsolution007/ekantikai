@@ -13,6 +13,7 @@ class ProductQuestion extends Model
         'admin_id',
         'field_name',
         'display_name',
+        'question_template', // Custom question format for bot to ask
         'field_type',
         'is_required',
         'sort_order',
