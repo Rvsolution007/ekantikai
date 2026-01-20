@@ -206,7 +206,17 @@ class DemoConversationService
                 ]
             );
 
-            if (isset($response['reply'])) {
+            // Check for response_message (correct key from parseEnhancedResponse)
+            if (isset($response['response_message']) && !empty($response['response_message'])) {
+                return [
+                    'success' => true,
+                    'message' => $response['response_message'],
+                    'extracted_data' => $response['extracted_data'] ?? [],
+                ];
+            }
+
+            // Also check reply key for backward compatibility
+            if (isset($response['reply']) && !empty($response['reply'])) {
                 return [
                     'success' => true,
                     'message' => $response['reply'],
@@ -214,18 +224,59 @@ class DemoConversationService
                 ];
             }
 
+            // Generate a contextual fallback message based on current/next question
+            $fallbackMessage = $this->generateContextualFallback($context, $admin);
+
             return [
                 'success' => true,
-                'message' => $response['message'] ?? 'Thank you for your response. Let me help you further.',
+                'message' => $fallbackMessage,
             ];
         } catch (\Exception $e) {
             Log::error('Demo AI response error', ['error' => $e->getMessage()]);
+
+            // Generate contextual fallback even on error
+            $fallbackMessage = $this->generateContextualFallback($context, $admin);
+
             return [
                 'success' => false,
-                'message' => 'I apologize, but I am having trouble processing your request. How can I help you?',
+                'message' => $fallbackMessage,
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Generate a contextual fallback message based on the pending questions
+     */
+    protected function generateContextualFallback(array $context, Admin $admin): string
+    {
+        $pendingQuestions = $context['pending_questions'] ?? [];
+        $currentQuestion = $context['current_question'] ?? null;
+        $isFinal = $context['is_final'] ?? false;
+
+        // Final message
+        if ($isFinal) {
+            return "Bahut dhanyavaad! Aapka order details note kar liya hai. Hum jaldi aapse contact karenge. 🙏";
+        }
+
+        // If we have a current question that was just answered, ask the next one
+        if ($currentQuestion && !empty($pendingQuestions)) {
+            $nextQuestion = $pendingQuestions[0] ?? null;
+            if ($nextQuestion) {
+                $displayName = $nextQuestion['display_name'] ?? $nextQuestion['field_name'] ?? 'details';
+                return "Achha, samajh gaya! Ab please batayein - aapko kaunsa {$displayName} chahiye?";
+            }
+        }
+
+        // If there are pending questions, ask the first one
+        if (!empty($pendingQuestions)) {
+            $firstPending = $pendingQuestions[0];
+            $displayName = $firstPending['display_name'] ?? $firstPending['field_name'] ?? 'details';
+            return "Zaroor! Pehle batayein - aapko kaunsa {$displayName} chahiye?";
+        }
+
+        // All questions answered
+        return "Bahut badiya! Aapne saari details de di hain. Kya aur kuch chahiye?";
     }
 
     /**

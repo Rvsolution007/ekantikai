@@ -53,7 +53,7 @@ class TenantController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:tenants,email',
+            'email' => 'required|email|unique:admins,email',
             'phone' => 'nullable|string|max:20',
             'company_name' => 'nullable|string|max:255',
             'subscription_plan' => 'required|in:free,basic,pro,enterprise',
@@ -186,12 +186,11 @@ class TenantController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:tenants,email,' . $admin->id,
+            'email' => 'required|email|unique:admins,email,' . $admin->id,
             'phone' => 'nullable|string|max:20',
-            'domain' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:500',
             'subscription_plan' => 'required|in:free,basic,pro,enterprise',
-            'status' => 'required|in:active,trial,suspended,inactive',
+            'is_active' => 'nullable|boolean',
             'subscription_ends_at' => 'nullable|date',
         ]);
 
@@ -199,11 +198,9 @@ class TenantController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'domain' => $request->domain,
             'address' => $request->address,
             'subscription_plan' => $request->subscription_plan,
-            'status' => $request->status,
-            'is_active' => $request->status === 'active',
+            'is_active' => $request->boolean('is_active', true),
             'subscription_ends_at' => $request->subscription_ends_at,
             'ai_system_prompt' => $request->ai_system_prompt,
         ]);
