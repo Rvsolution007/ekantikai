@@ -403,20 +403,6 @@
                             conversation (spread across different messages)</p>
                     </div>
 
-                    <!-- Unique Field Checkbox - For product questions -->
-                    <div class="mb-4" id="unique-field-wrapper" style="display: none;">
-                        <label
-                            class="flex items-center gap-3 cursor-pointer p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                            <input type="checkbox" id="node-unique-field"
-                                class="w-5 h-5 rounded border-gray-600 text-yellow-500 focus:ring-yellow-500">
-                            <div>
-                                <span class="text-yellow-400 font-medium text-sm">🔑 Unique Field</span>
-                                <p class="text-xs text-gray-500">This field uniquely identifies each product (e.g., Model
-                                    Number)</p>
-                            </div>
-                        </label>
-                    </div>
-
                     <!-- Lead Status Connection - For connecting question completion to lead status -->
                     <div class="mb-4" id="lead-status-wrapper" style="display: none;">
                         <label class="block text-sm text-gray-400 mb-2">🎯 Lead Status Connection</label>
@@ -599,24 +585,6 @@
                             }
                         });
                         console.log('Ask digit updated:', askDigit);
-                    }
-                });
-
-                // Unique Field checkbox change
-                document.getElementById('node-unique-field').addEventListener('change', (e) => {
-                    if (this.selectedNode) {
-                        const isUnique = e.target.checked;
-                        const nodeInfo = this.editor.getNodeFromId(this.selectedNode);
-                        const currentData = nodeInfo.data || {};
-
-                        this.editor.updateNodeDataFromId(this.selectedNode, {
-                            ...currentData,
-                            config: {
-                                ...currentData.config,
-                                is_unique_field: isUnique
-                            }
-                        });
-                        console.log('Unique field updated:', isUnique);
                     }
                 });
 
