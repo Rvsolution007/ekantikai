@@ -210,6 +210,9 @@ class WebhookController extends Controller
                                 'answer' => $validationResult['value'],
                                 'lead_id' => $lead->id,
                             ]);
+
+                            // SYNC TO LEAD_PRODUCTS: Create/update LeadProduct for Product Quotation display
+                            $this->syncWorkflowToLeadProduct($lead, $tenant->id);
                         } else {
                             // Invalid answer - show available options
                             Log::warning('Smart extraction found invalid answer', [
@@ -559,6 +562,79 @@ class WebhookController extends Controller
                 'invalid_items' => $invalidItems,
                 'available_options' => array_values($availableOptions),
             ];
+        }
+    }
+
+    /**
+     * Sync workflow answers to LeadProduct for Product Quotation display
+     * Creates or updates a LeadProduct entry when we have at least category+model
+     */
+    protected function syncWorkflowToLeadProduct(Lead $lead, int $adminId): void
+    {
+        try {
+            $collectedData = $lead->collected_data ?? [];
+            $workflowAnswers = $collectedData['workflow_questions'] ?? [];
+
+            if (empty($workflowAnswers)) {
+                return;
+            }
+
+            // Normalize keys to lowercase
+            $answers = array_change_key_case($workflowAnswers, CASE_LOWER);
+
+            // Get values (with multiple field name options)
+            $category = $answers['category'] ?? $answers['product_type'] ?? null;
+            $model = $answers['model'] ?? $answers['model_code'] ?? $answers['model_number'] ?? null;
+            $size = $answers['size'] ?? null;
+            $finish = $answers['finish'] ?? $answers['color'] ?? null;
+            $qty = $answers['qty'] ?? $answers['quantity'] ?? null;
+            $packaging = $answers['packaging'] ?? null;
+
+            // Only create LeadProduct if we have at least category OR model
+            if (empty($category) && empty($model)) {
+                return;
+            }
+
+            // Build unique key
+            $uniqueKey = md5(json_encode([
+                'lead_id' => $lead->id,
+                'category' => strtolower($category ?? ''),
+                'model' => strtolower($model ?? ''),
+            ]));
+
+            // Find or create LeadProduct
+            $leadProduct = \App\Models\LeadProduct::firstOrNew([
+                'lead_id' => $lead->id,
+                'unique_key' => $uniqueKey,
+            ]);
+
+            // Update fields
+            $leadProduct->admin_id = $adminId;
+            $leadProduct->category = $category;
+            $leadProduct->model = $model;
+            if ($size)
+                $leadProduct->size = $size;
+            if ($finish)
+                $leadProduct->finish = $finish;
+            if ($qty)
+                $leadProduct->qty = $qty;
+            if ($packaging)
+                $leadProduct->packaging = $packaging;
+
+            $leadProduct->save();
+
+            Log::info('Synced workflow to LeadProduct', [
+                'lead_id' => $lead->id,
+                'lead_product_id' => $leadProduct->id,
+                'category' => $category,
+                'model' => $model,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to sync workflow to LeadProduct', [
+                'error' => $e->getMessage(),
+                'lead_id' => $lead->id,
+            ]);
         }
     }
 
