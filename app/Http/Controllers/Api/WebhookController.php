@@ -179,13 +179,27 @@ class WebhookController extends Controller
                     'ai_response' => json_encode($aiResponse),
                 ]);
 
-                // FALLBACK: Always send a response if AI returns empty
+                // IMPROVED FALLBACK: Try to ask next pending question from flowchart
                 $detectedLang = $aiResponse['detected_language'] ?? 'hi';
-                $responseMessage = match ($detectedLang) {
-                    'en' => "I'm here to help! Could you please tell me more about what you're looking for?",
-                    'hi', 'hinglish' => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
-                    default => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
-                };
+
+                // Get next pending question from flowchart
+                $pendingQuestion = $this->getNextPendingQuestion($tenant->id, $lead);
+
+                if ($pendingQuestion) {
+                    // Ask the next pending question
+                    $responseMessage = match ($detectedLang) {
+                        'en' => "Got it! Now, what is your " . strtolower($pendingQuestion['display_name']) . "?",
+                        'hi', 'hinglish' => "Ji zaroor! Ab aapka " . $pendingQuestion['display_name'] . " kya hai?",
+                        default => "Ji, aapka " . $pendingQuestion['display_name'] . " bataiye?",
+                    };
+                } else {
+                    // No pending questions - generic fallback
+                    $responseMessage = match ($detectedLang) {
+                        'en' => "I'm here to help! Could you please tell me more about what you're looking for?",
+                        'hi', 'hinglish' => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
+                        default => "Ji, main aapki madad ke liye yahan hoon! Aap kya dhundh rahe hain?",
+                    };
+                }
             }
 
             // CHECK FOR CATALOGUE IMAGE (Point 12)
@@ -330,6 +344,47 @@ class WebhookController extends Controller
 
             return array_unique(array_merge($fields, $commonProductFields));
         });
+    }
+
+    /**
+     * Get the next pending (unanswered) question from flowchart
+     */
+    protected function getNextPendingQuestion(int $adminId, Lead $lead): ?array
+    {
+        // Get all workflow questions
+        $questions = \App\Models\ProductQuestion::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($questions->isEmpty()) {
+            return null;
+        }
+
+        // Get collected data
+        $collectedData = $lead->collected_data ?? [];
+        $workflowAnswers = $collectedData['workflow_questions'] ?? [];
+        $globalAnswers = $collectedData['global_questions'] ?? [];
+
+        // Merge all answered fields
+        $allAnswered = array_merge(
+            array_change_key_case($workflowAnswers, CASE_LOWER),
+            array_change_key_case($globalAnswers, CASE_LOWER)
+        );
+
+        // Find first unanswered question
+        foreach ($questions as $question) {
+            $fieldName = strtolower($question->field_name);
+            if (!isset($allAnswered[$fieldName]) || empty($allAnswered[$fieldName])) {
+                return [
+                    'field_name' => $question->field_name,
+                    'display_name' => $question->display_name,
+                    'is_required' => $question->is_required,
+                ];
+            }
+        }
+
+        return null; // All questions answered
     }
 
     /**
