@@ -248,10 +248,24 @@ class WebhookController extends Controller
     protected function processAIResponse(Admin $tenant, Customer $customer, Lead $lead, array $aiResponse): void
     {
         // Update extracted data (Point 8.8)
+        // FIX: Save to correct category - workflow_questions for product fields, global_questions for personal info
         if (!empty($aiResponse['extracted_data'])) {
+            // Get workflow field names for this admin
+            $workflowFields = $this->getWorkflowFieldNames($tenant->id);
+
             foreach ($aiResponse['extracted_data'] as $key => $value) {
                 if ($value !== null) {
-                    $lead->addCollectedData($key, $value);
+                    // Determine correct category based on field type
+                    $fieldKey = strtolower($key);
+
+                    // Check if this is a workflow/product field
+                    if (in_array($fieldKey, $workflowFields)) {
+                        // Product/workflow field - save to workflow_questions
+                        $lead->addCollectedData($key, $value, 'workflow_questions');
+                    } else {
+                        // Global field (city, purpose, etc.) - save to global_questions
+                        $lead->addCollectedData($key, $value, 'global_questions');
+                    }
                 }
             }
         }
@@ -296,6 +310,26 @@ class WebhookController extends Controller
                 $lead->updateLeadStatus($status->id);
             }
         }
+    }
+
+    /**
+     * Get all workflow field names for an admin
+     * These are the product-related questions from flowchart/product_questions table
+     */
+    protected function getWorkflowFieldNames(int $adminId): array
+    {
+        // Cache for 5 minutes to avoid repeated DB queries
+        return Cache::remember("workflow_fields_{$adminId}", 300, function () use ($adminId) {
+            $fields = \App\Models\ProductQuestion::where('admin_id', $adminId)
+                ->pluck('field_name')
+                ->map(fn($f) => strtolower($f))
+                ->toArray();
+
+            // Also include common product field names that might not be in database
+            $commonProductFields = ['category', 'product', 'model', 'size', 'finish', 'color', 'quantity', 'qty', 'packaging'];
+
+            return array_unique(array_merge($fields, $commonProductFields));
+        });
     }
 
     /**
