@@ -971,19 +971,29 @@ class AIService
         // *** NEW: Build pending questions section ***
         $pendingQuestionsSection = '';
         if (!empty($context['pending_questions'])) {
-            $pendingQuestionsSection = "\n## ⚠️ IMPORTANT: PENDING QUESTIONS TO ASK\n";
-            $pendingQuestionsSection .= "The following flowchart questions have NOT been answered yet:\n";
+            $firstPending = $context['pending_questions'][0] ?? null;
+
+            // CRITICAL: Tell AI which field we're expecting answer for
+            if ($firstPending) {
+                $pendingQuestionsSection = "\n## 🎯 CURRENT QUESTION - EXPECTING ANSWER FOR:\n";
+                $pendingQuestionsSection .= "**Field: {$firstPending['field_name']}** ({$firstPending['display_name']})\n";
+                $pendingQuestionsSection .= "⚠️ CRITICAL: If user gives ANY answer now, save it to '{$firstPending['field_name']}' in extracted_data!\n";
+                $pendingQuestionsSection .= "Example: User says '15 or 20' → extracted_data.{$firstPending['field_name']} = '15 or 20'\n\n";
+            }
+
+            $pendingQuestionsSection .= "## PENDING QUESTIONS (in order):\n";
             foreach ($context['pending_questions'] as $i => $q) {
                 $num = $i + 1;
                 $required = $q['is_required'] ? '[REQUIRED]' : '[OPTIONAL]';
-                $pendingQuestionsSection .= "{$num}. {$q['display_name']} ({$q['field_name']}) {$required}\n";
+                $current = ($i === 0) ? ' ← CURRENT (waiting for answer)' : '';
+                $pendingQuestionsSection .= "{$num}. {$q['display_name']} ({$q['field_name']}) {$required}{$current}\n";
             }
-            $pendingQuestionsSection .= "\n### ACTION REQUIRED:\n";
-            $pendingQuestionsSection .= "- After confirming current product, ASK THE FIRST PENDING QUESTION\n";
-            $pendingQuestionsSection .= "- Example: If City is pending, ask 'Aapka city konsa hai?' or 'Which city?'\n";
-            $pendingQuestionsSection .= "- Do NOT skip these questions - they are part of the sales workflow\n";
+            $pendingQuestionsSection .= "\n### MAPPING RULES:\n";
+            $pendingQuestionsSection .= "- User's answer goes to the FIRST pending field ({$firstPending['field_name']})\n";
+            $pendingQuestionsSection .= "- After saving, ask the NEXT pending question\n";
+            $pendingQuestionsSection .= "- DO NOT repeat the question that was just answered\n";
         } else {
-            $pendingQuestionsSection = "\n## ALL QUESTIONS ANSWERED\n";
+            $pendingQuestionsSection = "\n## ✅ ALL QUESTIONS ANSWERED\n";
             $pendingQuestionsSection .= "All flowchart questions have been answered. Order is complete.\n";
         }
 
@@ -1265,15 +1275,20 @@ When user asks for a list/options with phrases like:
 {
     "intent": "inquiry|confirmation|modification|rejection|casual|unclear",
     "lead_status_suggestion": "status name from list above or null",
-    "extracted_data": {"field_name": "value"},
+    "extracted_data": {
+        "FIELD_NAME_HERE": "user's answer for that field"
+    },
     "product_confirmations": [
         {
-            "field_name": "extracted value from user message"
+            "category": "product type",
+            "model": "model number",
+            "size": "size value",
+            "finish": "finish value"
         }
     ],
     "product_rejections": [
         {
-            "field_name": "value to remove (add * to delete)"
+            "model": "model* (add * to mark for deletion)"
         }
     ],
     "unique_field_mentioned": "unique field value if mentioned or null",
