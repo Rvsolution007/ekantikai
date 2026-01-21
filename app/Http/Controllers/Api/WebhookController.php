@@ -183,6 +183,19 @@ class WebhookController extends Controller
             // If AI returned a message but we have pending flowchart questions,
             // use AI's confirmation/acknowledgment but append/replace with flowchart question
             if ($pendingQuestion) {
+                // Get the question template from flowchart (Ask Question Format)
+                $questionTemplate = $pendingQuestion['question_template'] ?? null;
+
+                // === AI ENHANCEMENT OF FLOWCHART QUESTION ===
+                // Use AI to make the question more friendly and conversational
+                // The template is a REFERENCE, AI enhances it
+                $flowchartQuestion = $this->enhanceQuestionWithAI(
+                    $tenant,
+                    $pendingQuestion,
+                    $detectedLang,
+                    $messageData['content'] ?? ''
+                );
+
                 // Check if AI response contains a valid acknowledgment we can keep
                 $hasAckInResponse = !empty($responseMessage) &&
                     (stripos($responseMessage, 'noted') !== false ||
@@ -190,14 +203,8 @@ class WebhookController extends Controller
                         stripos($responseMessage, 'perfect') !== false ||
                         stripos($responseMessage, 'great') !== false ||
                         stripos($responseMessage, 'zaroor') !== false ||
-                        stripos($responseMessage, 'ji') !== false);
-
-                // Generate flowchart question
-                $flowchartQuestion = match ($detectedLang) {
-                    'en' => "Now, what is your " . strtolower($pendingQuestion['display_name']) . "?",
-                    'hi', 'hinglish' => "Ab aapka " . $pendingQuestion['display_name'] . " kya hai?",
-                    default => "Aapka " . $pendingQuestion['display_name'] . " bataiye?",
-                };
+                        stripos($responseMessage, 'ji ') !== false ||
+                        stripos($responseMessage, 'samajh') !== false);
 
                 // If AI had a good acknowledgment, keep it and add flowchart question
                 if ($hasAckInResponse) {
@@ -210,17 +217,14 @@ class WebhookController extends Controller
                         $responseMessage = $flowchartQuestion;
                     }
                 } else {
-                    // No good acknowledgment, just use flowchart question
-                    $responseMessage = match ($detectedLang) {
-                        'en' => "Got it! " . $flowchartQuestion,
-                        'hi', 'hinglish' => "Ji! " . $flowchartQuestion,
-                        default => $flowchartQuestion,
-                    };
+                    // No good acknowledgment, use flowchart question directly
+                    $responseMessage = $flowchartQuestion;
                 }
 
-                Log::info('Flowchart Priority: Overriding AI response with flowchart question', [
-                    'ai_response_preview' => substr($aiResponse['response_message'] ?? '', 0, 80),
+                Log::info('Flowchart Priority: Using AI-enhanced flowchart question', [
+                    'original_template' => $questionTemplate,
                     'flowchart_question' => $pendingQuestion['field_name'],
+                    'enhanced_question' => $flowchartQuestion,
                     'final_message' => $responseMessage,
                 ]);
             } else {
@@ -500,6 +504,7 @@ class WebhookController extends Controller
                     'field_name' => $question->field_name,
                     'display_name' => $question->display_name,
                     'is_required' => $question->is_required,
+                    'question_template' => $question->question_template, // Ask Question Format from flowchart
                 ];
             }
         }
@@ -1032,5 +1037,137 @@ class WebhookController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * Enhance flowchart question using AI
+     * Takes the question template from flowchart and makes it friendly/conversational
+     */
+    protected function enhanceQuestionWithAI(Admin $tenant, array $pendingQuestion, string $language, string $userMessage): string
+    {
+        $questionTemplate = $pendingQuestion['question_template'] ?? null;
+        $displayName = $pendingQuestion['display_name'] ?? $pendingQuestion['field_name'];
+        $fieldName = $pendingQuestion['field_name'];
+
+        // If no template, generate a default friendly question
+        if (empty($questionTemplate)) {
+            return match ($language) {
+                'en' => "Got it! Now, what {$displayName} would you like?",
+                'hi', 'hinglish' => "Ji samajh gaya! Ab aapko kaunsa {$displayName} chahiye?",
+                default => "Ji! Aapka {$displayName} batayein?",
+            };
+        }
+
+        // Use AI to enhance the question template into a friendly conversational question
+        try {
+            $aiService = new AIService();
+
+            // Build a simple prompt to enhance the question
+            $enhancePrompt = $this->buildQuestionEnhancePrompt($tenant, $questionTemplate, $displayName, $language, $userMessage);
+
+            // Call AI with a minimal prompt for speed
+            $response = $aiService->callAI($enhancePrompt, "Enhance this question naturally.");
+
+            // Parse the response - expect just the enhanced question text
+            $enhancedQuestion = $this->parseEnhancedQuestion($response, $questionTemplate, $displayName, $language);
+
+            if (!empty($enhancedQuestion)) {
+                Log::debug('AI enhanced question successfully', [
+                    'original' => $questionTemplate,
+                    'enhanced' => $enhancedQuestion,
+                ]);
+                return $enhancedQuestion;
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to enhance question with AI, using template', [
+                'error' => $e->getMessage(),
+                'template' => $questionTemplate,
+            ]);
+        }
+
+        // Fallback: Use the template directly with a friendly prefix
+        return match ($language) {
+            'en' => "Great! " . $questionTemplate,
+            'hi', 'hinglish' => "Ji! " . $questionTemplate,
+            default => $questionTemplate,
+        };
+    }
+
+    /**
+     * Build prompt to enhance a flowchart question
+     */
+    protected function buildQuestionEnhancePrompt(Admin $tenant, string $template, string $displayName, string $language, string $userMessage): string
+    {
+        $tenantName = $tenant->company_name ?? $tenant->name ?? 'our company';
+        $tone = $tenant->ai_tone ?? 'friendly';
+
+        $langInstruction = match ($language) {
+            'en' => 'Respond in English only.',
+            'hi' => 'Respond in Hindi only (Devanagari script).',
+            'hinglish' => 'Respond in Hinglish (Hindi words in English script, casual style).',
+            default => 'Respond in Hinglish.',
+        };
+
+        return <<<PROMPT
+You are a {$tone} sales assistant for {$tenantName}.
+
+TASK: Convert this question template into a natural, friendly conversational question.
+
+QUESTION TEMPLATE (reference): "{$template}"
+FIELD NAME: {$displayName}
+USER'S LAST MESSAGE: "{$userMessage}"
+
+RULES:
+1. Make it sound natural and friendly, like a real salesperson
+2. Keep the same meaning as the template
+3. {$langInstruction}
+4. Keep it SHORT - max 15-20 words
+5. Include a brief acknowledgment of user's message if relevant
+6. DO NOT add any greeting if not needed
+7. If user mentioned something specific, acknowledge it briefly
+
+OUTPUT: Return ONLY the enhanced question text, nothing else. No JSON, no explanation.
+
+Example input: "Aapko kaunsa product chahiye?"
+Example output: "Ji, aapko konsa product pasand aayega - handles, hinges ya kuch aur?"
+
+Now enhance this question:
+PROMPT;
+    }
+
+    /**
+     * Parse the AI response to extract enhanced question
+     */
+    protected function parseEnhancedQuestion(string $response, string $fallbackTemplate, string $displayName, string $language): string
+    {
+        // Clean the response
+        $cleaned = trim($response);
+
+        // Remove any JSON formatting if accidentally returned
+        $cleaned = preg_replace('/^```.*$/m', '', $cleaned);
+        $cleaned = preg_replace('/^\{.*?\}$/s', '', $cleaned);
+        $cleaned = trim($cleaned);
+
+        // If response looks like JSON, try to parse
+        if (str_starts_with($cleaned, '{')) {
+            $data = json_decode($cleaned, true);
+            if (isset($data['response_message'])) {
+                return $data['response_message'];
+            }
+            if (isset($data['question'])) {
+                return $data['question'];
+            }
+        }
+
+        // If response is too long or empty, use fallback
+        if (empty($cleaned) || strlen($cleaned) > 200) {
+            return match ($language) {
+                'en' => "Got it! " . $fallbackTemplate,
+                'hi', 'hinglish' => "Ji! " . $fallbackTemplate,
+                default => $fallbackTemplate,
+            };
+        }
+
+        return $cleaned;
     }
 }
