@@ -166,78 +166,9 @@ class WebhookController extends Controller
             // Update customer's last activity
             $customer->updateLastActivity();
 
-            // Get response message
+            // Get response message from AI
             $responseMessage = $aiResponse['response_message'] ?? '';
-
-            // === FLOWCHART PRIORITY ENFORCEMENT ===
-            // ALWAYS override AI's question with flowchart-based question
-            // AI is used for data extraction/confirmations, but questions come from flowchart only
-
-            // First, process any data extracted by AI (save to lead)
-            $lead->refresh();
-
-            // Get the next pending question from FLOWCHART (code-enforced, not AI)
-            $pendingQuestion = $this->getNextPendingQuestion($tenant->id, $lead);
             $detectedLang = $aiResponse['detected_language'] ?? 'hi';
-
-            // If AI returned a message but we have pending flowchart questions,
-            // use AI's confirmation/acknowledgment but append/replace with flowchart question
-            if ($pendingQuestion) {
-                // Get the question template from flowchart (Ask Question Format)
-                $questionTemplate = $pendingQuestion['question_template'] ?? null;
-
-                // === AI ENHANCEMENT OF FLOWCHART QUESTION ===
-                // Use AI to make the question more friendly and conversational
-                // The template is a REFERENCE, AI enhances it
-                $flowchartQuestion = $this->enhanceQuestionWithAI(
-                    $tenant,
-                    $pendingQuestion,
-                    $detectedLang,
-                    $messageData['content'] ?? ''
-                );
-
-                // Check if AI response contains a valid acknowledgment we can keep
-                $hasAckInResponse = !empty($responseMessage) &&
-                    (stripos($responseMessage, 'noted') !== false ||
-                        stripos($responseMessage, 'theek') !== false ||
-                        stripos($responseMessage, 'perfect') !== false ||
-                        stripos($responseMessage, 'great') !== false ||
-                        stripos($responseMessage, 'zaroor') !== false ||
-                        stripos($responseMessage, 'ji ') !== false ||
-                        stripos($responseMessage, 'samajh') !== false);
-
-                // If AI had a good acknowledgment, keep it and add flowchart question
-                if ($hasAckInResponse) {
-                    // Extract just the acknowledgment part, remove any AI-generated question
-                    $ackPart = preg_replace('/\?.*$/u', '', $responseMessage);
-                    $ackPart = trim($ackPart);
-                    if (strlen($ackPart) > 10 && strlen($ackPart) < 100) {
-                        $responseMessage = $ackPart . ". " . $flowchartQuestion;
-                    } else {
-                        $responseMessage = $flowchartQuestion;
-                    }
-                } else {
-                    // No good acknowledgment, use flowchart question directly
-                    $responseMessage = $flowchartQuestion;
-                }
-
-                Log::info('Flowchart Priority: Using AI-enhanced flowchart question', [
-                    'original_template' => $questionTemplate,
-                    'flowchart_question' => $pendingQuestion['field_name'],
-                    'enhanced_question' => $flowchartQuestion,
-                    'final_message' => $responseMessage,
-                ]);
-            } else {
-                // No pending questions - all flowchart questions answered
-                // Use AI's response for natural completion, or generate our own
-                if (empty($responseMessage)) {
-                    $responseMessage = match ($detectedLang) {
-                        'en' => "Perfect! Your order has been noted. Is there anything else you need?",
-                        'hi', 'hinglish' => "Bahut badhiya! Aapka order note ho gaya hai. Kuch aur chahiye?",
-                        default => "Ji, aapka order note ho gaya. Aur kuch?",
-                    };
-                }
-            }
 
             // DEBUG: Log when response is empty
             if (empty($responseMessage)) {

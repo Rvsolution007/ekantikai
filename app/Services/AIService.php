@@ -849,18 +849,27 @@ class AIService
             ->with('questionnaireField')
             ->get();
 
+        // Also get question templates from ProductQuestion table
+        $productQuestions = ProductQuestion::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->pluck('question_template', 'field_name')
+            ->toArray();
+
         $rules = [];
         foreach ($nodes as $node) {
             $field = $node->questionnaireField;
             if ($field) {
+                $fieldName = $field->field_name;
                 $rules[] = [
-                    'field_name' => $field->field_name,
+                    'field_name' => $fieldName,
                     'display_name' => $field->display_name,
                     'is_required' => $node->is_required,
                     'is_optional' => !$node->is_required,
                     'ask_digit' => $node->ask_digit,
                     'is_unique_field' => $node->is_unique_field,
                     'field_type' => $field->field_type,
+                    // Add question template from ProductQuestion for AI to enhance
+                    'question_template' => $productQuestions[strtolower($fieldName)] ?? $productQuestions[$fieldName] ?? null,
                 ];
             }
         }
@@ -932,20 +941,31 @@ class AIService
         $allowedFieldNames = [];
         if (!empty($context['field_rules'])) {
             $fieldRules = "## 🔴 CRITICAL: ALLOWED FIELDS (FLOWCHART ONLY)\n";
-            $fieldRules .= "⚠️ YOU CAN ONLY ASK ABOUT THESE FIELDS - NO EXCEPTIONS:\n";
+            $fieldRules .= "⚠️ YOU CAN ONLY ASK ABOUT THESE FIELDS - NO EXCEPTIONS:\n\n";
             foreach ($context['field_rules'] as $rule) {
                 $type = $rule['is_required'] ? 'REQUIRED' : 'OPTIONAL';
                 $unique = $rule['is_unique_field'] ? ' [UNIQUE IDENTIFIER]' : '';
                 $askDigit = $rule['ask_digit'] > 0 ? " (ask max {$rule['ask_digit']} times)" : '';
+                $template = $rule['question_template'] ?? null;
+
                 $fieldRules .= "✓ {$rule['display_name']} ({$rule['field_name']}): {$type}{$unique}{$askDigit}\n";
+
+                // Include question template for AI to enhance
+                if (!empty($template)) {
+                    $fieldRules .= "   → ASK LIKE THIS (enhance naturally): \"{$template}\"\n";
+                }
+
                 $allowedFieldNames[] = $rule['field_name'];
             }
             $fieldRules .= "\n### 🚫 FORBIDDEN FIELDS (NEVER ASK THESE IF NOT IN LIST ABOVE):\n";
             $fieldRules .= "- qty / quantity - DO NOT ASK unless 'qty' is in the list above\n";
             $fieldRules .= "- material - DO NOT ASK unless 'material' is in the list above\n";
             $fieldRules .= "- Any other field NOT listed above\n";
-            $fieldRules .= "\n### STRICT RULE:\n";
-            $fieldRules .= "If a field is NOT in the ✓ list above, NEVER mention it or ask about it.\n";
+            $fieldRules .= "\n### QUESTION ENHANCEMENT RULES:\n";
+            $fieldRules .= "- When asking a question, use the template provided as REFERENCE\n";
+            $fieldRules .= "- Make it sound natural and friendly, like a real salesperson\n";
+            $fieldRules .= "- Keep the same meaning as the template\n";
+            $fieldRules .= "- Add brief acknowledgment of user's message if relevant\n";
         }
 
         // *** NEW: Build pending questions section ***
