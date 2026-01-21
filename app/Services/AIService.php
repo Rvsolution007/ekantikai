@@ -929,14 +929,23 @@ class AIService
         }
 
         $fieldRules = '';
+        $allowedFieldNames = [];
         if (!empty($context['field_rules'])) {
-            $fieldRules = "## FIELD RULES\n";
+            $fieldRules = "## 🔴 CRITICAL: ALLOWED FIELDS (FLOWCHART ONLY)\n";
+            $fieldRules .= "⚠️ YOU CAN ONLY ASK ABOUT THESE FIELDS - NO EXCEPTIONS:\n";
             foreach ($context['field_rules'] as $rule) {
                 $type = $rule['is_required'] ? 'REQUIRED' : 'OPTIONAL';
                 $unique = $rule['is_unique_field'] ? ' [UNIQUE IDENTIFIER]' : '';
                 $askDigit = $rule['ask_digit'] > 0 ? " (ask max {$rule['ask_digit']} times)" : '';
-                $fieldRules .= "- {$rule['display_name']} ({$rule['field_name']}): {$type}{$unique}{$askDigit}\n";
+                $fieldRules .= "✓ {$rule['display_name']} ({$rule['field_name']}): {$type}{$unique}{$askDigit}\n";
+                $allowedFieldNames[] = $rule['field_name'];
             }
+            $fieldRules .= "\n### 🚫 FORBIDDEN FIELDS (NEVER ASK THESE IF NOT IN LIST ABOVE):\n";
+            $fieldRules .= "- qty / quantity - DO NOT ASK unless 'qty' is in the list above\n";
+            $fieldRules .= "- material - DO NOT ASK unless 'material' is in the list above\n";
+            $fieldRules .= "- Any other field NOT listed above\n";
+            $fieldRules .= "\n### STRICT RULE:\n";
+            $fieldRules .= "If a field is NOT in the ✓ list above, NEVER mention it or ask about it.\n";
         }
 
         // *** NEW: Build pending questions section ***
@@ -1253,16 +1262,19 @@ When user asks for a list/options with phrases like:
     "detected_language": "hi|en|hinglish|mr|gu|ta|te|bn|other"
 }
 
-## RULES:
+## RULES (FOLLOW STRICTLY):
 1. ALWAYS respond in the SAME LANGUAGE as user's input - this is MANDATORY
 2. Extract ONLY the fields that are defined in FIELD RULES section above (from flowchart)
-3. DO NOT ask for fields that are NOT in FIELD RULES - follow flowchart strictly
-4. If user wants to remove/cancel something, add to product_rejections with * on the field
-5. Return ONLY valid JSON
-6. Check if all required questions are answered
-7. Determine lead status based on answered questions and user engagement
-8. NEVER mention products not in your catalogue
-9. If language is unclear, default to Hinglish (Hindi+English mix)
+3. 🚫 NEVER ask for fields that are NOT in FIELD RULES - follow flowchart ONLY
+4. 🚫 NEVER ask about qty/quantity UNLESS it is explicitly listed in FIELD RULES above
+5. 🚫 NEVER ask about material UNLESS it is explicitly listed in FIELD RULES above
+6. If user wants to remove/cancel something, add to product_rejections with * on the field
+7. Return ONLY valid JSON
+8. Check if all required questions from FIELD RULES are answered
+9. Determine lead status based on answered questions and user engagement
+10. NEVER mention products not in your catalogue
+11. If language is unclear, default to Hinglish (Hindi+English mix)
+12. When all FIELD RULES questions are answered, say order is complete - DO NOT invent new questions
 
 PROMPT;
     }

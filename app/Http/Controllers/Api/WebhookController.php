@@ -169,6 +169,72 @@ class WebhookController extends Controller
             // Get response message
             $responseMessage = $aiResponse['response_message'] ?? '';
 
+            // === FLOWCHART PRIORITY ENFORCEMENT ===
+            // ALWAYS override AI's question with flowchart-based question
+            // AI is used for data extraction/confirmations, but questions come from flowchart only
+
+            // First, process any data extracted by AI (save to lead)
+            $lead->refresh();
+
+            // Get the next pending question from FLOWCHART (code-enforced, not AI)
+            $pendingQuestion = $this->getNextPendingQuestion($tenant->id, $lead);
+            $detectedLang = $aiResponse['detected_language'] ?? 'hi';
+
+            // If AI returned a message but we have pending flowchart questions,
+            // use AI's confirmation/acknowledgment but append/replace with flowchart question
+            if ($pendingQuestion) {
+                // Check if AI response contains a valid acknowledgment we can keep
+                $hasAckInResponse = !empty($responseMessage) &&
+                    (stripos($responseMessage, 'noted') !== false ||
+                        stripos($responseMessage, 'theek') !== false ||
+                        stripos($responseMessage, 'perfect') !== false ||
+                        stripos($responseMessage, 'great') !== false ||
+                        stripos($responseMessage, 'zaroor') !== false ||
+                        stripos($responseMessage, 'ji') !== false);
+
+                // Generate flowchart question
+                $flowchartQuestion = match ($detectedLang) {
+                    'en' => "Now, what is your " . strtolower($pendingQuestion['display_name']) . "?",
+                    'hi', 'hinglish' => "Ab aapka " . $pendingQuestion['display_name'] . " kya hai?",
+                    default => "Aapka " . $pendingQuestion['display_name'] . " bataiye?",
+                };
+
+                // If AI had a good acknowledgment, keep it and add flowchart question
+                if ($hasAckInResponse) {
+                    // Extract just the acknowledgment part, remove any AI-generated question
+                    $ackPart = preg_replace('/\?.*$/u', '', $responseMessage);
+                    $ackPart = trim($ackPart);
+                    if (strlen($ackPart) > 10 && strlen($ackPart) < 100) {
+                        $responseMessage = $ackPart . ". " . $flowchartQuestion;
+                    } else {
+                        $responseMessage = $flowchartQuestion;
+                    }
+                } else {
+                    // No good acknowledgment, just use flowchart question
+                    $responseMessage = match ($detectedLang) {
+                        'en' => "Got it! " . $flowchartQuestion,
+                        'hi', 'hinglish' => "Ji! " . $flowchartQuestion,
+                        default => $flowchartQuestion,
+                    };
+                }
+
+                Log::info('Flowchart Priority: Overriding AI response with flowchart question', [
+                    'ai_response_preview' => substr($aiResponse['response_message'] ?? '', 0, 80),
+                    'flowchart_question' => $pendingQuestion['field_name'],
+                    'final_message' => $responseMessage,
+                ]);
+            } else {
+                // No pending questions - all flowchart questions answered
+                // Use AI's response for natural completion, or generate our own
+                if (empty($responseMessage)) {
+                    $responseMessage = match ($detectedLang) {
+                        'en' => "Perfect! Your order has been noted. Is there anything else you need?",
+                        'hi', 'hinglish' => "Bahut badhiya! Aapka order note ho gaya hai. Kuch aur chahiye?",
+                        default => "Ji, aapka order note ho gaya. Aur kuch?",
+                    };
+                }
+            }
+
             // DEBUG: Log when response is empty
             if (empty($responseMessage)) {
                 Log::warning('AI returned empty response_message', [
@@ -186,7 +252,6 @@ class WebhookController extends Controller
                 // Only save if the answer is valid in catalogue
                 $currentPending = $this->getNextPendingQuestion($tenant->id, $lead);
                 $validationResult = null;
-                $detectedLang = $aiResponse['detected_language'] ?? 'hi';
 
                 if ($currentPending && !empty($messageData['content'])) {
                     $userAnswer = trim($messageData['content']);
