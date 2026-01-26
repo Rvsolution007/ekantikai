@@ -403,20 +403,25 @@ class SystemConnectionsController extends Controller
 
                 // Check if API key is configured
                 $provider = $aiSettings->where('key', 'global_ai_provider')->first();
+                $allSettings = DB::table('settings')->get();
+
                 if ($provider) {
                     $providerValue = $provider->value;
                     if ($providerValue === 'google') {
-                        // Check for Google API key OR Vertex AI service account
+                        // Check for: 1) GEMINI_API_KEY, 2) GOOGLE_APPLICATION_CREDENTIALS, 3) Vertex AI settings
                         $apiKey = env('GEMINI_API_KEY') ?: env('GOOGLE_API_KEY');
-                        $serviceAccount = env('GOOGLE_APPLICATION_CREDENTIALS');
+                        $serviceAccountEnv = env('GOOGLE_APPLICATION_CREDENTIALS');
+                        $vertexEmail = $allSettings->where('key', 'vertex_service_email')->first();
+                        $vertexKey = $allSettings->where('key', 'vertex_private_key')->first();
+                        $hasVertexSettings = $vertexEmail && !empty($vertexEmail->value) && $vertexKey && !empty($vertexKey->value);
 
-                        if (empty($apiKey) && empty($serviceAccount)) {
+                        if (empty($apiKey) && empty($serviceAccountEnv) && !$hasVertexSettings) {
                             $result['status'] = 'Warning';
-                            $result['issues'][] = "⚠️ No Google auth found - set GEMINI_API_KEY or GOOGLE_APPLICATION_CREDENTIALS";
+                            $result['issues'][] = "⚠️ No Google auth found - configure Vertex AI in AI Config or set GEMINI_API_KEY";
                         }
-                        // All good - either API key or Service Account is configured
+                        // All good - one of the auth methods is configured
                     } elseif ($providerValue === 'openai') {
-                        $openaiKey = $aiSettings->where('key', 'openai_api_key')->first();
+                        $openaiKey = $allSettings->where('key', 'openai_api_key')->first();
                         if (!$openaiKey || empty($openaiKey->value)) {
                             $result['status'] = 'Warning';
                             $result['issues'][] = "⚠️ OpenAI API key not configured";
