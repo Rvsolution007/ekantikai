@@ -116,15 +116,15 @@ class SystemConnectionsController extends Controller
             'ai_model' => [
                 'name' => 'AI Model (Bot)',
                 'icon' => '🤖',
-                'description' => 'Gemini/OpenAI AI configuration',
-                'tables' => ['ai_configs'],
+                'description' => 'Gemini/OpenAI AI configuration (stored in settings table)',
+                'tables' => ['settings'],
                 'controllers' => ['AIConfigController'],
                 'views' => 'superadmin/ai-config/',
-                'model' => 'App\\Models\\AIConfig',
+                'model' => 'App\\Models\\Setting',
                 'connects_to' => ['webhook', 'product_questions', 'global_questions', 'catalogue'],
-                'status' => $this->checkConnectionWithDetails('ai_configs')['status'],
-                'issues' => $this->checkConnectionWithDetails('ai_configs')['issues'],
-                'count' => $this->checkConnectionWithDetails('ai_configs')['count'],
+                'status' => $this->checkAIConfigStatus()['status'],
+                'issues' => $this->checkAIConfigStatus()['issues'],
+                'count' => $this->checkAIConfigStatus()['count'],
             ],
             'webhook' => [
                 'name' => 'WhatsApp Webhook',
@@ -284,7 +284,7 @@ class SystemConnectionsController extends Controller
                 'followups' => 'Scheduled followups',
                 'chat_messages' => 'Chat history',
                 'whatsapp_users' => 'WhatsApp contacts',
-                'ai_configs' => 'AI configuration',
+                'settings' => 'System settings (incl. AI config)',
             ];
 
             foreach ($tables as $table => $description) {
@@ -350,21 +350,9 @@ class SystemConnectionsController extends Controller
             $result['status'] = 'Error';
             $result['error_message'] = $e->getMessage();
 
-            // Parse error message to give simple explanation
-            $errorMsg = $e->getMessage();
-
-            if (strpos($errorMsg, 'doesn\'t exist') !== false || strpos($errorMsg, 'does not exist') !== false) {
-                $result['issues'][] = "❌ Table '{$table}' does not exist in database";
-                $result['issues'][] = "💡 Fix: Run 'php artisan migrate' to create tables";
-            } elseif (strpos($errorMsg, 'Access denied') !== false) {
-                $result['issues'][] = "❌ Database access denied";
-                $result['issues'][] = "💡 Fix: Check database credentials in .env file";
-            } elseif (strpos($errorMsg, 'Connection refused') !== false) {
-                $result['issues'][] = "❌ Cannot connect to database";
-                $result['issues'][] = "💡 Fix: Check if database server is running";
-            } else {
-                $result['issues'][] = "❌ Database error: " . substr($errorMsg, 0, 100);
-            }
+            // Show the ACTUAL error message - no guessing
+            $result['issues'][] = "❌ Error: " . $e->getMessage();
+            $result['issues'][] = "📁 " . basename($e->getFile()) . " (Line: " . $e->getLine() . ")";
         }
 
         return $result;
@@ -380,6 +368,65 @@ class SystemConnectionsController extends Controller
         } catch (\Exception $e) {
             return 0;
         }
+    }
+
+    /**
+     * Check AI Config status specifically (stored in settings table)
+     */
+    private function checkAIConfigStatus()
+    {
+        $result = [
+            'status' => 'Active',
+            'issues' => [],
+            'count' => 0,
+        ];
+
+        try {
+            // AI config is stored in settings table with group='ai'
+            $aiSettings = DB::table('settings')->where('group', 'ai')->get();
+            $result['count'] = $aiSettings->count();
+
+            if ($result['count'] === 0) {
+                $result['status'] = 'Empty';
+                $result['issues'][] = "⚠️ No AI settings found in settings table (group='ai')";
+                $result['issues'][] = "💡 Go to SuperAdmin > AI Config to configure";
+            } else {
+                // Check for required settings
+                $requiredKeys = ['global_ai_provider', 'global_ai_model'];
+                $existingKeys = $aiSettings->pluck('key')->toArray();
+
+                foreach ($requiredKeys as $key) {
+                    if (!in_array($key, $existingKeys)) {
+                        $result['issues'][] = "⚠️ Missing setting: {$key}";
+                    }
+                }
+
+                // Check if API key is configured
+                $provider = $aiSettings->where('key', 'global_ai_provider')->first();
+                if ($provider) {
+                    $providerValue = $provider->value;
+                    if ($providerValue === 'google') {
+                        // Check for Google API key in env
+                        $apiKey = env('GEMINI_API_KEY') ?: env('GOOGLE_API_KEY');
+                        if (empty($apiKey)) {
+                            $result['status'] = 'Warning';
+                            $result['issues'][] = "⚠️ GEMINI_API_KEY not set in .env";
+                        }
+                    } elseif ($providerValue === 'openai') {
+                        $openaiKey = $aiSettings->where('key', 'openai_api_key')->first();
+                        if (!$openaiKey || empty($openaiKey->value)) {
+                            $result['status'] = 'Warning';
+                            $result['issues'][] = "⚠️ OpenAI API key not configured";
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            $result['status'] = 'Error';
+            $result['issues'][] = "❌ Error: " . $e->getMessage();
+        }
+
+        return $result;
     }
 
     /**
