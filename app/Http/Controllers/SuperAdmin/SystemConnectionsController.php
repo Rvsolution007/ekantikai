@@ -44,7 +44,9 @@ class SystemConnectionsController extends Controller
                 'views' => 'admin/catalogue/',
                 'model' => 'App\\Models\\Catalogue',
                 'connects_to' => ['product_questions', 'webhook', 'ai_prompt'],
-                'status' => $this->checkConnection('catalogues'),
+                'status' => $this->checkConnectionWithDetails('catalogues')['status'],
+                'issues' => $this->checkConnectionWithDetails('catalogues')['issues'],
+                'count' => $this->checkConnectionWithDetails('catalogues')['count'],
             ],
             'product_questions' => [
                 'name' => 'Product Questions',
@@ -55,7 +57,9 @@ class SystemConnectionsController extends Controller
                 'views' => 'admin/workflow/fields/',
                 'model' => 'App\\Models\\ProductQuestion',
                 'connects_to' => ['flowchart', 'catalogue', 'ai_prompt'],
-                'status' => $this->checkConnection('product_questions'),
+                'status' => $this->checkConnectionWithDetails('product_questions')['status'],
+                'issues' => $this->checkConnectionWithDetails('product_questions')['issues'],
+                'count' => $this->checkConnectionWithDetails('product_questions')['count'],
             ],
             'global_questions' => [
                 'name' => 'Global Questions',
@@ -66,7 +70,9 @@ class SystemConnectionsController extends Controller
                 'views' => 'admin/workflow/global/',
                 'model' => 'App\\Models\\GlobalQuestion',
                 'connects_to' => ['flowchart', 'ai_prompt'],
-                'status' => $this->checkConnection('global_questions'),
+                'status' => $this->checkConnectionWithDetails('global_questions')['status'],
+                'issues' => $this->checkConnectionWithDetails('global_questions')['issues'],
+                'count' => $this->checkConnectionWithDetails('global_questions')['count'],
             ],
             'flowchart' => [
                 'name' => 'Flowchart',
@@ -77,7 +83,9 @@ class SystemConnectionsController extends Controller
                 'views' => 'admin/workflow/flowchart/',
                 'model' => 'App\\Models\\QuestionnaireNode',
                 'connects_to' => ['product_questions', 'global_questions', 'webhook'],
-                'status' => $this->checkConnection('questionnaire_nodes'),
+                'status' => $this->checkConnectionWithDetails('questionnaire_nodes')['status'],
+                'issues' => $this->checkConnectionWithDetails('questionnaire_nodes')['issues'],
+                'count' => $this->checkConnectionWithDetails('questionnaire_nodes')['count'],
             ],
             'leads' => [
                 'name' => 'Leads',
@@ -88,7 +96,9 @@ class SystemConnectionsController extends Controller
                 'views' => 'admin/leads/',
                 'model' => 'App\\Models\\Lead',
                 'connects_to' => ['webhook', 'followups'],
-                'status' => $this->checkConnection('leads'),
+                'status' => $this->checkConnectionWithDetails('leads')['status'],
+                'issues' => $this->checkConnectionWithDetails('leads')['issues'],
+                'count' => $this->checkConnectionWithDetails('leads')['count'],
             ],
             'followups' => [
                 'name' => 'Followups',
@@ -99,7 +109,9 @@ class SystemConnectionsController extends Controller
                 'views' => 'admin/followups/',
                 'model' => 'App\\Models\\FollowupTemplate',
                 'connects_to' => ['leads', 'webhook'],
-                'status' => $this->checkConnection('followup_templates'),
+                'status' => $this->checkConnectionWithDetails('followup_templates')['status'],
+                'issues' => $this->checkConnectionWithDetails('followup_templates')['issues'],
+                'count' => $this->checkConnectionWithDetails('followup_templates')['count'],
             ],
             'ai_model' => [
                 'name' => 'AI Model (Bot)',
@@ -110,7 +122,9 @@ class SystemConnectionsController extends Controller
                 'views' => 'superadmin/ai-config/',
                 'model' => 'App\\Models\\AIConfig',
                 'connects_to' => ['webhook', 'product_questions', 'global_questions', 'catalogue'],
-                'status' => $this->checkConnection('ai_configs'),
+                'status' => $this->checkConnectionWithDetails('ai_configs')['status'],
+                'issues' => $this->checkConnectionWithDetails('ai_configs')['issues'],
+                'count' => $this->checkConnectionWithDetails('ai_configs')['count'],
             ],
             'webhook' => [
                 'name' => 'WhatsApp Webhook',
@@ -122,6 +136,8 @@ class SystemConnectionsController extends Controller
                 'model' => 'N/A',
                 'connects_to' => ['ai_model', 'leads', 'catalogue', 'product_questions', 'flowchart'],
                 'status' => 'Active',
+                'issues' => [],
+                'count' => $this->getTableCount('chat_messages'),
             ],
         ];
     }
@@ -297,7 +313,7 @@ class SystemConnectionsController extends Controller
     }
 
     /**
-     * Check if a table has data
+     * Check if a table has data - simple version
      */
     private function checkConnection($table)
     {
@@ -306,6 +322,63 @@ class SystemConnectionsController extends Controller
             return $count > 0 ? 'Active' : 'Empty';
         } catch (\Exception $e) {
             return 'Error';
+        }
+    }
+
+    /**
+     * Check connection with detailed issues
+     */
+    private function checkConnectionWithDetails($table)
+    {
+        $result = [
+            'status' => 'Active',
+            'issues' => [],
+            'count' => 0,
+            'error_message' => null,
+        ];
+
+        try {
+            // Check if table exists and is accessible
+            $count = DB::table($table)->count();
+            $result['count'] = $count;
+
+            if ($count === 0) {
+                $result['status'] = 'Empty';
+                $result['issues'][] = "Table '{$table}' is empty - no data found";
+            }
+        } catch (\Exception $e) {
+            $result['status'] = 'Error';
+            $result['error_message'] = $e->getMessage();
+
+            // Parse error message to give simple explanation
+            $errorMsg = $e->getMessage();
+
+            if (strpos($errorMsg, 'doesn\'t exist') !== false || strpos($errorMsg, 'does not exist') !== false) {
+                $result['issues'][] = "❌ Table '{$table}' does not exist in database";
+                $result['issues'][] = "💡 Fix: Run 'php artisan migrate' to create tables";
+            } elseif (strpos($errorMsg, 'Access denied') !== false) {
+                $result['issues'][] = "❌ Database access denied";
+                $result['issues'][] = "💡 Fix: Check database credentials in .env file";
+            } elseif (strpos($errorMsg, 'Connection refused') !== false) {
+                $result['issues'][] = "❌ Cannot connect to database";
+                $result['issues'][] = "💡 Fix: Check if database server is running";
+            } else {
+                $result['issues'][] = "❌ Database error: " . substr($errorMsg, 0, 100);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get table count safely
+     */
+    private function getTableCount($table)
+    {
+        try {
+            return DB::table($table)->count();
+        } catch (\Exception $e) {
+            return 0;
         }
     }
 

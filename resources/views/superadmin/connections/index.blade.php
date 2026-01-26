@@ -427,22 +427,68 @@
             @click.self="detailModal = false">
             <div class="glass rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-white" x-text="selectedComponent?.name"></h3>
-                    <button @click="detailModal = false" class="text-gray-400 hover:text-white">✕</button>
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl" x-text="selectedComponent?.icon"></span>
+                        <h3 class="text-lg font-semibold text-white" x-text="selectedComponent?.name"></h3>
+                    </div>
+                    <button @click="detailModal = false" class="text-gray-400 hover:text-white text-xl">✕</button>
                 </div>
-                <div x-show="selectedComponent" class="space-y-3 text-sm">
+                
+                <!-- Status Badge -->
+                <div class="mb-4">
+                    <span class="px-3 py-1 rounded-lg text-sm"
+                        :class="selectedComponent?.status === 'Active' ? 'bg-green-500/20 text-green-400' : 
+                                (selectedComponent?.status === 'Empty' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400')"
+                        x-text="selectedComponent?.status"></span>
+                    <span class="text-gray-400 text-sm ml-2" x-show="selectedComponent?.count !== undefined">
+                        (<span x-text="selectedComponent?.count"></span> records)
+                    </span>
+                </div>
+
+                <div x-show="selectedComponent" class="space-y-4 text-sm">
                     <p class="text-gray-400" x-text="selectedComponent?.description"></p>
-                    <div>
-                        <span class="text-gray-500">Tables:</span>
-                        <span class="text-cyan-400" x-text="selectedComponent?.tables?.join(', ')"></span>
+                    
+                    <!-- Issues Section -->
+                    <div x-show="selectedComponent?.issues?.length > 0" class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                        <h4 class="text-red-400 font-medium mb-2">⚠️ Issues Found:</h4>
+                        <ul class="space-y-1">
+                            <template x-for="issue in selectedComponent?.issues" :key="issue">
+                                <li class="text-gray-300" x-text="issue"></li>
+                            </template>
+                        </ul>
                     </div>
-                    <div>
-                        <span class="text-gray-500">Model:</span>
-                        <span class="text-purple-400" x-text="selectedComponent?.model"></span>
+
+                    <!-- No Issues -->
+                    <div x-show="selectedComponent?.issues?.length === 0 && selectedComponent?.status === 'Active'" 
+                        class="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+                        <p class="text-green-400">✅ No issues - working correctly!</p>
                     </div>
-                    <div>
-                        <span class="text-gray-500">Views:</span>
-                        <span class="text-yellow-400" x-text="selectedComponent?.views"></span>
+
+                    <div class="glass-light rounded-xl p-4 space-y-2">
+                        <div>
+                            <span class="text-gray-500">Tables:</span>
+                            <span class="text-cyan-400" x-text="selectedComponent?.tables?.join(', ')"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Controller:</span>
+                            <span class="text-blue-400" x-text="selectedComponent?.controllers?.join(', ')"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Model:</span>
+                            <span class="text-purple-400" x-text="selectedComponent?.model"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Views:</span>
+                            <span class="text-yellow-400" x-text="selectedComponent?.views"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Connects to:</span>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                <template x-for="target in selectedComponent?.connects_to" :key="target">
+                                    <span class="px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-400 text-xs" x-text="target"></span>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
