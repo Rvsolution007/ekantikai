@@ -406,12 +406,15 @@ class SystemConnectionsController extends Controller
                 if ($provider) {
                     $providerValue = $provider->value;
                     if ($providerValue === 'google') {
-                        // Check for Google API key in env
+                        // Check for Google API key OR Vertex AI service account
                         $apiKey = env('GEMINI_API_KEY') ?: env('GOOGLE_API_KEY');
-                        if (empty($apiKey)) {
+                        $serviceAccount = env('GOOGLE_APPLICATION_CREDENTIALS');
+
+                        if (empty($apiKey) && empty($serviceAccount)) {
                             $result['status'] = 'Warning';
-                            $result['issues'][] = "⚠️ GEMINI_API_KEY not set in .env";
+                            $result['issues'][] = "⚠️ No Google auth found - set GEMINI_API_KEY or GOOGLE_APPLICATION_CREDENTIALS";
                         }
+                        // All good - either API key or Service Account is configured
                     } elseif ($providerValue === 'openai') {
                         $openaiKey = $aiSettings->where('key', 'openai_api_key')->first();
                         if (!$openaiKey || empty($openaiKey->value)) {
