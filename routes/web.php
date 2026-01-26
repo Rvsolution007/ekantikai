@@ -90,16 +90,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/chats/send-media', [ChatController::class, 'sendMedia'])->name('chats.send-media');
 
         // Catalogue Import/Export (must be before resource route)
-        Route::get('/catalogue/import/sample', [CatalogueImportController::class, 'downloadSample'])->name('catalogue.import.sample');
-        Route::post('/catalogue/import', [CatalogueImportController::class, 'import'])->name('catalogue.import');
+        Route::get('/catalogue/template', [CatalogueController::class, 'downloadTemplate'])->name('catalogue.template');
+        Route::post('/catalogue/import', [CatalogueController::class, 'import'])->name('catalogue.import');
+        Route::delete('/catalogue/clear-all', [CatalogueController::class, 'clearAll'])->name('catalogue.clear-all');
+        Route::post('/catalogue/bulk-delete', [CatalogueController::class, 'bulkDelete'])->name('catalogue.bulk-delete');
+        Route::get('/catalogue/ajax-search', [CatalogueController::class, 'ajaxSearch'])->name('catalogue.ajax-search');
 
         // Catalogue Management
         Route::resource('catalogue', CatalogueController::class);
         Route::post('/catalogue/{catalogue}/toggle-status', [CatalogueController::class, 'toggleStatus'])->name('catalogue.toggle-status');
         Route::post('/catalogue/{catalogue}/upload-image', [CatalogueController::class, 'uploadImage'])->name('catalogue.upload-image');
-        Route::delete('/catalogue/clear-all', [CatalogueController::class, 'clearAll'])->name('catalogue.clear-all');
-        Route::post('/catalogue/bulk-delete', [CatalogueController::class, 'bulkDelete'])->name('catalogue.bulk-delete');
-        Route::get('/catalogue/ajax-search', [CatalogueController::class, 'ajaxSearch'])->name('catalogue.ajax-search');
 
         // Catalogue Fields
         Route::post('/catalogue-fields', [CatalogueFieldController::class, 'store'])->name('catalogue-fields.store');
@@ -176,6 +176,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/flowchart/connection/{connection}', [\App\Http\Controllers\Admin\FlowchartController::class, 'deleteConnection'])->name('flowchart.connection.delete');
             Route::post('/flowchart/save-all', [\App\Http\Controllers\Admin\FlowchartController::class, 'saveAll'])->name('flowchart.save-all');
             Route::post('/flowchart/clear', [\App\Http\Controllers\Admin\FlowchartController::class, 'clearFlow'])->name('flowchart.clear');
+
+            // Data Validation (Catalog Debugging)
+            Route::get('/validation', [\App\Http\Controllers\Admin\DataValidationController::class, 'index'])->name('validation.index');
+            Route::get('/validation/lookup-model', [\App\Http\Controllers\Admin\DataValidationController::class, 'lookupModel'])->name('validation.lookup-model');
+            Route::get('/validation/category-products', [\App\Http\Controllers\Admin\DataValidationController::class, 'getCategoryProducts'])->name('validation.category-products');
+            Route::get('/validation/validate-all', [\App\Http\Controllers\Admin\DataValidationController::class, 'validateAll'])->name('validation.validate-all');
         });
     });
 });
@@ -242,5 +248,10 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::get('/settings', function () {
         return view('superadmin.settings.index');
     })->name('settings.index');
+
+    // System Connections Status
+    Route::get('/connections', [\App\Http\Controllers\SuperAdmin\SystemConnectionsController::class, 'index'])->name('connections.index');
+    Route::get('/connections/status', [\App\Http\Controllers\SuperAdmin\SystemConnectionsController::class, 'status'])->name('connections.status');
+    Route::post('/connections/validate', [\App\Http\Controllers\SuperAdmin\SystemConnectionsController::class, 'validateConnection'])->name('connections.validate');
 });
 

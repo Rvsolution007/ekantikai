@@ -108,13 +108,12 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span class="font-medium">Import Errors ({{ count($importErrors) }} rows)</span>
+                    <span class="font-medium">Import Errors ({{ count($importErrors) }} rows skipped)</span>
                 </div>
                 <div class="max-h-40 overflow-y-auto space-y-2">
                     @foreach($importErrors as $error)
-                        <div class="text-sm">
-                            <span class="text-gray-400">Row {{ $error['row'] }}:</span>
-                            <span class="text-red-400">{{ implode(', ', $error['errors']) }}</span>
+                        <div class="text-sm text-red-400">
+                            {{ is_array($error) ? ($error['row'] ?? '') . ': ' . implode(', ', $error['errors'] ?? [$error]) : $error }}
                         </div>
                     @endforeach
                 </div>

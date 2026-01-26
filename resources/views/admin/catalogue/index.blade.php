@@ -250,29 +250,30 @@
 
     <!-- Import Modal -->
     <div id="importModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center" x-data="{ 
-                show: false, 
-                isDragging: false,
-                fileName: '',
-                handleDrop(e) {
-                    this.isDragging = false;
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0) {
-                        const file = files[0];
-                        if (file.name.match(/\.(xlsx|xls)$/i)) {
-                            this.$refs.fileInput.files = files;
-                            this.fileName = file.name;
-                        } else {
-                            alert('Please upload only Excel files (.xlsx or .xls)');
+                        show: false, 
+                        isDragging: false,
+                        fileName: '',
+                        handleDrop(e) {
+                            this.isDragging = false;
+                            const files = e.dataTransfer.files;
+                            if (files.length > 0) {
+                                const file = files[0];
+                                if (file.name.match(/\.(csv)$/i)) {
+                                    this.$refs.fileInput.files = files;
+                                    this.fileName = file.name;
+                                } else {
+                                    alert('Please upload only CSV files (.csv)');
+                                }
+                            }
+                        },
+                        handleFileSelect(e) {
+                            if (e.target.files.length > 0) {
+                                this.fileName = e.target.files[0].name;
+                            }
                         }
-                    }
-                },
-                handleFileSelect(e) {
-                    if (e.target.files.length > 0) {
-                        this.fileName = e.target.files[0].name;
-                    }
-                }
-            }" x-show="show" x-cloak :class="show ? 'flex' : 'hidden'" @open-import.window="show = true; fileName = ''"
-        @close-modal.window="show = false" @keydown.escape.window="show = false">
+                    }" x-show="show" x-cloak :class="show ? 'flex' : 'hidden'"
+        @open-import.window="show = true; fileName = ''" @close-modal.window="show = false"
+        @keydown.escape.window="show = false">
         <div class="glass rounded-2xl p-6 w-full max-w-md mx-4" @click.away="show = false">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-xl font-bold text-white">Import Products from Excel</h3>
@@ -284,7 +285,7 @@
             </div>
 
             <div class="mb-6">
-                <a href="{{ route('admin.catalogue.import.sample') }}"
+                <a href="{{ route('admin.catalogue.template') }}"
                     class="flex items-center justify-center space-x-2 w-full px-4 py-3 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -327,11 +328,11 @@
                     <!-- Text -->
                     <template x-if="!fileName">
                         <div>
-                            <p class="text-white font-medium" x-show="isDragging">Drop your Excel file here!</p>
+                            <p class="text-white font-medium" x-show="isDragging">Drop your CSV file here!</p>
                             <p class="text-gray-400" x-show="!isDragging">
                                 <span class="text-primary-400 font-medium">Click to upload</span> or drag and drop
                             </p>
-                            <p class="text-xs text-gray-500 mt-2">Excel files only (.xlsx, .xls)</p>
+                            <p class="text-xs text-gray-500 mt-2">CSV files only (.csv)</p>
                         </div>
                     </template>
                     <template x-if="fileName">
@@ -342,7 +343,7 @@
                     </template>
 
                     <!-- Hidden File Input -->
-                    <input type="file" name="file" accept=".xlsx,.xls" required x-ref="fileInput" class="hidden"
+                    <input type="file" name="file" accept=".csv" required x-ref="fileInput" class="hidden"
                         @change="handleFileSelect($event)">
                 </div>
 
@@ -362,15 +363,7 @@
     </div>
 
     @push('scripts')
-        <script>
-            function toggleOptions(value) {
-                const optionsField = document.getElementById('optionsField');
-                if (value === 'select') {
-                    optionsField.classList.remove('hidden');
-                } else {
-                    optionsField.classList.add('hidden');
-                }
-            }
+        <script>     function toggleOptions(value) {         const optionsField = document.getElementById('optionsField');         if (value === 'select') {             optionsField.classList.remove('hidden');         } else {             optionsField.classList.add('hidden');         }     }
         </script>
     @endpush
 @endsection

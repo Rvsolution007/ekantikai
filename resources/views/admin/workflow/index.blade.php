@@ -21,8 +21,8 @@
             </div>
         </div>
 
-        <!-- 3 Section Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- 4 Section Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <!-- Product Question -->
             <a href="{{ route('admin.workflow.fields.index') }}"
                 class="glass rounded-2xl p-6 hover:bg-white/10 transition-all group cursor-pointer">
@@ -92,6 +92,29 @@
                     </div>
                 </div>
             </a>
+
+            <!-- Data Validation -->
+            <a href="{{ route('admin.workflow.validation.index') }}"
+                class="glass rounded-2xl p-6 hover:bg-white/10 transition-all group cursor-pointer">
+                <div class="flex flex-col items-center text-center">
+                    <div
+                        class="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-green-500/25">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Data Validation</h3>
+                    <p class="text-gray-400 text-sm">View catalog data, check model codes, validate field mappings</p>
+                    <div class="mt-4 flex items-center gap-2 text-green-400">
+                        <span class="text-sm font-medium">Open Dashboard</span>
+                        <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </div>
+            </a>
         </div>
 
         <!-- Quick Info -->
@@ -103,7 +126,7 @@
                 </svg>
                 How Workflow Works
             </h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="flex items-start gap-3">
                     <span
                         class="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold">1</span>
@@ -126,6 +149,14 @@
                     <div>
                         <p class="text-white font-medium">Build Flowchart</p>
                         <p class="text-gray-400 text-sm">Design conversation flow with visual builder</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span
+                        class="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center font-bold">4</span>
+                    <div>
+                        <p class="text-white font-medium">Validate Data</p>
+                        <p class="text-gray-400 text-sm">Check catalog data and field mappings</p>
                     </div>
                 </div>
             </div>

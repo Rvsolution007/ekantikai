@@ -318,4 +318,328 @@ class CatalogueController extends Controller
 
         return back()->with('success', 'Product image uploaded successfully!');
     }
+
+    /**
+     * Import products from Excel using PhpSpreadsheet directly
+     */
+    public function import(Request $request)
+    {
+        $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
+
+        if (!$adminId) {
+            return back()->with('error', 'Tenant not found.');
+        }
+
+        $request->validate([
+            'file' => 'required|mimes:csv,txt|max:10240', // CSV only, 10MB max
+        ]);
+
+        try {
+            $file = $request->file('file');
+
+            // Read file content and handle encoding
+            $content = file_get_contents($file->getPathname());
+
+            // Remove UTF-8 BOM if present
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+            // Try to detect and convert encoding
+            $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-1252', 'ISO-8859-1'], true);
+            if ($encoding && $encoding !== 'UTF-8') {
+                $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+            }
+
+            // Write to temp file
+            $tempFile = tempnam(sys_get_temp_dir(), 'csv_');
+            file_put_contents($tempFile, $content);
+
+            // Read cleaned CSV file
+            $handle = fopen($tempFile, 'r');
+            if (!$handle) {
+                unlink($tempFile);
+                return back()->with('error', 'Could not open file.');
+            }
+
+            // Get catalogue fields for this admin
+            $catalogueFields = CatalogueField::forTenant($adminId)->ordered()->get();
+
+            if ($catalogueFields->isEmpty()) {
+                fclose($handle);
+                return back()->with('error', 'Please configure catalogue fields first.');
+            }
+
+            // Read header row
+            $headerRow = fgetcsv($handle);
+            if (!$headerRow) {
+                fclose($handle);
+                return back()->with('error', 'CSV file is empty or invalid.');
+            }
+
+            // Clean and lowercase headers
+            $headers = array_map(function ($h) {
+                return strtolower(trim($h ?? ''));
+            }, $headerRow);
+
+            // Build field mapping (CSV column index => field_key)
+            $fieldMap = [];
+            foreach ($catalogueFields as $field) {
+                $fieldKeyLower = strtolower($field->field_key);
+                $fieldNameLower = strtolower($field->field_name);
+                $fieldKeySpaced = strtolower(str_replace('_', ' ', $field->field_key));
+
+                // Find matching column in CSV headers
+                foreach ($headers as $colIndex => $header) {
+                    if ($header === $fieldKeyLower || $header === $fieldNameLower || $header === $fieldKeySpaced) {
+                        $fieldMap[$colIndex] = $field->field_key;
+                        break;
+                    }
+                }
+            }
+
+            if (empty($fieldMap)) {
+                fclose($handle);
+                return back()->with('error', 'No matching columns found in CSV. Check column headers match your field names.');
+            }
+
+            $successCount = 0;
+            $skipCount = 0;
+            $errors = [];
+            $rowNumber = 1; // Header was row 1
+
+            // Process data rows
+            while (($row = fgetcsv($handle)) !== false) {
+                $rowNumber++;
+
+                // Build data array
+                $data = [];
+                $hasData = false;
+
+                foreach ($fieldMap as $colIndex => $fieldKey) {
+                    $value = isset($row[$colIndex]) ? trim($row[$colIndex] ?? '') : '';
+
+                    // Sanitize UTF-8 - remove or replace invalid characters
+                    $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+                    $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value); // Remove control characters
+
+                    // If still not valid UTF-8, try to convert from Windows encoding
+                    if (!mb_check_encoding($value, 'UTF-8')) {
+                        $value = mb_convert_encoding($value, 'UTF-8', 'Windows-1252');
+                    }
+
+                    $data[$fieldKey] = $value;
+
+                    if (!empty($value)) {
+                        $hasData = true;
+                    }
+                }
+
+                // Skip empty rows - but log it
+                if (!$hasData) {
+                    $errors[] = "Row {$rowNumber}: Empty row (no data found)";
+                    $skipCount++;
+                    continue;
+                }
+
+                // Validate uniqueness
+                $validationError = null;
+                foreach ($catalogueFields as $field) {
+                    if ($field->is_unique && !empty($data[$field->field_key])) {
+                        $jsonPath = '$."' . $field->field_key . '"';
+                        $exists = Catalogue::where('admin_id', $adminId)
+                            ->whereRaw("JSON_EXTRACT(data, ?) = ?", [$jsonPath, $data[$field->field_key]])
+                            ->exists();
+
+                        if ($exists) {
+                            $validationError = "Row {$rowNumber}: {$field->field_name} '{$data[$field->field_key]}' already exists.";
+                            break;
+                        }
+                    }
+                }
+
+                if ($validationError) {
+                    $errors[] = $validationError;
+                    $skipCount++;
+                    continue;
+                }
+
+                // Create catalogue entry with error handling
+                try {
+                    Catalogue::create([
+                        'admin_id' => $adminId,
+                        'data' => $data,
+                        'is_active' => true,
+                    ]);
+                    $successCount++;
+                } catch (\Exception $e) {
+                    $errors[] = "Row {$rowNumber}: Database error - " . $e->getMessage();
+                    $skipCount++;
+                }
+            }
+
+            fclose($handle);
+
+            // Clean up temp file
+            if (isset($tempFile) && file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+
+            if ($successCount > 0) {
+                $message = "Successfully imported {$successCount} products.";
+                if ($skipCount > 0) {
+                    $message .= " {$skipCount} rows skipped.";
+                }
+
+                return back()
+                    ->with('success', $message)
+                    ->with('import_errors', $errors);
+            } else {
+                return back()
+                    ->with('error', 'No products imported.')
+                    ->with('import_errors', $errors);
+            }
+
+        } catch (\Exception $e) {
+            // Clean up temp file on error
+            if (isset($tempFile) && file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+            return back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download sample CSV template with demo data
+     */
+    public function downloadTemplate()
+    {
+        $admin = auth()->guard('admin')->user();
+        $adminId = $admin->admin_id ?? $admin->id;
+
+        $fields = CatalogueField::forTenant($adminId)->ordered()->get();
+
+        if ($fields->isEmpty()) {
+            return back()->with('error', 'Please configure catalogue fields first.');
+        }
+
+        // Get field keys to understand the structure
+        $fieldKeys = $fields->pluck('field_key')->toArray();
+        $headers = $fields->pluck('field_name')->toArray();
+
+        // Demo data based on common catalogue structure
+        $demoRows = [];
+
+        // Check if we have standard fields and add appropriate demo data
+        $hasCategory = in_array('product_category', $fieldKeys) || in_array('category', $fieldKeys);
+        $hasModel = in_array('model_code', $fieldKeys) || in_array('model', $fieldKeys);
+        $hasSize = in_array('size', $fieldKeys) || in_array('sizes', $fieldKeys);
+        $hasFinish = in_array('finish', $fieldKeys) || in_array('finish_color', $fieldKeys) || in_array('color', $fieldKeys);
+
+        if ($hasCategory && $hasModel) {
+            // Add realistic demo data for different categories
+            $demoData = [
+                // Profile handles
+                ['Product Category' => 'Profile handles', 'Model Code' => '029', 'Size' => '6inch,8inch,10inch,12inch', 'Finish/Color' => 'Silver,Gold,Black', 'Material' => 'Aluminium', 'Pack Per Size' => '10 pcs/box'],
+                ['Product Category' => 'Profile handles', 'Model Code' => '034 BS', 'Size' => '6inch,8inch,10inch,14inch,16inch', 'Finish/Color' => 'Chrome,Matt Black', 'Material' => 'Aluminium', 'Pack Per Size' => '10 pcs/box'],
+                ['Product Category' => 'Profile handles', 'Model Code' => '035 BS', 'Size' => '8inch,10inch,12inch', 'Finish/Color' => 'Gold,Champagne', 'Material' => 'Aluminium', 'Pack Per Size' => '10 pcs/box'],
+                // Wardrobe handles
+                ['Product Category' => 'Wardrobe handles', 'Model Code' => '9045', 'Size' => '160mm,224mm,288mm', 'Finish/Color' => 'Black,Chrome,Gold', 'Material' => 'Zinc Alloy', 'Pack Per Size' => '10 pcs/box'],
+                ['Product Category' => 'Wardrobe handles', 'Model Code' => '9050', 'Size' => '200mm,300mm', 'Finish/Color' => 'Matt Black,Rose Gold', 'Material' => 'Zinc Alloy', 'Pack Per Size' => '10 pcs/box'],
+                // Cabinet handles
+                ['Product Category' => 'Cabinet handles', 'Model Code' => '0012', 'Size' => '96mm,128mm', 'Finish/Color' => 'Chrome,Gold', 'Material' => 'Zinc Alloy', 'Pack Per Size' => '10 pcs/box'],
+                // Knob handles
+                ['Product Category' => 'Knob handles', 'Model Code' => '401', 'Size' => '25mm,30mm', 'Finish/Color' => 'Gold,Antique', 'Material' => 'Brass', 'Pack Per Size' => '20 pcs/box'],
+                // Main door handles
+                ['Product Category' => 'Main door handles', 'Model Code' => '95', 'Size' => '10inch,12inch', 'Finish/Color' => 'Gold PVD,Black PVD', 'Material' => 'Stainless Steel', 'Pack Per Size' => '5 pairs/box'],
+            ];
+
+            // Map demo data to actual field structure
+            foreach ($demoData as $demo) {
+                $row = [];
+                foreach ($fields as $field) {
+                    $value = '';
+                    $fieldNameLower = strtolower($field->field_name);
+                    $fieldKeyLower = strtolower($field->field_key);
+
+                    // Match demo data to field
+                    foreach ($demo as $demoKey => $demoValue) {
+                        $demoKeyLower = strtolower($demoKey);
+                        if (
+                            $fieldNameLower === $demoKeyLower ||
+                            str_contains($fieldKeyLower, str_replace(' ', '_', $demoKeyLower)) ||
+                            str_contains($demoKeyLower, str_replace('_', ' ', $fieldKeyLower))
+                        ) {
+                            $value = $demoValue;
+                            break;
+                        }
+                    }
+
+                    // If no match found, use generic sample
+                    if (empty($value)) {
+                        switch ($field->field_type) {
+                            case 'number':
+                                $value = '100';
+                                break;
+                            case 'select':
+                                $options = $field->options ?? [];
+                                $value = !empty($options) ? $options[0] : '';
+                                break;
+                            default:
+                                $value = '';
+                        }
+                    }
+
+                    $row[] = $value;
+                }
+                $demoRows[] = $row;
+            }
+        } else {
+            // Generic demo data based on field types
+            for ($i = 1; $i <= 3; $i++) {
+                $row = [];
+                foreach ($fields as $field) {
+                    switch ($field->field_type) {
+                        case 'text':
+                            $row[] = "Sample {$field->field_name} {$i}";
+                            break;
+                        case 'number':
+                            $row[] = (string) (100 * $i);
+                            break;
+                        case 'select':
+                            $options = $field->options ?? [];
+                            $row[] = !empty($options) ? $options[0] : 'Option1';
+                            break;
+                        default:
+                            $row[] = "Value {$i}";
+                    }
+                }
+                $demoRows[] = $row;
+            }
+        }
+
+        // Generate CSV with BOM for Excel compatibility
+        $filename = 'catalogue_template_' . date('Y-m-d') . '.csv';
+        $handle = fopen('php://temp', 'r+');
+
+        // Add UTF-8 BOM for Excel
+        fwrite($handle, "\xEF\xBB\xBF");
+
+        // Write headers
+        fputcsv($handle, $headers);
+
+        // Write demo data rows
+        foreach ($demoRows as $row) {
+            fputcsv($handle, $row);
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
 }
+
