@@ -843,9 +843,14 @@ class AIService
      */
     protected function getFlowchartRules(int $adminId): array
     {
-        $nodes = QuestionnaireNode::where('admin_id', $adminId)
-            ->where('is_active', true)
-            ->where('node_type', QuestionnaireNode::TYPE_QUESTION)
+        // CRITICAL FIX: Order nodes by linked ProductQuestion's sort_order
+        // This ensures Category comes before Model in AI prompts
+        $nodes = QuestionnaireNode::where('questionnaire_nodes.admin_id', $adminId)
+            ->where('questionnaire_nodes.is_active', true)
+            ->where('questionnaire_nodes.node_type', QuestionnaireNode::TYPE_QUESTION)
+            ->leftJoin('product_questions', 'questionnaire_nodes.questionnaire_field_id', '=', 'product_questions.id')
+            ->orderBy('product_questions.sort_order', 'asc')
+            ->select('questionnaire_nodes.*')
             ->with('questionnaireField')
             ->get();
 
