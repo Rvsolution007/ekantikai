@@ -143,6 +143,7 @@ class CatalogueFieldController extends Controller
 
     /**
      * Sync fields from Questionnaire (Workflow) Product Questions
+     * Also syncs the sort_order to match ProductQuestion order
      */
     public function syncFromQuestionnaire()
     {
@@ -153,7 +154,7 @@ class CatalogueFieldController extends Controller
             return back()->with('error', 'Tenant not found.');
         }
 
-        // Get all questionnaire fields for this tenant
+        // Get all questionnaire fields for this tenant ORDERED BY sort_order
         $questionnaireFields = \App\Models\ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->ordered()
@@ -163,22 +164,11 @@ class CatalogueFieldController extends Controller
             return back()->with('error', 'No workflow fields found. Please create product questions in Workflow first.');
         }
 
-        $synced = 0;
-        $skipped = 0;
-        $maxOrder = CatalogueField::where('admin_id', $adminId)->max('sort_order') ?? 0;
+        $created = 0;
+        $updated = 0;
 
         foreach ($questionnaireFields as $qField) {
             $fieldKey = CatalogueField::generateFieldKey($qField->field_name);
-
-            // Check if already exists
-            $exists = CatalogueField::where('admin_id', $adminId)
-                ->where('field_key', $fieldKey)
-                ->exists();
-
-            if ($exists) {
-                $skipped++;
-                continue;
-            }
 
             // Map questionnaire field type to catalogue field type
             $fieldType = 'text';
@@ -188,25 +178,41 @@ class CatalogueFieldController extends Controller
                 $fieldType = 'select';
             }
 
-            // Create catalogue field
-            CatalogueField::create([
+            // Try to find existing field by product_question_id first, then by field_key
+            $existingField = CatalogueField::where('admin_id', $adminId)
+                ->where('product_question_id', $qField->id)
+                ->first();
+
+            if (!$existingField) {
+                $existingField = CatalogueField::where('admin_id', $adminId)
+                    ->where('field_key', $fieldKey)
+                    ->first();
+            }
+
+            $fieldData = [
                 'admin_id' => $adminId,
+                'product_question_id' => $qField->id,
                 'field_name' => $qField->display_name ?: $qField->field_name,
                 'field_key' => $fieldKey,
                 'field_type' => $fieldType,
                 'is_unique' => $qField->is_unique_field ?? false,
                 'is_required' => $qField->is_required ?? false,
-                'sort_order' => ++$maxOrder,
+                'sort_order' => $qField->sort_order, // Use EXACT sort_order from ProductQuestion
                 'options' => $qField->options_manual ?? null,
-            ]);
+            ];
 
-            $synced++;
+            if ($existingField) {
+                // Update existing field - including sort_order!
+                $existingField->update($fieldData);
+                $updated++;
+            } else {
+                // Create new catalogue field
+                CatalogueField::create($fieldData);
+                $created++;
+            }
         }
 
-        $message = "Synced {$synced} fields from Workflow.";
-        if ($skipped > 0) {
-            $message .= " Skipped {$skipped} existing fields.";
-        }
+        $message = "Synced from Workflow: {$created} created, {$updated} updated with correct order.";
 
         return back()->with('success', $message);
     }

@@ -12,6 +12,7 @@ class CatalogueField extends Model
 
     protected $fillable = [
         'admin_id',
+        'product_question_id',
         'field_name',
         'field_key',
         'field_type',
