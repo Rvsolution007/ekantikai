@@ -191,8 +191,32 @@ class WebhookController extends Controller
                 if ($currentPending && !empty($messageData['content'])) {
                     $userAnswer = trim($messageData['content']);
 
-                    // Validate against catalogue before saving
-                    if (strlen($userAnswer) < 100) {
+                    // CRITICAL FIX: Check if user is asking for options (not providing an answer)
+                    if ($this->isQuestionTypeResponse($userAnswer)) {
+                        // User is asking "konse he?", "options batao?" etc.
+                        // Don't save - instead show available options
+                        $availableOptions = $this->getFieldOptionsFromCatalogue(
+                            $tenant->id,
+                            $currentPending['field_name'],
+                            $lead
+                        );
+
+                        Log::info('Detected question-type response, showing options', [
+                            'field' => $currentPending['field_name'],
+                            'user_message' => $userAnswer,
+                            'options_count' => count($availableOptions),
+                        ]);
+
+                        // Set validation result to show options
+                        $validationResult = [
+                            'valid' => false,
+                            'is_question_request' => true,
+                            'available_options' => $availableOptions,
+                            'invalid_items' => [],
+                        ];
+                    }
+                    // Only validate against catalogue if not a question
+                    elseif (strlen($userAnswer) < 100) {
                         $validationResult = $this->validateUserAnswerWithCatalogue(
                             $tenant->id,
                             $currentPending['field_name'],
@@ -230,16 +254,28 @@ class WebhookController extends Controller
                 $pendingQuestion = $this->getNextPendingQuestion($tenant->id, $lead);
 
                 if ($validationResult && !$validationResult['valid'] && !empty($validationResult['available_options'])) {
-                    // Invalid answer detected - ask user to choose from available options
                     $options = implode(', ', array_slice($validationResult['available_options'], 0, 15));
-                    $invalidItems = $validationResult['invalid_items'] ?? [];
-                    $invalidText = !empty($invalidItems) ? implode(', ', $invalidItems) : $messageData['content'];
 
-                    $responseMessage = match ($detectedLang) {
-                        'en' => "Sorry, '{$invalidText}' is not available. Please choose from: {$options}",
-                        'hi', 'hinglish' => "Maaf kijiye, '{$invalidText}' available nahi hai. Yeh options available hain: {$options}",
-                        default => "'{$invalidText}' available nahi hai. Available options: {$options}",
-                    };
+                    // Check if user was asking for options (friendly response) vs giving invalid answer
+                    if (!empty($validationResult['is_question_request'])) {
+                        // User asked "konse he?" - show options in friendly manner
+                        $fieldName = $currentPending['display_name'] ?? $currentPending['field_name'] ?? 'options';
+                        $responseMessage = match ($detectedLang) {
+                            'en' => "Here are the available {$fieldName} options: {$options}. Which one would you like?",
+                            'hi', 'hinglish' => "Ji, {$fieldName} me ye options available hain: {$options}. Kaunsa chahiye?",
+                            default => "{$fieldName} me ye options hain: {$options}. Kaunsa chahiye?",
+                        };
+                    } else {
+                        // Invalid answer detected - tell user what's not available and show options
+                        $invalidItems = $validationResult['invalid_items'] ?? [];
+                        $invalidText = !empty($invalidItems) ? implode(', ', $invalidItems) : $messageData['content'];
+
+                        $responseMessage = match ($detectedLang) {
+                            'en' => "Sorry, '{$invalidText}' is not available. Please choose from: {$options}",
+                            'hi', 'hinglish' => "Maaf kijiye, '{$invalidText}' available nahi hai. Yeh options available hain: {$options}",
+                            default => "'{$invalidText}' available nahi hai. Available options: {$options}",
+                        };
+                    }
                 } elseif ($pendingQuestion) {
                     // Ask the next pending question
                     $responseMessage = match ($detectedLang) {
@@ -317,22 +353,61 @@ class WebhookController extends Controller
     protected function processAIResponse(Admin $tenant, Customer $customer, Lead $lead, array $aiResponse): void
     {
         // Update extracted data (Point 8.8)
-        // FIX: Save to correct category - workflow_questions for product fields, global_questions for personal info
+        // CRITICAL FIX: Only save workflow fields if they match current pending question
+        // This prevents flowchart skip when AI auto-extracts from casual mentions
         if (!empty($aiResponse['extracted_data'])) {
             // Get workflow field names for this admin
             $workflowFields = $this->getWorkflowFieldNames($tenant->id);
 
+            // Get current pending question from flowchart for validation
+            $currentPending = $this->getNextPendingQuestion($tenant->id, $lead);
+            $pendingFieldName = $currentPending ? strtolower($currentPending['field_name']) : null;
+
             foreach ($aiResponse['extracted_data'] as $key => $value) {
-                if ($value !== null) {
-                    // Determine correct category based on field type
+                if ($value !== null && !empty(trim($value))) {
                     $fieldKey = strtolower($key);
 
                     // Check if this is a workflow/product field
                     if (in_array($fieldKey, $workflowFields)) {
-                        // Product/workflow field - save to workflow_questions
-                        $lead->addCollectedData($key, $value, 'workflow_questions');
+                        // FLOWCHART ORDER CHECK: Only save if this is the current pending question
+                        // OR if all previous questions are already answered
+                        if ($pendingFieldName === null || $fieldKey === $pendingFieldName) {
+                            // VALIDATION CHECK: Validate against catalogue before saving
+                            $validationResult = $this->validateUserAnswerWithCatalogue(
+                                $tenant->id,
+                                $key,
+                                $value,
+                                $lead
+                            );
+
+                            if ($validationResult['valid']) {
+                                $lead->addCollectedData($key, $validationResult['value'], 'workflow_questions');
+                                Log::info('AI extracted valid workflow data', [
+                                    'field' => $key,
+                                    'value' => $validationResult['value'],
+                                    'lead_id' => $lead->id,
+                                ]);
+
+                                // Update pending field for next iteration
+                                $lead->refresh();
+                                $currentPending = $this->getNextPendingQuestion($tenant->id, $lead);
+                                $pendingFieldName = $currentPending ? strtolower($currentPending['field_name']) : null;
+                            } else {
+                                Log::warning('AI extracted data not valid in catalogue, skipping save', [
+                                    'field' => $key,
+                                    'value' => $value,
+                                    'available_options' => array_slice($validationResult['available_options'] ?? [], 0, 10),
+                                ]);
+                            }
+                        } else {
+                            Log::info('Skipping out-of-order AI extraction to preserve flowchart', [
+                                'extracted_field' => $fieldKey,
+                                'pending_field' => $pendingFieldName,
+                                'value' => $value,
+                            ]);
+                        }
                     } else {
-                        // Global field (city, purpose, etc.) - save to global_questions
+                        // Global field (city, purpose, etc.) - save directly to global_questions
                         $lead->addCollectedData($key, $value, 'global_questions');
                     }
                 }
@@ -1100,5 +1175,135 @@ PROMPT;
         }
 
         return $cleaned;
+    }
+
+    /**
+     * Check if user's message is asking for options/list rather than providing an answer
+     * Examples: "konse he?", "options batao", "list do", "kya available hai?"
+     */
+    protected function isQuestionTypeResponse(string $message): bool
+    {
+        $message = strtolower(trim($message));
+
+        // Common question-type patterns in Hindi/Hinglish/English
+        $questionPatterns = [
+            // Asking for list/options
+            'konse he',
+            'konse hai',
+            'kaunse he',
+            'kaunse hai',
+            'kon se',
+            'kaun se',
+            'konsa he',
+            'konsa hai',
+            'kaunsa he',
+            'kaunsa hai',
+            'kon sa',
+            'kaun sa',
+            'options',
+            'option',
+            'list',
+            'batao',
+            'bata do',
+            'dikhao',
+            'dikha do',
+            'available',
+            'availabl',
+            'kya hai',
+            'kya he',
+            'kya kya',
+            'which one',
+            'which ones',
+            'what options',
+            'what are',
+            'show me',
+            'tell me',
+            'give me list',
+            // Question markers
+            'konsi',
+            'kaunsi',
+            'kitne',
+            'kitni',
+            'kitna',
+            // Clarification requests
+            'matlab',
+            'meaning',
+            'samjha',
+            'samjhao',
+            'explain',
+            'example',
+            'for example',
+            'jaise',
+            'jese',
+        ];
+
+        foreach ($questionPatterns as $pattern) {
+            if (str_contains($message, $pattern)) {
+                return true;
+            }
+        }
+
+        // Also check if message ends with question mark
+        if (str_ends_with($message, '?')) {
+            return true;
+        }
+
+        // Check if message is very short and likely a question word
+        $questionWords = ['kya', 'kon', 'kaun', 'kis', 'kab', 'kaha', 'kaise', 'kyun', 'kitna', 'what', 'which', 'who', 'how', 'why', 'when', 'where'];
+        $words = explode(' ', $message);
+        if (count($words) <= 2 && in_array($words[0], $questionWords)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get available options for a field from catalogue
+     */
+    protected function getFieldOptionsFromCatalogue(int $adminId, string $fieldName, Lead $lead): array
+    {
+        // Get collected data to apply filters
+        $collectedData = $lead->collected_data ?? [];
+        $workflowAnswers = $collectedData['workflow_questions'] ?? [];
+
+        // Build catalogue query
+        $query = \App\Models\Catalogue::where('admin_id', $adminId)
+            ->where('is_active', true);
+
+        // Apply progressive filters based on already-answered fields
+        foreach ($workflowAnswers as $key => $value) {
+            if (!empty($value)) {
+                // Try to filter by this field in JSON data
+                $query->where(function ($q) use ($key, $value) {
+                    $jsonPath = '$.\"' . $key . '\"';
+                    $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$value}%"]);
+                });
+            }
+        }
+
+        // Get catalogue items
+        $items = $query->get();
+
+        if ($items->isEmpty()) {
+            return [];
+        }
+
+        // Extract unique values for the requested field
+        $options = [];
+        $fieldKeyLower = strtolower($fieldName);
+
+        foreach ($items as $item) {
+            $data = $item->data ?? [];
+            foreach ($data as $key => $value) {
+                if (strtolower($key) === $fieldKeyLower && !empty($value)) {
+                    // Handle comma-separated values
+                    $values = array_map('trim', explode(',', $value));
+                    $options = array_merge($options, $values);
+                }
+            }
+        }
+
+        return array_unique(array_filter($options));
     }
 }
