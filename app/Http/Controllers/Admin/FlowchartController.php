@@ -93,11 +93,33 @@ class FlowchartController extends Controller
                 'pos_y' => (int) $request->input('position.y'),
             ];
 
+            // Handle new fields: global_question_id and lead_status_id
+            if ($request->has('data.globalQuestionId')) {
+                $data['global_question_id'] = $request->input('data.globalQuestionId');
+            }
+            if ($request->has('data.leadStatusId')) {
+                $data['lead_status_id'] = $request->input('data.leadStatusId');
+            }
+            if ($request->has('data.fieldId')) {
+                $data['questionnaire_field_id'] = $request->input('data.fieldId');
+            }
+
+            $warning = null;
+
             if ($nodeId && !str_starts_with($nodeId, 'new_')) {
                 // Update existing node
                 $node = QuestionnaireNode::where('id', $nodeId)
                     ->where('admin_id', $adminId)
                     ->firstOrFail();
+
+                // Validate lead status ordering (warning only)
+                if (isset($data['lead_status_id'])) {
+                    [$isValid, $message] = $node->validateStatusId($data['lead_status_id']);
+                    if (!$isValid) {
+                        $warning = $message;
+                    }
+                }
+
                 $node->update($data);
             } else {
                 // Create new node
@@ -114,10 +136,17 @@ class FlowchartController extends Controller
 
             DB::commit();
 
-            return response()->json([
+            $response = [
                 'success' => true,
                 'node' => $node->toReactFlowNode(),
-            ]);
+            ];
+
+            // Include warning if status ordering issue
+            if ($warning) {
+                $response['warning'] = $warning;
+            }
+
+            return response()->json($response);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

@@ -443,5 +443,140 @@ class Lead extends Model
     {
         return $query->where('status', 'open');
     }
+
+    /**
+     * Remove product by unique field value
+     * User says: "9038 nikal do" → Find product with model=9038 and delete
+     */
+    public function removeProductByUniqueField(string $value): ?LeadProduct
+    {
+        $product = $this->leadProducts()
+            ->get()
+            ->first(fn($p) => $p->matchesUniqueField($value));
+
+        if ($product) {
+            $product->delete();
+            return $product;
+        }
+
+        return null;
+    }
+
+    /**
+     * Clear a field in product by unique identifier
+     * User says: "9038 me black nahi chahiye" → Find product 9038, set finish=null
+     */
+    public function clearProductField(string $uniqueValue, string $fieldName): ?LeadProduct
+    {
+        $product = $this->leadProducts()
+            ->get()
+            ->first(fn($p) => $p->matchesUniqueField($uniqueValue));
+
+        if ($product) {
+            $product->clearField($fieldName);
+            return $product;
+        }
+
+        return null;
+    }
+
+    /**
+     * Add product from collected data (when all unique keys are complete)
+     */
+    public function addProductFromCollectedData(array $collectedData): LeadProduct
+    {
+        return LeadProduct::createFromCollectedData($this, $collectedData);
+    }
+
+    /**
+     * Get collected data for a specific category
+     */
+    public function getCollectedData(string $category = 'product_questions'): array
+    {
+        return $this->collected_data[$category] ?? [];
+    }
+
+    /**
+     * Set collected data for a category
+     */
+    public function setCollectedData(string $category, array $data): void
+    {
+        $allData = $this->collected_data ?? [];
+        $allData[$category] = $data;
+        $allData['last_updated'] = now()->toIso8601String();
+
+        $this->collected_data = $allData;
+        $this->save();
+    }
+
+    /**
+     * Check if all unique key fields have values in collected data
+     */
+    public function areUniqueKeysComplete(): bool
+    {
+        $uniqueKeyFields = ProductQuestion::where('admin_id', $this->admin_id)
+            ->where('is_unique_key', true)
+            ->active()
+            ->pluck('field_name');
+
+        $productData = $this->getCollectedData('product_questions');
+
+        foreach ($uniqueKeyFields as $fieldName) {
+            if (empty($productData[$fieldName])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get missing unique key fields from collected data
+     */
+    public function getMissingUniqueKeyFields(): array
+    {
+        $uniqueKeyFields = ProductQuestion::where('admin_id', $this->admin_id)
+            ->where('is_unique_key', true)
+            ->active()
+            ->orderBy('unique_key_order')
+            ->get();
+
+        $productData = $this->getCollectedData('product_questions');
+        $missing = [];
+
+        foreach ($uniqueKeyFields as $field) {
+            if (empty($productData[$field->field_name])) {
+                $missing[] = $field;
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Get connection status for SuperAdmin dashboard
+     */
+    public function getConnectionStatus(): array
+    {
+        return [
+            'lead_id' => $this->id,
+            'admin_id' => $this->admin_id,
+            'customer' => [
+                'connected' => $this->customer_id !== null,
+                'id' => $this->customer_id,
+                'name' => $this->customer?->name,
+            ],
+            'lead_status' => [
+                'connected' => $this->lead_status_id !== null,
+                'id' => $this->lead_status_id,
+                'name' => $this->leadStatus?->name,
+            ],
+            'products_count' => $this->leadProducts()->count(),
+            'collected_data_keys' => array_keys($this->collected_data ?? []),
+            'bot_active' => $this->bot_active,
+            'completed_all_questions' => $this->completed_all_questions,
+        ];
+    }
 }
+
 

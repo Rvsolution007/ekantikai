@@ -16,6 +16,8 @@ class QuestionnaireNode extends Model
         'pos_x',
         'pos_y',
         'questionnaire_field_id',
+        'global_question_id',   // NEW: Link to global question
+        'lead_status_id',       // NEW: Lead status to set when answered
         'is_active',
         'is_required',
         'ask_digit',
@@ -44,6 +46,18 @@ class QuestionnaireNode extends Model
     public function questionnaireField(): BelongsTo
     {
         return $this->belongsTo(ProductQuestion::class);
+    }
+
+    // NEW: Relationship to GlobalQuestion
+    public function globalQuestion(): BelongsTo
+    {
+        return $this->belongsTo(GlobalQuestion::class);
+    }
+
+    // NEW: Relationship to LeadStatus
+    public function leadStatus(): BelongsTo
+    {
+        return $this->belongsTo(LeadStatus::class);
     }
 
     public function outgoingConnections(): HasMany
@@ -134,6 +148,8 @@ class QuestionnaireNode extends Model
                 'label' => $this->label,
                 'config' => $this->config ?? [],
                 'fieldId' => $this->questionnaire_field_id,
+                'globalQuestionId' => $this->global_question_id,
+                'leadStatusId' => $this->lead_status_id,
                 'isRequired' => $this->is_required,
                 'askDigit' => $this->ask_digit,
                 'isUniqueField' => $this->is_unique_field,
@@ -244,5 +260,80 @@ class QuestionnaireNode extends Model
             'catalogue_field' => $field->catalogue_field,
         ]);
         $this->save();
+    }
+
+    /**
+     * Get the minimum allowed status ID based on previous nodes
+     * Nodes in sequence can only have same or higher status
+     */
+    public function getMinAllowedStatusId(): ?int
+    {
+        // Get all nodes that come before this one (have connection to this)
+        $previousNodes = self::where('admin_id', $this->admin_id)
+            ->whereHas('outgoingConnections', function ($q) {
+                $q->where('target_node_id', $this->id);
+            })
+            ->whereNotNull('lead_status_id')
+            ->get();
+
+        if ($previousNodes->isEmpty()) {
+            return null; // No restriction
+        }
+
+        // Find the maximum status ID from previous nodes
+        return $previousNodes->max('lead_status_id');
+    }
+
+    /**
+     * Validate if a status ID can be set on this node
+     * Returns [valid, message]
+     */
+    public function validateStatusId(?int $statusId): array
+    {
+        if ($statusId === null) {
+            return [true, null];
+        }
+
+        $minAllowed = $this->getMinAllowedStatusId();
+
+        if ($minAllowed !== null && $statusId < $minAllowed) {
+            $minStatus = LeadStatus::find($minAllowed);
+            return [
+                false,
+                "Warning: Previous node has status '{$minStatus->name}'. This node should have same or higher status."
+            ];
+        }
+
+        return [true, null];
+    }
+
+    /**
+     * Get connection status for SuperAdmin dashboard
+     */
+    public function getConnectionStatus(): array
+    {
+        return [
+            'node_id' => $this->id,
+            'label' => $this->label,
+            'node_type' => $this->node_type,
+            'product_question' => [
+                'connected' => $this->questionnaire_field_id !== null,
+                'id' => $this->questionnaire_field_id,
+                'field_name' => $this->questionnaireField?->field_name,
+            ],
+            'global_question' => [
+                'connected' => $this->global_question_id !== null,
+                'id' => $this->global_question_id,
+                'field_name' => $this->globalQuestion?->field_name,
+            ],
+            'lead_status' => [
+                'connected' => $this->lead_status_id !== null,
+                'id' => $this->lead_status_id,
+                'name' => $this->leadStatus?->name,
+            ],
+            'outgoing_connections' => $this->outgoingConnections->count(),
+            'incoming_connections' => $this->incomingConnections->count(),
+            'is_required' => $this->is_required,
+        ];
     }
 }

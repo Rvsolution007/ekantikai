@@ -48,12 +48,28 @@ class QuestionnaireService
         // Gate 2: Check questionnaire fields (in order)
         $nextField = $this->getNextField();
         if ($nextField) {
+            // Get collected data for cascading filter
+            $collectedData = $this->getCollectedDataForFilter();
+
+            // Use filtered options if field fetches from catalogue
+            $options = $nextField->getFilteredOptions($collectedData);
+            if (empty($options)) {
+                $options = $nextField->getOptions();
+            }
+
+            // For quantity fields, don't show options - direct input
+            if ($nextField->is_qty_field) {
+                $options = [];
+            }
+
             return [
                 'type' => 'field',
                 'field' => $nextField->field_name,
                 'question' => $this->getQuestionText($nextField->field_name, $language),
-                'options' => $nextField->getOptions(),
+                'options' => $options,
                 'is_required' => $nextField->is_required,
+                'is_qty_field' => $nextField->is_qty_field,
+                'is_unique_field' => $nextField->is_unique_field,
             ];
         }
 
@@ -64,6 +80,45 @@ class QuestionnaireService
             'question' => $this->getCompletionMessage($language),
             'options' => [],
         ];
+    }
+
+    /**
+     * Get collected data for cascading filter
+     */
+    protected function getCollectedDataForFilter(): array
+    {
+        $collectedData = [];
+
+        // From state completed fields
+        $completedFields = $this->state->completed_fields ?? [];
+        foreach ($completedFields as $key => $value) {
+            if (!str_starts_with($key, '_') && !empty($value)) {
+                $collectedData[$key] = $value;
+            }
+        }
+
+        // From lead collected_data
+        if ($this->lead) {
+            $leadData = $this->lead->collected_data ?? [];
+
+            // Product questions category
+            $productQuestions = $leadData['product_questions'] ?? [];
+            foreach ($productQuestions as $key => $value) {
+                if (!empty($value)) {
+                    $collectedData[$key] = $value;
+                }
+            }
+
+            // Workflow questions
+            $workflowQuestions = $leadData['workflow_questions'] ?? [];
+            foreach ($workflowQuestions as $key => $value) {
+                if (!empty($value)) {
+                    $collectedData[$key] = $value;
+                }
+            }
+        }
+
+        return $collectedData;
     }
 
     /**
@@ -281,10 +336,13 @@ class QuestionnaireService
             ->where('trigger_position', 'after_field')
             ->where('trigger_after_field', $fieldName)
             ->active()
-            ->first(function ($question) {
-                return !$this->customer->wasGlobalAsked($question->field_name)
-                    && !$this->customer->getGlobalField($question->field_name);
-            });
+            ->get()
+            ->filter(
+                fn($question) =>
+                !$this->customer->wasGlobalAsked($question->field_name)
+                && !$this->customer->getGlobalField($question->field_name)
+            )
+            ->first();
     }
 
     /**
@@ -410,18 +468,67 @@ class QuestionnaireService
                 // Get ask_digit from node or config (for optional questions)
                 $askDigit = $currentNode->ask_digit ?? $config['ask_digit'] ?? 1;
                 $isRequired = $currentNode->is_required ?? ($config['is_required'] ?? true);
-                $leadStatusId = $config['lead_status_id'] ?? null;
+
+                // Get lead_status_id from node (new column) or config (legacy)
+                $leadStatusId = $currentNode->lead_status_id ?? $config['lead_status_id'] ?? null;
+
+                // Check if this is a GlobalQuestion node
+                if ($currentNode->global_question_id) {
+                    $globalQuestion = $currentNode->globalQuestion;
+                    if ($globalQuestion) {
+                        return [
+                            'type' => 'flowchart_global',
+                            'node_id' => $currentNode->id,
+                            'field' => $globalQuestion->field_name,
+                            'question' => $globalQuestion->question ?? $this->getQuestionText($globalQuestion->field_name, $language),
+                            'options' => $globalQuestion->options ?? [],
+                            'is_required' => $isRequired,
+                            'ask_digit' => $askDigit,
+                            'lead_status_id' => $leadStatusId,
+                            'is_global' => true,
+                        ];
+                    }
+                }
+
+                // Check if linked to ProductQuestion
+                $productQuestion = $currentNode->questionnaireField;
+                $options = $config['options'] ?? [];
+                $fieldName = $config['field_name'] ?? 'field_' . $currentNode->id;
+                $isQtyField = false;
+                $isUniqueField = $currentNode->is_unique_field ?? ($config['is_unique_field'] ?? false);
+
+                if ($productQuestion) {
+                    $fieldName = $productQuestion->field_name;
+                    $isQtyField = $productQuestion->is_qty_field;
+                    $isUniqueField = $isUniqueField || $productQuestion->is_unique_field;
+
+                    // Get filtered options for cascading filter
+                    $collectedData = $this->getCollectedDataForFilter();
+                    $filteredOptions = $productQuestion->getFilteredOptions($collectedData);
+
+                    if (!empty($filteredOptions)) {
+                        $options = $filteredOptions;
+                    } elseif (empty($options)) {
+                        $options = $productQuestion->getOptions();
+                    }
+
+                    // For quantity fields, don't show options - direct input
+                    if ($isQtyField) {
+                        $options = [];
+                    }
+                }
 
                 return [
                     'type' => 'flowchart',
                     'node_id' => $currentNode->id,
-                    'field' => $config['field_name'] ?? 'field_' . $currentNode->id,
-                    'question' => $config['question_text'] ?? $this->getQuestionText($config['field_name'] ?? '', $language),
-                    'options' => $config['options'] ?? [],
+                    'field' => $fieldName,
+                    'question' => $config['question_text'] ?? $this->getQuestionText($fieldName, $language),
+                    'options' => $options,
                     'is_required' => $isRequired,
                     'ask_digit' => $askDigit, // How many times to ask optional question
                     'lead_status_id' => $leadStatusId, // Status to set after answering
-                    'is_unique_field' => $currentNode->is_unique_field ?? ($config['is_unique_field'] ?? false),
+                    'is_unique_field' => $isUniqueField,
+                    'is_qty_field' => $isQtyField,
                 ];
 
             case \App\Models\QuestionnaireNode::TYPE_CONDITION:
@@ -506,16 +613,48 @@ class QuestionnaireService
 
         if ($currentNode->node_type === \App\Models\QuestionnaireNode::TYPE_QUESTION) {
             $config = $currentNode->config ?? [];
-            $fieldName = $config['field_name'] ?? 'field_' . $currentNode->id;
-            $fields[$fieldName] = $answer;
 
-            // Also save to linked ProductQuestion if exists for sync
-            if ($currentNode->questionnaire_field_id) {
+            // Handle GlobalQuestion nodes
+            if ($currentNode->global_question_id) {
+                $globalQuestion = $currentNode->globalQuestion;
+                if ($globalQuestion) {
+                    $fieldName = $globalQuestion->field_name;
+                    $fields[$fieldName] = $answer;
+
+                    // Save to customer global field
+                    $this->customer->setGlobalField($fieldName, $answer);
+                    $this->customer->markGlobalAsked($fieldName);
+
+                    // Save to lead's collected_data under global_questions
+                    if ($this->lead) {
+                        $this->lead->addCollectedData($fieldName, $answer, 'global_questions');
+                    }
+                }
+            } else {
+                // Regular ProductQuestion node
+                $fieldName = $config['field_name'] ?? 'field_' . $currentNode->id;
+
+                // If linked to ProductQuestion, use its field_name
+                if ($currentNode->questionnaire_field_id) {
+                    $productQuestion = $currentNode->questionnaireField;
+                    if ($productQuestion) {
+                        $fieldName = $productQuestion->field_name;
+                    }
+                }
+
+                $fields[$fieldName] = $answer;
+
+                // Also save to state completed fields
                 $this->state->setCompletedField($fieldName, $answer);
+
+                // Save to lead's collected_data under product_questions
+                if ($this->lead) {
+                    $this->lead->addCollectedData($fieldName, $answer, 'product_questions');
+                }
             }
 
-            // Update lead status if configured
-            $leadStatusId = $config['lead_status_id'] ?? null;
+            // Update lead status if configured (from node column or config)
+            $leadStatusId = $currentNode->lead_status_id ?? $config['lead_status_id'] ?? null;
             if ($leadStatusId && $this->lead) {
                 $this->lead->update(['lead_status_id' => $leadStatusId]);
             }
