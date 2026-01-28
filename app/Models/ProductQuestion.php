@@ -141,10 +141,17 @@ class ProductQuestion extends Model
         $query = Catalogue::where('admin_id', $this->admin_id)
             ->where('is_active', true);
 
-        // Apply filters from previously collected data
+        // Apply filters from previously collected data with case-insensitive matching
         foreach ($collectedData as $fieldName => $value) {
             if (!empty($value)) {
-                $query->where("data->{$fieldName}", $value);
+                // Normalize value for category field (handle singular/plural, case)
+                $normalizedValue = $this->normalizeFilterValue($fieldName, $value);
+
+                // Use case-insensitive JSON matching
+                $query->whereRaw(
+                    "LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, ?))) = LOWER(?)",
+                    ['$.' . $fieldName, $normalizedValue]
+                );
             }
         }
 
@@ -155,6 +162,46 @@ class ProductQuestion extends Model
             ->unique()
             ->values()
             ->toArray();
+    }
+
+    /**
+     * Normalize filter value for better matching
+     * Handles common variations like singular/plural, case differences
+     */
+    protected function normalizeFilterValue(string $fieldName, string $value): string
+    {
+        $value = trim($value);
+
+        // For category/product type fields, normalize common variations
+        if (in_array(strtolower($fieldName), ['category', 'product_type', 'product_category', 'product'])) {
+            $lower = strtolower($value);
+
+            // Map singular to plural forms used in catalogue
+            $mappings = [
+                'profile handle' => 'Profile handles',
+                'wardrobe handle' => 'Wardrobe handles',
+                'cabinet handle' => 'Cabinet handles',
+                'knob handle' => 'Knob handles',
+                'main door handle' => 'Main door handles',
+                'wardrobe profile handle' => 'Wardrobe profile handle',
+            ];
+
+            // Check for partial matches
+            foreach ($mappings as $pattern => $normalized) {
+                if (str_contains($lower, $pattern)) {
+                    return $normalized;
+                }
+            }
+
+            // Also check existing plural forms (case normalization)
+            foreach ($mappings as $pattern => $normalized) {
+                if (strtolower($normalized) === $lower) {
+                    return $normalized;
+                }
+            }
+        }
+
+        return $value;
     }
 
     /**
