@@ -150,7 +150,7 @@ class SystemConnectionsController extends Controller
         $items = [];
 
         // Check WebhookController for hardcoded values
-        $webhookPath = app_path('Http/Controllers/WebhookController.php');
+        $webhookPath = app_path('Http/Controllers/Api/WebhookController.php');
         if (File::exists($webhookPath)) {
             $content = File::get($webhookPath);
 

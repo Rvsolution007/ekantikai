@@ -152,6 +152,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/fields/reorder', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'reorder'])->name('fields.reorder');
             Route::post('/fields/{field}/toggle-unique', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'toggleUniqueKey'])->name('fields.toggle-unique');
             Route::post('/fields/{field}/toggle-unique-field', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'toggleUniqueField'])->name('fields.toggle-unique-field');
+            Route::post('/fields/{field}/toggle-qty-field', [\App\Http\Controllers\Admin\ProductQuestionController::class, 'toggleQtyField'])->name('fields.toggle-qty-field');
 
             // Global Questions
             Route::get('/global', [\App\Http\Controllers\Admin\GlobalQuestionController::class, 'index'])->name('global.index');

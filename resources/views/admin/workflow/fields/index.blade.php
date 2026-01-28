@@ -135,6 +135,8 @@
                                 Unique Field</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                                 Unique Key</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                Qty Field</th>
                             <th
                                 class="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                                 Status</th>
@@ -165,10 +167,10 @@
                                 </td>
                                 <td class="px-4 py-4">
                                     <span class="px-2.5 py-1 rounded-full text-xs font-medium
-                                                                                                    @if($field->field_type == 'text') bg-blue-500/20 text-blue-400
-                                                                                                    @elseif($field->field_type == 'select') bg-green-500/20 text-green-400
-                                                                                                    @else bg-yellow-500/20 text-yellow-400
-                                                                                                    @endif">
+                                                                                                                    @if($field->field_type == 'text') bg-blue-500/20 text-blue-400
+                                                                                                                    @elseif($field->field_type == 'select') bg-green-500/20 text-green-400
+                                                                                                                    @else bg-yellow-500/20 text-yellow-400
+                                                                                                                    @endif">
                                         {{ ucfirst($field->field_type) }}
                                     </span>
                                 </td>
@@ -176,12 +178,13 @@
                                     <form action="{{ route('admin.workflow.fields.toggle-unique-field', $field) }}"
                                         method="POST" class="inline">
                                         @csrf
-                                        <button type="submit" class="w-10 h-10 rounded-xl transition-all flex items-center justify-center mx-auto
-                                                                                                        @if($field->is_unique_field) 
-                                                                                                            bg-gradient-to-br from-green-500 to-teal-500 shadow-lg shadow-green-500/25
-                                                                                                        @else 
-                                                                                                            bg-white/5 hover:bg-white/10 border border-white/10
-                                                                                                        @endif">
+                                        <button type="submit"
+                                            class="w-10 h-10 rounded-xl transition-all flex items-center justify-center mx-auto
+                                                                                                                        @if($field->is_unique_field) 
+                                                                                                                            bg-gradient-to-br from-green-500 to-teal-500 shadow-lg shadow-green-500/25
+                                                                                                                        @else 
+                                                                                                                            bg-white/5 hover:bg-white/10 border border-white/10
+                                                                                                                        @endif">
                                             @if($field->is_unique_field)
                                                 <span class="text-white font-bold text-sm">🏷️</span>
                                             @else
@@ -198,12 +201,13 @@
                                     <form action="{{ route('admin.workflow.fields.toggle-unique', $field) }}" method="POST"
                                         class="inline">
                                         @csrf
-                                        <button type="submit" class="w-10 h-10 rounded-xl transition-all flex items-center justify-center mx-auto
-                                                                                                        @if($field->is_unique_key) 
-                                                                                                            bg-gradient-to-br from-yellow-500 to-orange-500 shadow-lg shadow-yellow-500/25
-                                                                                                        @else 
-                                                                                                            bg-white/5 hover:bg-white/10 border border-white/10
-                                                                                                        @endif">
+                                        <button type="submit"
+                                            class="w-10 h-10 rounded-xl transition-all flex items-center justify-center mx-auto
+                                                                                                                        @if($field->is_unique_key) 
+                                                                                                                            bg-gradient-to-br from-yellow-500 to-orange-500 shadow-lg shadow-yellow-500/25
+                                                                                                                        @else 
+                                                                                                                            bg-white/5 hover:bg-white/10 border border-white/10
+                                                                                                                        @endif">
                                             @if($field->is_unique_key)
                                                 <span class="text-white font-bold text-sm">🔑{{ $field->unique_key_order }}</span>
                                             @else
@@ -211,6 +215,29 @@
                                                     viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                                </svg>
+                                            @endif
+                                        </button>
+                                    </form>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <form action="{{ route('admin.workflow.fields.toggle-qty-field', $field) }}" method="POST"
+                                        class="inline">
+                                        @csrf
+                                        <button type="submit"
+                                            class="w-10 h-10 rounded-xl transition-all flex items-center justify-center mx-auto
+                                                                                                                        @if($field->is_qty_field) 
+                                                                                                                            bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/25
+                                                                                                                        @else 
+                                                                                                                            bg-white/5 hover:bg-white/10 border border-white/10
+                                                                                                                        @endif">
+                                            @if($field->is_qty_field)
+                                                <span class="text-white font-bold text-sm">📦</span>
+                                            @else
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M20 12H4" />
                                                 </svg>
                                             @endif
                                         </button>
@@ -295,8 +322,21 @@
 
     </div>
 
+    <!-- Toast notification container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
+        // Toast notification function
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `px-6 py-3 rounded-xl text-white font-medium shadow-lg mb-2 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const tbody = document.getElementById('sortableFields');
             if (tbody && tbody.children.length > 0 && tbody.children[0].dataset.id) {
@@ -316,7 +356,19 @@
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
                             },
                             body: JSON.stringify({ order: order })
-                        });
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showToast('Order saved successfully!', 'success');
+                                } else {
+                                    showToast('Failed to save order', 'error');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Reorder error:', error);
+                                showToast('Failed to save order', 'error');
+                            });
                     }
                 });
             }

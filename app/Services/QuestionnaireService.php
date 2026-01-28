@@ -341,7 +341,7 @@ class QuestionnaireService
      */
     public function hasFlowchartNodes(): bool
     {
-        return \App\Models\QuestionnaireNode::where('tenant_id', $this->tenantId)
+        return \App\Models\QuestionnaireNode::where('admin_id', $this->tenantId)
             ->where('node_type', 'start')
             ->exists();
     }

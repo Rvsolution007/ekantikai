@@ -202,6 +202,19 @@ class ProductQuestionController extends Controller
     }
 
     /**
+     * Toggle qty field status (for quantity input fields)
+     */
+    public function toggleQtyField(ProductQuestion $field)
+    {
+        $this->authorizeField($field);
+
+        $field->is_qty_field = !$field->is_qty_field;
+        $field->save();
+
+        return back()->with('success', 'Qty field status updated');
+    }
+
+    /**
      * Get current tenant ID
      */
     protected function getAdminId(): int

@@ -20,6 +20,7 @@ class ProductQuestion extends Model
         'is_unique_key',
         'unique_key_order',
         'is_unique_field', // For identifying unique products like Model Number
+        'is_qty_field', // For qty input fields - always ask for input
         'options_source',
         'options_manual',
         'catalogue_field',
@@ -31,6 +32,7 @@ class ProductQuestion extends Model
         'is_required' => 'boolean',
         'is_unique_key' => 'boolean',
         'is_unique_field' => 'boolean',
+        'is_qty_field' => 'boolean',
         'options_manual' => 'array',
         'validation_rules' => 'array',
         'is_active' => 'boolean',

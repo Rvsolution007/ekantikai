@@ -849,17 +849,29 @@ class AIService
             ->with('questionnaireField')
             ->get();
 
-        // Also get question templates from ProductQuestion table
+        // Get full ProductQuestion data including is_unique_key and is_qty_field
         $productQuestions = ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
-            ->pluck('question_template', 'field_name')
-            ->toArray();
+            ->get()
+            ->keyBy(function ($item) {
+                return strtolower($item->field_name);
+            });
 
         $rules = [];
         foreach ($nodes as $node) {
             $field = $node->questionnaireField;
             if ($field) {
                 $fieldName = $field->field_name;
+                $fieldNameLower = strtolower($fieldName);
+
+                // Get ProductQuestion data for this field
+                $pq = $productQuestions[$fieldNameLower] ?? null;
+                $isUniqueKey = $pq->is_unique_key ?? false;
+                $isQtyField = $pq->is_qty_field ?? false;
+
+                // Determine field behavior
+                $fieldBehavior = $this->getFieldBehavior($isUniqueKey, $isQtyField);
+
                 $rules[] = [
                     'field_name' => $fieldName,
                     'display_name' => $field->display_name,
@@ -867,14 +879,29 @@ class AIService
                     'is_optional' => !$node->is_required,
                     'ask_digit' => $node->ask_digit,
                     'is_unique_field' => $node->is_unique_field,
+                    'is_unique_key' => $isUniqueKey,
+                    'is_qty_field' => $isQtyField,
+                    'field_behavior' => $fieldBehavior,
                     'field_type' => $field->field_type,
                     // Add question template from ProductQuestion for AI to enhance
-                    'question_template' => $productQuestions[strtolower($fieldName)] ?? $productQuestions[$fieldName] ?? null,
+                    'question_template' => $pq->question_template ?? null,
                 ];
             }
         }
 
         return $rules;
+    }
+
+    /**
+     * Determine field behavior based on ProductQuestion settings
+     * @return string 'ask_options' | 'ask_input' | 'inform_availability'
+     */
+    protected function getFieldBehavior(bool $isUniqueKey, bool $isQtyField): string
+    {
+        if ($isQtyField) {
+            return 'ask_input'; // Always ask for qty input
+        }
+        return $isUniqueKey ? 'ask_options' : 'inform_availability';
     }
 
     /**
@@ -947,8 +974,16 @@ class AIService
                 $unique = $rule['is_unique_field'] ? ' [UNIQUE IDENTIFIER]' : '';
                 $askDigit = $rule['ask_digit'] > 0 ? " (ask max {$rule['ask_digit']} times)" : '';
                 $template = $rule['question_template'] ?? null;
+                $behavior = $rule['field_behavior'] ?? 'ask_options';
 
-                $fieldRules .= "✓ {$rule['display_name']} ({$rule['field_name']}): {$type}{$unique}{$askDigit}\n";
+                // Behavior indicator
+                $behaviorLabel = match ($behavior) {
+                    'ask_input' => '[📦 QTY - ASK INPUT]',
+                    'inform_availability' => '[ℹ️ INFORM ONLY]',
+                    default => '[🔑 ASK OPTIONS]',
+                };
+
+                $fieldRules .= "✓ {$rule['display_name']} ({$rule['field_name']}): {$type}{$unique}{$askDigit} {$behaviorLabel}\n";
 
                 // Include question template for AI to enhance
                 if (!empty($template)) {
@@ -957,10 +992,34 @@ class AIService
 
                 $allowedFieldNames[] = $rule['field_name'];
             }
-            $fieldRules .= "\n### 🚫 FORBIDDEN FIELDS (NEVER ASK THESE IF NOT IN LIST ABOVE):\n";
-            $fieldRules .= "- qty / quantity - DO NOT ASK unless 'qty' is in the list above\n";
-            $fieldRules .= "- material - DO NOT ASK unless 'material' is in the list above\n";
-            $fieldRules .= "- Any other field NOT listed above\n";
+
+            // Add behavior-based instructions
+            $fieldRules .= "\n### 📋 FIELD BEHAVIOR RULES:\n\n";
+
+            $fieldRules .= "**[🔑 ASK OPTIONS] - For is_unique_key=true fields:**\n";
+            $fieldRules .= "- Show available options from catalogue to user\n";
+            $fieldRules .= "- Ask: \"Kaunsa chahiye? [option1], [option2], [option3]...\"\n";
+            $fieldRules .= "- Wait for user to select one option\n\n";
+
+            $fieldRules .= "**[📦 QTY - ASK INPUT] - For is_qty_field=true fields:**\n";
+            $fieldRules .= "- Always ASK user for quantity input\n";
+            $fieldRules .= "- Ask: \"Kitni qty chahiye?\" or \"Quantity batao\"\n";
+            $fieldRules .= "- Accept any number as valid response\n\n";
+
+            $fieldRules .= "**[ℹ️ INFORM ONLY] - For fields without unique_key/qty:**\n";
+            $fieldRules .= "- DO NOT ask the user to choose\n";
+            $fieldRules .= "- INFORM them: \"Hmare pas [field] me [value] available he\"\n";
+            $fieldRules .= "- Wait for positive confirmation (ha, ok, theek hai, chalega)\n";
+            $fieldRules .= "- Then move to next field\n\n";
+
+            $fieldRules .= "### ✅ POSITIVE CONFIRMATION DETECTION:\n";
+            $fieldRules .= "Accept these as positive confirmations:\n";
+            $fieldRules .= "- Hindi: ha, haan, ji, theek hai, thik he, chalega, sahi hai\n";
+            $fieldRules .= "- English: yes, ok, okay, fine, alright, sure, correct, right\n";
+            $fieldRules .= "- Hinglish: ok hai, theek, done, confirm\n\n";
+
+            $fieldRules .= "### 🚫 FORBIDDEN FIELDS (NEVER ASK THESE IF NOT IN LIST ABOVE):\n";
+            $fieldRules .= "- Any field NOT listed above\n";
             $fieldRules .= "\n### QUESTION ENHANCEMENT RULES:\n";
             $fieldRules .= "- When asking a question, use the template provided as REFERENCE\n";
             $fieldRules .= "- Make it sound natural and friendly, like a real salesperson\n";
