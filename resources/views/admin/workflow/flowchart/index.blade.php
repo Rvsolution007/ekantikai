@@ -639,16 +639,16 @@
                 el.style.top = node.y + 'px';
 
                 el.innerHTML = `
-                <div class="flow-node-inner">
-                    <div class="flow-node-icon">${config.icon}</div>
-                    <div class="flow-node-content">
-                        <div class="flow-node-title">${node.label}</div>
-                        <div class="flow-node-subtitle">${config.subtitle}</div>
+                    <div class="flow-node-inner">
+                        <div class="flow-node-icon">${config.icon}</div>
+                        <div class="flow-node-content">
+                            <div class="flow-node-title">${node.label}</div>
+                            <div class="flow-node-subtitle">${config.subtitle}</div>
+                        </div>
                     </div>
-                </div>
-                ${config.inputs > 0 ? '<div class="flow-handle handle-input" data-handle="input"></div>' : ''}
-                ${config.outputs > 0 ? '<div class="flow-handle handle-output" data-handle="output"></div>' : ''}
-            `;
+                    ${config.inputs > 0 ? '<div class="flow-handle handle-input" data-handle="input"></div>' : ''}
+                    ${config.outputs > 0 ? '<div class="flow-handle handle-output" data-handle="output"></div>' : ''}
+                `;
 
                 // Node drag events
                 el.addEventListener('mousedown', (e) => this.onNodeMouseDown(e, node.id));
@@ -747,13 +747,15 @@
                 this.isConnecting = true;
                 this.connectionStart = { nodeId, handleType };
 
-                const nodeEl = document.getElementById('node-' + nodeId);
-                const handle = nodeEl.querySelector('.handle-output');
-                const rect = handle.getBoundingClientRect();
-                const canvasRect = this.canvas.getBoundingClientRect();
+                const node = this.nodes.get(nodeId);
+                
+                // Use stored coordinates with fixed offsets
+                const NODE_WIDTH = 160;
+                const NODE_HEIGHT = 54;
+                const HANDLE_OFFSET_X = 8;
 
-                this.connectionStart.x = rect.left + rect.width / 2 - canvasRect.left;
-                this.connectionStart.y = rect.top + rect.height / 2 - canvasRect.top;
+                this.connectionStart.x = node.x + NODE_WIDTH + HANDLE_OFFSET_X;
+                this.connectionStart.y = node.y + NODE_HEIGHT / 2;
 
                 // Create temp connection path
                 this.tempConnection = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -831,78 +833,73 @@
                 this.svg.querySelectorAll('.connection-path').forEach(el => el.remove());
                 document.querySelectorAll('.connection-delete-btn').forEach(el => el.remove());
 
+                // Node dimensions (fixed for consistent positioning)
+                const NODE_WIDTH = 160;
+                const NODE_HEIGHT = 54;
+                const HANDLE_OFFSET_X = 8; // Handle is 8px from edge
+
                 this.connections.forEach(conn => {
                     const sourceNode = this.nodes.get(conn.source);
                     const targetNode = this.nodes.get(conn.target);
 
                     if (!sourceNode || !targetNode) return;
 
-                    const sourceEl = document.getElementById('node-' + conn.source);
-                    const targetEl = document.getElementById('node-' + conn.target);
+                    // Calculate handle positions using stored node coordinates
+                    // Output handle: right side of source node
+                    const x1 = sourceNode.x + NODE_WIDTH + HANDLE_OFFSET_X;
+                    const y1 = sourceNode.y + NODE_HEIGHT / 2;
 
-                    if (!sourceEl || !targetEl) return;
-
-                    const sourceHandle = sourceEl.querySelector('.handle-output');
-                    const targetHandle = targetEl.querySelector('.handle-input');
-
-                    if (!sourceHandle || !targetHandle) return;
-
-                    const canvasRect = this.canvas.getBoundingClientRect();
-                    const sourceRect = sourceHandle.getBoundingClientRect();
-                    const targetRect = targetHandle.getBoundingClientRect();
-
-                    const x1 = sourceRect.left + sourceRect.width / 2 - canvasRect.left;
-                    const y1 = sourceRect.top + sourceRect.height / 2 - canvasRect.top;
-                    const x2 = targetRect.left + targetRect.width / 2 - canvasRect.left;
-                    const y2 = targetRect.top + targetRect.height / 2 - canvasRect.top;
+                    // Input handle: left side of target node
+                    const x2 = targetNode.x - HANDLE_OFFSET_X;
+                    const y2 = targetNode.y + NODE_HEIGHT / 2;
 
                     // Create path
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     path.classList.add('connection-path');
                     path.setAttribute('d', this.createBezierPath(x1, y1, x2, y2));
                     path.dataset.connId = conn.id;
-                    
+
                     // Calculate midpoint for delete button
                     const midX = (x1 + x2) / 2;
                     const midY = (y1 + y2) / 2;
-                    
+
                     // Create X delete button (n8n style)
                     const deleteBtn = document.createElement('div');
                     deleteBtn.className = 'connection-delete-btn';
                     deleteBtn.innerHTML = '✕';
                     deleteBtn.style.cssText = `
-                        position: absolute;
-                        left: ${midX}px;
-                        top: ${midY}px;
-                        width: 22px;
-                        height: 22px;
-                        background: #ef4444;
-                        border: 2px solid #fff;
-                        border-radius: 50%;
-                        color: #fff;
-                        font-size: 12px;
-                        font-weight: bold;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        cursor: pointer;
-                        opacity: 0;
-                        transform: translate(-50%, -50%);
-                        transition: all 0.15s ease;
-                        z-index: 100;
-                        pointer-events: auto;
-                    `;
+                            position: absolute;
+                            left: ${midX}px;
+                            top: ${midY}px;
+                            width: 22px;
+                            height: 22px;
+                            background: #ef4444;
+                            border: 2px solid #fff;
+                            border-radius: 50%;
+                            color: #fff;
+                            font-size: 12px;
+                            font-weight: bold;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            cursor: pointer;
+                            opacity: 0;
+                            transform: translate(-50%, -50%);
+                            transition: all 0.15s ease;
+                            z-index: 100;
+                            pointer-events: auto;
+                        `;
                     deleteBtn.dataset.connId = conn.id;
-                    
+
                     // Show button on hover
                     const showBtn = () => { deleteBtn.style.opacity = '1'; };
                     const hideBtn = () => { deleteBtn.style.opacity = '0'; };
-                    
+
                     path.addEventListener('mouseenter', showBtn);
                     path.addEventListener('mouseleave', hideBtn);
                     deleteBtn.addEventListener('mouseenter', showBtn);
                     deleteBtn.addEventListener('mouseleave', hideBtn);
-                    
+
                     // Delete on click
                     deleteBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
