@@ -137,6 +137,23 @@ class QuestionnaireNode extends Model
      */
     public function toReactFlowNode(): array
     {
+        // Get question_template from linked ProductQuestion if exists
+        $questionTemplate = null;
+        $questionType = null;
+        $questionId = null;
+
+        if ($this->questionnaire_field_id) {
+            $linkedField = $this->questionnaireField;
+            if ($linkedField) {
+                $questionTemplate = $linkedField->question_template;
+                $questionType = 'product';
+                $questionId = $linkedField->id;
+            }
+        } elseif ($this->global_question_id) {
+            $questionType = 'global';
+            $questionId = $this->global_question_id;
+        }
+
         return [
             'id' => (string) $this->id,
             'type' => $this->node_type,
@@ -153,6 +170,10 @@ class QuestionnaireNode extends Model
                 'isRequired' => $this->is_required,
                 'askDigit' => $this->ask_digit,
                 'isUniqueField' => $this->is_unique_field,
+                // Include question_template from ProductQuestion for frontend
+                'question_template' => $questionTemplate,
+                'question_type' => $questionType,
+                'question_id' => $questionId,
             ],
         ];
     }

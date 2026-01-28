@@ -335,7 +335,7 @@ class FlowchartController extends Controller
             }
 
             // RESTORE: Apply backed up ProductQuestion settings to recreated fields
-            // This preserves is_unique_key, unique_key_order, is_unique_field, question_template that admin had set
+            // This preserves is_unique_key, unique_key_order, is_unique_field that admin had set
             foreach ($existingFieldSettings as $fieldName => $settings) {
                 ProductQuestion::where('admin_id', $adminId)
                     ->where('field_name', $fieldName)
@@ -343,8 +343,24 @@ class FlowchartController extends Controller
                         'is_unique_key' => $settings['is_unique_key'] ?? false,
                         'unique_key_order' => $settings['unique_key_order'],
                         'is_unique_field' => $settings['is_unique_field'] ?? false,
-                        'question_template' => $settings['question_template'] ?? null,
+                        // Don't restore question_template here - it will be updated from new values below
                     ]);
+            }
+
+            // UPDATE: Save new question_template values from the actual node data
+            // This ensures newly entered question templates are saved, not overwritten by backup
+            foreach ($request->input('nodes') as $nodeData) {
+                if (($nodeData['type'] ?? '') === 'question') {
+                    $config = $nodeData['data']['config'] ?? [];
+                    $fieldName = $config['field_name'] ?? null;
+                    $questionTemplate = $config['question_template'] ?? null;
+
+                    if ($fieldName && $questionTemplate !== null) {
+                        ProductQuestion::where('admin_id', $adminId)
+                            ->where('field_name', $fieldName)
+                            ->update(['question_template' => $questionTemplate]);
+                    }
+                }
             }
 
             // Reorder QuestionnaireFields based on flowchart
