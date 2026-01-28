@@ -685,60 +685,154 @@ class WebhookController extends Controller
             // Normalize keys to lowercase
             $answers = array_change_key_case($workflowAnswers, CASE_LOWER);
 
-            // Get values (with multiple field name options)
-            $category = $answers['category'] ?? $answers['product_type'] ?? null;
-            $model = $answers['model'] ?? $answers['model_code'] ?? $answers['model_number'] ?? null;
-            $size = $answers['size'] ?? null;
-            $finish = $answers['finish'] ?? $answers['color'] ?? null;
-            $qty = $answers['qty'] ?? $answers['quantity'] ?? null;
-            $packaging = $answers['packaging'] ?? null;
+            // Get unique key fields for this admin
+            $uniqueKeyFields = \App\Models\ProductQuestion::where('admin_id', $adminId)
+                ->where('is_unique_key', true)
+                ->orderBy('unique_key_order')
+                ->pluck('field_name')
+                ->map(fn($f) => strtolower($f))
+                ->toArray();
 
-            // Only create LeadProduct if we have at least category OR model
-            if (empty($category) && empty($model)) {
-                return;
+            // Get all product fields
+            $allFields = \App\Models\ProductQuestion::where('admin_id', $adminId)
+                ->orderBy('sort_order')
+                ->pluck('field_name')
+                ->map(fn($f) => strtolower($f))
+                ->toArray();
+
+            // Prepare field values - parse multi-values for unique key fields
+            $fieldValues = [];
+            foreach ($allFields as $field) {
+                $value = $answers[$field] ?? null;
+
+                if (empty($value)) {
+                    $fieldValues[$field] = [null];
+                    continue;
+                }
+
+                // For unique key fields, parse multi-values (split by , or and &)
+                if (in_array($field, $uniqueKeyFields)) {
+                    $values = preg_split('/[,&]|\bor\b|\band\b/i', $value);
+                    $values = array_map('trim', $values);
+                    $values = array_filter($values, fn($v) => !empty($v));
+                    $fieldValues[$field] = !empty($values) ? array_values($values) : [$value];
+                } else {
+                    $fieldValues[$field] = [$value];
+                }
             }
 
-            // Build unique key
-            $uniqueKey = md5(json_encode([
-                'lead_id' => $lead->id,
-                'category' => strtolower($category ?? ''),
-                'model' => strtolower($model ?? ''),
-            ]));
+            // Generate Cartesian product of unique key field values
+            $combinations = $this->generateCartesianProduct($fieldValues, $uniqueKeyFields);
 
-            // Find or create LeadProduct
-            $leadProduct = \App\Models\LeadProduct::firstOrNew([
+            Log::info('Generating unique key combinations', [
                 'lead_id' => $lead->id,
-                'unique_key' => $uniqueKey,
+                'unique_keys' => $uniqueKeyFields,
+                'combinations_count' => count($combinations),
             ]);
 
-            // Update fields
-            $leadProduct->admin_id = $adminId;
-            $leadProduct->category = $category;
-            $leadProduct->model = $model;
-            if ($size)
-                $leadProduct->size = $size;
-            if ($finish)
-                $leadProduct->finish = $finish;
-            if ($qty)
-                $leadProduct->qty = $qty;
-            if ($packaging)
-                $leadProduct->packaging = $packaging;
+            // Create LeadProduct for each combination
+            foreach ($combinations as $combo) {
+                // Build unique key from unique key fields only
+                $keyParts = [$lead->id];
+                foreach ($uniqueKeyFields as $ukField) {
+                    $keyParts[] = strtolower(trim($combo[$ukField] ?? ''));
+                }
+                $uniqueKey = implode('|', $keyParts);
 
-            $leadProduct->save();
+                // Find or create LeadProduct
+                $leadProduct = \App\Models\LeadProduct::firstOrNew([
+                    'lead_id' => $lead->id,
+                    'unique_key' => $uniqueKey,
+                ]);
 
-            Log::info('Synced workflow to LeadProduct', [
-                'lead_id' => $lead->id,
-                'lead_product_id' => $leadProduct->id,
-                'category' => $category,
-                'model' => $model,
-            ]);
+                // Update all fields from combination
+                $leadProduct->admin_id = $adminId;
+
+                // Map common field names to LeadProduct columns
+                $columnMapping = [
+                    'category' => 'category',
+                    'product_type' => 'category',
+                    'product_category' => 'category',
+                    'model' => 'model',
+                    'model_code' => 'model',
+                    'model_number' => 'model',
+                    'size' => 'size',
+                    'finish' => 'finish',
+                    'color' => 'finish',
+                    'finish/color' => 'finish',
+                    'qty' => 'qty',
+                    'quantity' => 'qty',
+                    'packaging' => 'packaging',
+                    'material' => 'material',
+                ];
+
+                // Store dynamic data for fields not in standard columns
+                $dynamicData = [];
+
+                foreach ($combo as $field => $value) {
+                    if (empty($value))
+                        continue;
+
+                    $column = $columnMapping[$field] ?? null;
+                    if ($column && property_exists($leadProduct, $column)) {
+                        $leadProduct->$column = $value;
+                    } else {
+                        // Store in dynamic data JSON
+                        $dynamicData[$field] = $value;
+                    }
+                }
+
+                if (!empty($dynamicData)) {
+                    $leadProduct->data = array_merge($leadProduct->data ?? [], $dynamicData);
+                }
+
+                $leadProduct->save();
+
+                Log::debug('Created/Updated LeadProduct', [
+                    'lead_product_id' => $leadProduct->id,
+                    'unique_key' => $uniqueKey,
+                    'category' => $leadProduct->category,
+                    'model' => $leadProduct->model,
+                    'size' => $leadProduct->size,
+                ]);
+            }
 
         } catch (\Exception $e) {
             Log::warning('Failed to sync workflow to LeadProduct', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'lead_id' => $lead->id,
             ]);
         }
+    }
+
+    /**
+     * Generate Cartesian product of field values for unique key fields
+     * Non-unique key fields use first value only
+     */
+    protected function generateCartesianProduct(array $fieldValues, array $uniqueKeyFields): array
+    {
+        $result = [[]];
+
+        foreach ($fieldValues as $field => $values) {
+            // For unique key fields, expand all values
+            // For non-unique key fields, use only first value
+            if (!in_array($field, $uniqueKeyFields)) {
+                $values = [reset($values)]; // Use only first value
+            }
+
+            $newResult = [];
+            foreach ($result as $combo) {
+                foreach ($values as $value) {
+                    $newCombo = $combo;
+                    $newCombo[$field] = $value;
+                    $newResult[] = $newCombo;
+                }
+            }
+            $result = $newResult;
+        }
+
+        return $result;
     }
 
     /**
