@@ -840,20 +840,11 @@ class AIService
 
     /**
      * Get flowchart rules for AI context
+     * CRITICAL: Traverses from Start node following connections to get correct order
+     * This ensures any flowchart changes are reflected in bot's question order
      */
     protected function getFlowchartRules(int $adminId): array
     {
-        // CRITICAL FIX: Order nodes by linked ProductQuestion's sort_order
-        // This ensures Category comes before Model in AI prompts
-        $nodes = QuestionnaireNode::where('questionnaire_nodes.admin_id', $adminId)
-            ->where('questionnaire_nodes.is_active', true)
-            ->where('questionnaire_nodes.node_type', QuestionnaireNode::TYPE_QUESTION)
-            ->leftJoin('product_questions', 'questionnaire_nodes.questionnaire_field_id', '=', 'product_questions.id')
-            ->orderBy('product_questions.sort_order', 'asc')
-            ->select('questionnaire_nodes.*')
-            ->with('questionnaireField')
-            ->get();
-
         // Get full ProductQuestion data including is_unique_key and is_qty_field
         $productQuestions = ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
@@ -862,8 +853,11 @@ class AIService
                 return strtolower($item->field_name);
             });
 
+        // TRAVERSE FLOWCHART FROM START NODE TO GET CORRECT ORDER
+        $orderedNodes = $this->traverseFlowchartForQuestions($adminId);
+
         $rules = [];
-        foreach ($nodes as $node) {
+        foreach ($orderedNodes as $node) {
             $field = $node->questionnaireField;
             if ($field) {
                 $fieldName = $field->field_name;
@@ -895,6 +889,57 @@ class AIService
         }
 
         return $rules;
+    }
+
+    /**
+     * Traverse flowchart from Start node to collect question nodes in order
+     * Follows connections to determine the actual flowchart sequence
+     */
+    protected function traverseFlowchartForQuestions(int $adminId): array
+    {
+        $startNode = QuestionnaireNode::getStartNode($adminId);
+        if (!$startNode) {
+            // Fallback: return nodes ordered by ProductQuestion.sort_order if no start node
+            return QuestionnaireNode::where('questionnaire_nodes.admin_id', $adminId)
+                ->where('questionnaire_nodes.is_active', true)
+                ->where('questionnaire_nodes.node_type', QuestionnaireNode::TYPE_QUESTION)
+                ->leftJoin('product_questions', 'questionnaire_nodes.questionnaire_field_id', '=', 'product_questions.id')
+                ->orderBy('product_questions.sort_order', 'asc')
+                ->select('questionnaire_nodes.*')
+                ->with('questionnaireField')
+                ->get()
+                ->all();
+        }
+
+        $orderedQuestions = [];
+        $visited = [];
+        $current = $startNode;
+        $maxIterations = 50; // Prevent infinite loops
+        $iteration = 0;
+
+        while ($current && $iteration < $maxIterations) {
+            $iteration++;
+
+            // Avoid infinite loops
+            if (isset($visited[$current->id])) {
+                break;
+            }
+            $visited[$current->id] = true;
+
+            // If current is a question node, add it to our ordered list
+            if ($current->node_type === QuestionnaireNode::TYPE_QUESTION && $current->is_active) {
+                // Load the relationship if not already loaded
+                if (!$current->relationLoaded('questionnaireField')) {
+                    $current->load('questionnaireField');
+                }
+                $orderedQuestions[] = $current;
+            }
+
+            // Get next node
+            $current = $current->getNextNode();
+        }
+
+        return $orderedQuestions;
     }
 
     /**
