@@ -136,3 +136,18 @@ Route::get('/debug/admin-catalogue', function () {
         'admins' => $result,
     ]);
 });
+
+// ============================================
+// DEBUG: Multi-Value Split Testing
+// ============================================
+use App\Http\Controllers\Api\DebugController;
+
+// Test current lead data
+Route::get('/debug/multi-value-test', [DebugController::class, 'testMultiValueSplit']);
+
+// Simulate split logic
+Route::get('/debug/simulate-split', [DebugController::class, 'simulateSplit']);
+
+// Force recreate LeadProducts from product_confirmations
+Route::get('/debug/force-recreate', [DebugController::class, 'forceRecreate']);
+
