@@ -254,5 +254,13 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::get('/connections', [\App\Http\Controllers\SuperAdmin\SystemConnectionsController::class, 'index'])->name('connections.index');
     Route::get('/connections/status', [\App\Http\Controllers\SuperAdmin\SystemConnectionsController::class, 'status'])->name('connections.status');
     Route::post('/connections/validate', [\App\Http\Controllers\SuperAdmin\SystemConnectionsController::class, 'validateConnection'])->name('connections.validate');
+
+    // Debug Dashboard
+    Route::get('/debug', [\App\Http\Controllers\SuperAdmin\DebugController::class, 'index'])->name('debug.index');
+    Route::get('/debug/{admin}', [\App\Http\Controllers\SuperAdmin\DebugController::class, 'show'])->name('debug.show');
+    Route::post('/debug/{admin}/scan', [\App\Http\Controllers\SuperAdmin\DebugController::class, 'scan'])->name('debug.scan');
+
+    // Project Structure Documentation
+    Route::get('/project-structure', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'index'])->name('project-structure.index');
 });
 

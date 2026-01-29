@@ -1,0 +1,291 @@
+{
+    "generated_at": "2026-01-29T11:32:58+00:00",
+    "admins": [
+        {
+            "admin_id": 1,
+            "admin_name": "Datsun Hardware",
+            "product_questions": [
+                {
+                    "id": 1,
+                    "field_name": "category",
+                    "display_name": "Product Category",
+                    "field_type": "text",
+                    "is_required": false,
+                    "is_unique_key": true,
+                    "unique_key_order": 1,
+                    "is_qty_field": false,
+                    "options_source": "manual",
+                    "catalogue_field": null
+                },
+                {
+                    "id": 2,
+                    "field_name": "model",
+                    "display_name": "Model Number",
+                    "field_type": "text",
+                    "is_required": false,
+                    "is_unique_key": true,
+                    "unique_key_order": 2,
+                    "is_qty_field": false,
+                    "options_source": "manual",
+                    "catalogue_field": null
+                },
+                {
+                    "id": 3,
+                    "field_name": "size",
+                    "display_name": "Size",
+                    "field_type": "text",
+                    "is_required": false,
+                    "is_unique_key": true,
+                    "unique_key_order": 3,
+                    "is_qty_field": false,
+                    "options_source": "manual",
+                    "catalogue_field": null
+                },
+                {
+                    "id": 4,
+                    "field_name": "finish",
+                    "display_name": "Finish\/Color",
+                    "field_type": "text",
+                    "is_required": false,
+                    "is_unique_key": true,
+                    "unique_key_order": 4,
+                    "is_qty_field": false,
+                    "options_source": "manual",
+                    "catalogue_field": null
+                },
+                {
+                    "id": 22,
+                    "field_name": "qty",
+                    "display_name": "Qty",
+                    "field_type": "text",
+                    "is_required": false,
+                    "is_unique_key": false,
+                    "unique_key_order": null,
+                    "is_qty_field": true,
+                    "options_source": "manual",
+                    "catalogue_field": null
+                },
+                {
+                    "id": 6,
+                    "field_name": "packaging",
+                    "display_name": "Packaging",
+                    "field_type": "text",
+                    "is_required": false,
+                    "is_unique_key": false,
+                    "unique_key_order": null,
+                    "is_qty_field": false,
+                    "options_source": "manual",
+                    "catalogue_field": null
+                },
+                {
+                    "id": 7,
+                    "field_name": "material",
+                    "display_name": "Material",
+                    "field_type": "text",
+                    "is_required": false,
+                    "is_unique_key": false,
+                    "unique_key_order": null,
+                    "is_qty_field": false,
+                    "options_source": "manual",
+                    "catalogue_field": null
+                }
+            ],
+            "unique_key_fields": [
+                {
+                    "field_name": "category",
+                    "order": 1
+                },
+                {
+                    "field_name": "model",
+                    "order": 2
+                },
+                {
+                    "field_name": "size",
+                    "order": 3
+                },
+                {
+                    "field_name": "finish",
+                    "order": 4
+                }
+            ],
+            "qty_fields": [
+                "qty"
+            ],
+            "catalogue_linked_fields": [],
+            "questionnaire_nodes": [
+                {
+                    "id": 85,
+                    "node_type": "start",
+                    "label": "Start 1",
+                    "questionnaire_field_id": null,
+                    "global_question_id": null,
+                    "lead_status_id": null,
+                    "is_required": true,
+                    "ask_digit": 1,
+                    "is_unique_field": false
+                },
+                {
+                    "id": 86,
+                    "node_type": "question",
+                    "label": "Product Category",
+                    "questionnaire_field_id": 1,
+                    "global_question_id": null,
+                    "lead_status_id": null,
+                    "is_required": false,
+                    "ask_digit": 3,
+                    "is_unique_field": true
+                },
+                {
+                    "id": 87,
+                    "node_type": "question",
+                    "label": "Model Number",
+                    "questionnaire_field_id": 2,
+                    "global_question_id": null,
+                    "lead_status_id": null,
+                    "is_required": true,
+                    "ask_digit": 1,
+                    "is_unique_field": false
+                },
+                {
+                    "id": 88,
+                    "node_type": "question",
+                    "label": "Size",
+                    "questionnaire_field_id": 3,
+                    "global_question_id": null,
+                    "lead_status_id": null,
+                    "is_required": true,
+                    "ask_digit": 1,
+                    "is_unique_field": false
+                },
+                {
+                    "id": 89,
+                    "node_type": "question",
+                    "label": "Finish\/Color",
+                    "questionnaire_field_id": 4,
+                    "global_question_id": null,
+                    "lead_status_id": null,
+                    "is_required": true,
+                    "ask_digit": 1,
+                    "is_unique_field": false
+                },
+                {
+                    "id": 90,
+                    "node_type": "question",
+                    "label": "Qty",
+                    "questionnaire_field_id": 22,
+                    "global_question_id": null,
+                    "lead_status_id": null,
+                    "is_required": true,
+                    "ask_digit": 1,
+                    "is_unique_field": false
+                }
+            ],
+            "questionnaire_connections": [
+                {
+                    "id": 55,
+                    "source_node_id": 85,
+                    "target_node_id": 86,
+                    "priority": 0,
+                    "condition": null
+                },
+                {
+                    "id": 56,
+                    "source_node_id": 87,
+                    "target_node_id": 88,
+                    "priority": 0,
+                    "condition": null
+                },
+                {
+                    "id": 57,
+                    "source_node_id": 86,
+                    "target_node_id": 87,
+                    "priority": 0,
+                    "condition": null
+                },
+                {
+                    "id": 58,
+                    "source_node_id": 88,
+                    "target_node_id": 89,
+                    "priority": 0,
+                    "condition": null
+                },
+                {
+                    "id": 59,
+                    "source_node_id": 89,
+                    "target_node_id": 90,
+                    "priority": 0,
+                    "condition": null
+                }
+            ],
+            "global_questions": [
+                {
+                    "id": 1,
+                    "field_name": "city",
+                    "display_name": "City",
+                    "field_type": "text",
+                    "is_required": false
+                },
+                {
+                    "id": 2,
+                    "field_name": "purpose_of_purchase",
+                    "display_name": "Purpose of Purchase",
+                    "field_type": "select",
+                    "is_required": false
+                },
+                {
+                    "id": 3,
+                    "field_name": "delivery_type",
+                    "display_name": "Delivery Type",
+                    "field_type": "text",
+                    "is_required": false
+                }
+            ],
+            "lead_statuses": [
+                {
+                    "id": 1,
+                    "name": "New Lead",
+                    "order": 1,
+                    "is_default": true
+                },
+                {
+                    "id": 2,
+                    "name": "Qualified",
+                    "order": 2,
+                    "is_default": false
+                },
+                {
+                    "id": 3,
+                    "name": "Negotiation",
+                    "order": 3,
+                    "is_default": false
+                },
+                {
+                    "id": 4,
+                    "name": "Confirmed",
+                    "order": 4,
+                    "is_default": false
+                },
+                {
+                    "id": 5,
+                    "name": "Lost",
+                    "order": 5,
+                    "is_default": false
+                }
+            ],
+            "catalogues_count": 100,
+            "leads_count": 1,
+            "lead_products_count": 0,
+            "sample_catalogue_keys": [
+                "category",
+                "model",
+                "size",
+                "finish",
+                "packaging",
+                "material"
+            ],
+            "start_node_ids": [
+                85
+            ]
+        }
+    ]
+}
