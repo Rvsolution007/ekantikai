@@ -225,18 +225,32 @@ class WebhookController extends Controller
                         );
 
                         if ($validationResult['valid']) {
-                            // Valid answer - save it
-                            $lead->addCollectedData($currentPending['field_name'], $validationResult['value'], 'workflow_questions');
-                            $lead->refresh();
+                            // MULTI-VALUE FIX: Check if user provided multiple values
+                            $validItems = $validationResult['valid_items'] ?? [$validationResult['value']];
 
-                            Log::info('Smart extraction saved validated user answer', [
-                                'field' => $currentPending['field_name'],
-                                'answer' => $validationResult['value'],
-                                'lead_id' => $lead->id,
-                            ]);
+                            if (count($validItems) > 1) {
+                                // MULTIPLE VALUES: Skip workflow_questions, let AI's product_confirmations handle it
+                                // ProductConfirmationService.splitMultiValueConfirmations will create separate rows
+                                Log::info('Multi-value detected, skipping workflow_questions save - AI product_confirmations will handle', [
+                                    'field' => $currentPending['field_name'],
+                                    'values' => $validItems,
+                                    'lead_id' => $lead->id,
+                                ]);
+                                // AI already processed and created product_confirmations earlier
+                            } else {
+                                // SINGLE VALUE: Save to workflow_questions for fast sync
+                                $lead->addCollectedData($currentPending['field_name'], $validItems[0] ?? $validationResult['value'], 'workflow_questions');
+                                $lead->refresh();
 
-                            // SYNC TO LEAD_PRODUCTS: Create/update LeadProduct for Product Quotation display
-                            $this->syncWorkflowToLeadProduct($lead, $tenant->id);
+                                Log::info('Smart extraction saved validated user answer', [
+                                    'field' => $currentPending['field_name'],
+                                    'answer' => $validItems[0] ?? $validationResult['value'],
+                                    'lead_id' => $lead->id,
+                                ]);
+
+                                // SYNC TO LEAD_PRODUCTS: Create/update LeadProduct for this single value
+                                $this->syncWorkflowToLeadProduct($lead, $tenant->id);
+                            }
                         } else {
                             // Invalid answer - show available options
                             Log::warning('Smart extraction found invalid answer', [
