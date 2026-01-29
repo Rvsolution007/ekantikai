@@ -248,8 +248,8 @@ class WebhookController extends Controller
                                     'lead_id' => $lead->id,
                                 ]);
 
-                                // SYNC TO LEAD_PRODUCTS: Create/update LeadProduct for this single value
-                                $this->syncWorkflowToLeadProduct($lead, $tenant->id);
+                                // OPTION A: DISABLED - LeadProduct only from product_confirmations
+                                // $this->syncWorkflowToLeadProduct($lead, $tenant->id);
                             }
                         } else {
                             // Invalid answer - show available options
