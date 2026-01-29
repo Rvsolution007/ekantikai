@@ -441,6 +441,26 @@ class WebhookController extends Controller
             }
         }
 
+        // CRITICAL FALLBACK: If AI didn't return product_confirmations but extracted_data has product fields,
+        // auto-generate product_confirmations from extracted_data
+        $productFields = ['category', 'model', 'size', 'finish', 'product_type', 'product'];
+        if (empty($aiResponse['product_confirmations']) && !empty($aiResponse['extracted_data'])) {
+            $productData = [];
+            foreach ($aiResponse['extracted_data'] as $key => $value) {
+                if (in_array(strtolower($key), $productFields) && !empty($value)) {
+                    $productData[$key] = $value;
+                }
+            }
+
+            if (!empty($productData)) {
+                Log::info('Auto-generating product_confirmations from extracted_data (AI fallback)', [
+                    'lead_id' => $lead->id,
+                    'product_data' => $productData,
+                ]);
+                $aiResponse['product_confirmations'] = [$productData];
+            }
+        }
+
         // Handle product confirmations using ProductConfirmationService (Point 8.3)
         if (!empty($aiResponse['product_confirmations'])) {
             Log::debug('Processing product confirmations with service', [
