@@ -395,12 +395,25 @@ class WebhookController extends Controller
                             );
 
                             if ($validationResult['valid']) {
-                                $lead->addCollectedData($key, $validationResult['value'], 'workflow_questions');
-                                Log::info('AI extracted valid workflow data', [
-                                    'field' => $key,
-                                    'value' => $validationResult['value'],
-                                    'lead_id' => $lead->id,
-                                ]);
+                                // MULTI-VALUE FIX: Check if AI extracted multiple values
+                                $validItems = $validationResult['valid_items'] ?? [$validationResult['value']];
+
+                                if (count($validItems) > 1) {
+                                    // MULTIPLE VALUES: Skip workflow_questions, let product_confirmations handle
+                                    Log::info('AI extracted multi-value, skipping workflow_questions - product_confirmations will handle', [
+                                        'field' => $key,
+                                        'values' => $validItems,
+                                        'lead_id' => $lead->id,
+                                    ]);
+                                } else {
+                                    // SINGLE VALUE: Save to workflow_questions
+                                    $lead->addCollectedData($key, $validItems[0] ?? $validationResult['value'], 'workflow_questions');
+                                    Log::info('AI extracted valid workflow data (single value)', [
+                                        'field' => $key,
+                                        'value' => $validItems[0] ?? $validationResult['value'],
+                                        'lead_id' => $lead->id,
+                                    ]);
+                                }
 
                                 // Update pending field for next iteration
                                 $lead->refresh();
