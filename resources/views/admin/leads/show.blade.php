@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                                                        @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                                                        @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                                                        @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                                                @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                                                @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                                                @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                                                {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                                                        {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -172,15 +172,15 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                                                                                                                                                                {{ $lead->stage === $stageOption
+                                                                                                                                                                                                                                                        {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span
                                                 class="w-3 h-3 rounded-full mr-3 
-                                                                                                                                                                                                                @if($stageOption === 'New Lead') bg-yellow-500
-                                                                                                                                                                                                                @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                                                                                                                                                                @elseif($stageOption === 'Confirm') bg-green-500
-                                                                                                                                                                                                                @else bg-red-500 @endif"></span>
+                                                                                                                                                                                                                                                        @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                                                                                                                                                                                        @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                                                                                                                                                                                        @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                                                                                                                                                                                        @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,9 +233,16 @@
                                     {{ $lead->contact_name ?? 'customer' }}
                                 </p>
                             </div>
-                            <div class="text-right">
-                                <p class="text-white/70 text-sm">Date</p>
-                                <p class="text-white font-medium">{{ $lead->created_at->format('M d, Y') }}</p>
+                            <div class="flex items-center gap-4">
+                                <!-- DEBUG BUTTON -->
+                                <button onclick="openDebugModal()"
+                                    class="px-3 py-2 rounded-lg bg-yellow-500/20 border border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/30 transition-colors text-sm font-medium flex items-center gap-2">
+                                    🔍 Debug Data
+                                </button>
+                                <div class="text-right">
+                                    <p class="text-white/70 text-sm">Date</p>
+                                    <p class="text-white font-medium">{{ $lead->created_at->format('M d, Y') }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -454,68 +461,69 @@
                                 <span class="text-lg">🌐</span>
                                 Customer Information
                             </h4>
-                            <a href="{{ route('admin.clients.edit', $client) }}" 
-                               class="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1">
+                            <a href="{{ route('admin.clients.edit', $client) }}"
+                                class="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                                 Edit
                             </a>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                             @if($client->name)
-                            <div class="p-4 bg-white/5 rounded-xl">
-                                <p class="text-xs text-gray-400 mb-1">Name</p>
-                                <p class="text-white font-medium">{{ $client->name }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">Name</p>
+                                    <p class="text-white font-medium">{{ $client->name }}</p>
+                                </div>
                             @endif
                             @if($client->phone)
-                            <div class="p-4 bg-white/5 rounded-xl">
-                                <p class="text-xs text-gray-400 mb-1">Phone</p>
-                                <p class="text-white font-medium">{{ $client->phone }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">Phone</p>
+                                    <p class="text-white font-medium">{{ $client->phone }}</p>
+                                </div>
                             @endif
                             @if($client->business_name)
-                            <div class="p-4 bg-white/5 rounded-xl">
-                                <p class="text-xs text-gray-400 mb-1">Business Name</p>
-                                <p class="text-white font-medium">{{ $client->business_name }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">Business Name</p>
+                                    <p class="text-white font-medium">{{ $client->business_name }}</p>
+                                </div>
                             @endif
                             @if($client->city)
-                            <div class="p-4 bg-white/5 rounded-xl">
-                                <p class="text-xs text-gray-400 mb-1">City</p>
-                                <p class="text-white font-medium">{{ $client->city }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">City</p>
+                                    <p class="text-white font-medium">{{ $client->city }}</p>
+                                </div>
                             @endif
                             @if($client->state)
-                            <div class="p-4 bg-white/5 rounded-xl">
-                                <p class="text-xs text-gray-400 mb-1">State</p>
-                                <p class="text-white font-medium">{{ $client->state }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">State</p>
+                                    <p class="text-white font-medium">{{ $client->state }}</p>
+                                </div>
                             @endif
                             @if($client->gst_number)
-                            <div class="p-4 bg-white/5 rounded-xl">
-                                <p class="text-xs text-gray-400 mb-1">GST Number</p>
-                                <p class="text-white font-medium">{{ $client->gst_number }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">GST Number</p>
+                                    <p class="text-white font-medium">{{ $client->gst_number }}</p>
+                                </div>
                             @endif
                             @if($client->email)
-                            <div class="p-4 bg-white/5 rounded-xl">
-                                <p class="text-xs text-gray-400 mb-1">Email</p>
-                                <p class="text-white font-medium">{{ $client->email }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl">
+                                    <p class="text-xs text-gray-400 mb-1">Email</p>
+                                    <p class="text-white font-medium">{{ $client->email }}</p>
+                                </div>
                             @endif
                             @if($client->address)
-                            <div class="p-4 bg-white/5 rounded-xl col-span-2">
-                                <p class="text-xs text-gray-400 mb-1">Address</p>
-                                <p class="text-white font-medium">{{ $client->address }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl col-span-2">
+                                    <p class="text-xs text-gray-400 mb-1">Address</p>
+                                    <p class="text-white font-medium">{{ $client->address }}</p>
+                                </div>
                             @endif
                             @if($client->notes)
-                            <div class="p-4 bg-white/5 rounded-xl col-span-full">
-                                <p class="text-xs text-gray-400 mb-1">Notes</p>
-                                <p class="text-white font-medium">{{ $client->notes }}</p>
-                            </div>
+                                <div class="p-4 bg-white/5 rounded-xl col-span-full">
+                                    <p class="text-xs text-gray-400 mb-1">Notes</p>
+                                    <p class="text-white font-medium">{{ $client->notes }}</p>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -529,14 +537,15 @@
                         <div class="text-center py-8">
                             <div class="w-16 h-16 mx-auto rounded-full bg-white/5 flex items-center justify-center mb-4">
                                 <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                             </div>
                             <p class="text-gray-400 mb-4">No client profile created yet</p>
-                            <a href="{{ route('admin.clients.create') }}?phone={{ $lead->contact_phone }}&name={{ urlencode($lead->contact_name ?? '') }}" 
-                               class="btn-gradient px-4 py-2 rounded-lg inline-flex items-center gap-2">
+                            <a href="{{ route('admin.clients.create') }}?phone={{ $lead->contact_phone }}&name={{ urlencode($lead->contact_name ?? '') }}"
+                                class="btn-gradient px-4 py-2 rounded-lg inline-flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                 </svg>
                                 Create Client Profile
                             </a>
@@ -566,7 +575,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                                                                                                                                                                {{ $role === 'user'
+                                                                                                                                                                                                                                                        {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
@@ -747,10 +756,10 @@
 
                     const fieldDiv = document.createElement('div');
                     fieldDiv.innerHTML = `
-                                <label class="block text-sm font-medium text-gray-300 mb-1">${displayName}</label>
-                                <input type="text" name="${fieldName}" value="${value}"
-                                    class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                            `;
+                                                <label class="block text-sm font-medium text-gray-300 mb-1">${displayName}</label>
+                                                <input type="text" name="${fieldName}" value="${value}"
+                                                    class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                            `;
                     fieldsContainer.appendChild(fieldDiv);
                 });
 
@@ -834,5 +843,153 @@
                 </div>
             </div>
         </div>
+
+        <!-- DEBUG MODAL -->
+        <div id="debugModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 overflow-y-auto p-4">
+            <div class="glass rounded-2xl p-6 w-full max-w-4xl mx-4 my-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white">🔍 Debug Data - Multi-Value Analysis</h3>
+                    <button onclick="closeDebugModal()" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="debugContent" class="space-y-4">
+                    <div class="text-center py-8">
+                        <div class="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto">
+                        </div>
+                        <p class="text-gray-400 mt-4">Loading debug data...</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button onclick="closeDebugModal()"
+                        class="flex-1 px-4 py-3 rounded-xl bg-gray-700 text-white font-medium hover:bg-gray-600 transition-colors">
+                        Close
+                    </button>
+                    <button onclick="forceRecreateProducts()" id="forceRecreateBtn"
+                        class="flex-1 px-4 py-3 rounded-xl bg-orange-600 text-white font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2">
+                        🔄 Force Recreate Products
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function openDebugModal() {
+                document.getElementById('debugModal').classList.remove('hidden');
+                loadDebugData();
+            }
+
+            function closeDebugModal() {
+                document.getElementById('debugModal').classList.add('hidden');
+            }
+
+            function loadDebugData() {
+                const leadId = {{ $lead->id }};
+                fetch(`/api/debug/multi-value-test?lead_id=${leadId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayDebugData(data);
+                    })
+                    .catch(error => {
+                        document.getElementById('debugContent').innerHTML = `
+                                    <div class="p-4 bg-red-500/20 border border-red-500/50 rounded-xl">
+                                        <p class="text-red-400">Error loading debug data: ${error.message}</p>
+                                    </div>
+                                `;
+                    });
+            }
+
+            function displayDebugData(data) {
+                const content = document.getElementById('debugContent');
+
+                // Diagnosis
+                const diagnosis = data['4_diagnosis'] || {};
+                const diagnosisClass = diagnosis.status?.includes('✅') ? 'bg-green-500/20 border-green-500/50' : 'bg-red-500/20 border-red-500/50';
+                const diagnosisTextClass = diagnosis.status?.includes('✅') ? 'text-green-400' : 'text-red-400';
+
+                let html = `
+                            <!-- Diagnosis -->
+                            <div class="p-4 ${diagnosisClass} border rounded-xl">
+                                <h4 class="font-bold ${diagnosisTextClass} mb-2">📋 Diagnosis</h4>
+                                <p class="${diagnosisTextClass}">${diagnosis.status || 'No diagnosis'}</p>
+                                ${diagnosis.issues?.length > 0 ? `
+                                    <ul class="mt-2 space-y-1">
+                                        ${diagnosis.issues.map(issue => `<li class="text-sm text-red-300">• ${issue}</li>`).join('')}
+                                    </ul>
+                                ` : ''}
+                                ${diagnosis.recommendation ? `<p class="mt-2 text-yellow-300 text-sm">💡 ${diagnosis.recommendation}</p>` : ''}
+                            </div>
+
+                            <!-- workflow_questions -->
+                            <div class="p-4 bg-blue-500/20 border border-blue-500/50 rounded-xl">
+                                <h4 class="font-bold text-blue-400 mb-2">1️⃣ workflow_questions (flowchart progress)</h4>
+                                <p class="text-gray-400 text-xs mb-2">${data['1_workflow_questions']?.description || ''}</p>
+                                <pre class="text-sm text-white bg-black/30 p-3 rounded-lg overflow-x-auto">${JSON.stringify(data['1_workflow_questions']?.data || {}, null, 2)}</pre>
+                            </div>
+
+                            <!-- product_confirmations -->
+                            <div class="p-4 bg-purple-500/20 border border-purple-500/50 rounded-xl">
+                                <h4 class="font-bold text-purple-400 mb-2">2️⃣ product_confirmations (AI output) - ${data['2_product_confirmations']?.count || 0} items</h4>
+                                <p class="text-gray-400 text-xs mb-2">${data['2_product_confirmations']?.description || ''}</p>
+                                <pre class="text-sm text-white bg-black/30 p-3 rounded-lg overflow-x-auto max-h-48">${JSON.stringify(data['2_product_confirmations']?.data || [], null, 2)}</pre>
+                            </div>
+
+                            <!-- LeadProducts -->
+                            <div class="p-4 bg-green-500/20 border border-green-500/50 rounded-xl">
+                                <h4 class="font-bold text-green-400 mb-2">3️⃣ lead_products (Product Quotation) - ${data['3_current_lead_products']?.count || 0} rows</h4>
+                                <p class="text-gray-400 text-xs mb-2">${data['3_current_lead_products']?.description || ''}</p>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-white">
+                                        <thead class="border-b border-white/20">
+                                            <tr>
+                                                <th class="py-2 px-2 text-left">ID</th>
+                                                <th class="py-2 px-2 text-left">Category</th>
+                                                <th class="py-2 px-2 text-left">Model</th>
+                                                <th class="py-2 px-2 text-left">Size</th>
+                                                <th class="py-2 px-2 text-left">Finish</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(data['3_current_lead_products']?.data || []).map(p => `
+                                                <tr class="border-b border-white/10">
+                                                    <td class="py-2 px-2">${p.id}</td>
+                                                    <td class="py-2 px-2 ${p.category?.includes(',') ? 'text-red-400 font-bold' : ''}">${p.category || '-'}</td>
+                                                    <td class="py-2 px-2">${p.model || '-'}</td>
+                                                    <td class="py-2 px-2">${p.size || '-'}</td>
+                                                    <td class="py-2 px-2">${p.finish || '-'}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+
+                content.innerHTML = html;
+            }
+
+            function forceRecreateProducts() {
+                const leadId = {{ $lead->id }};
+                const btn = document.getElementById('forceRecreateBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="animate-spin">⏳</span> Processing...';
+
+                fetch(`/api/debug/force-recreate?lead_id=${leadId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(`Done! Deleted ${data.deleted_count} old rows, created ${data.new_products_created} new rows.`);
+                        location.reload();
+                    })
+                    .catch(error => {
+                        alert('Error: ' + error.message);
+                        btn.disabled = false;
+                        btn.innerHTML = '🔄 Force Recreate Products';
+                    });
+            }
+        </script>
     @endpush
 @endsection
