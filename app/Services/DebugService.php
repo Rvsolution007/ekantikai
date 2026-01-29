@@ -332,6 +332,83 @@ class DebugService
             }
         }
 
+        // === CHECK 11: n8n Model Parity ===
+        // Compare catalogue models against n8n expected models per category
+        $n8nExpectedModels = [
+            'knob handles' => ['401', '402', '404', '406', '407', '408', '409', '410', '412', '413', '414', '415', '416', '417', '418', '419', '422', '9014', '9017', '9034', '9035'],
+            'profile handles' => ['09', '016', '028', '029', '031', '032', '033', '034', '034 BS', '035 BS', '039'],
+            'cabinet handles' => ['007', '008', '009', '0010', '0011', '0012', '0013', '0014', '0015'],
+            'wardrobe handles' => ['252', '253', '9001', '9002', '9004', '9005', '9007', '9008', '9009', '9010', '9011', '9018', '9019', '9020', '9021', '9023', '9024', '9025', '9026', '9027', '9028', '9029', '9030', '9031', '9032', '9033', '9034', '9035', '9036', '9037', '9038', '9039', '9040', '9041', '9042', '9043', '9044', '9045', '9046', '9047', '9048', '9049', '9050', '9051', '9052', '9053'],
+            'wardrobe profile handle' => ['05', '022'],
+            'main door handles' => ['90', '91', '92', '93', '94', '95', '96', '97', '98', '99', '100'],
+        ];
+
+        $n8nIssues = [];
+        foreach ($n8nExpectedModels as $category => $expectedModels) {
+            $catalogueModelsForCat = array_keys($categoryModels[$category] ?? []);
+
+            // Normalize for comparison (handle leading zeros)
+            $normalizeModel = fn($m) => ltrim(strtolower(trim($m)), '0') ?: '0';
+            $expectedNorm = array_map($normalizeModel, $expectedModels);
+            $actualNorm = array_map($normalizeModel, $catalogueModelsForCat);
+
+            // Find missing (in n8n but not in catalogue)
+            $missingNorm = array_diff($expectedNorm, $actualNorm);
+            $missingModels = [];
+            foreach ($missingNorm as $idx => $norm) {
+                $missingModels[] = $expectedModels[$idx];
+            }
+
+            // Find format mismatches (same value but different format)
+            $formatIssues = [];
+            foreach ($expectedModels as $exp) {
+                $expNorm = $normalizeModel($exp);
+                foreach ($catalogueModelsForCat as $cat) {
+                    $catNorm = $normalizeModel($cat);
+                    if ($expNorm === $catNorm && strtolower($exp) !== strtolower($cat)) {
+                        $formatIssues[] = "'{$cat}' should be '{$exp}'";
+                    }
+                }
+            }
+
+            if (count($missingModels) > 0 || count($formatIssues) > 0) {
+                $n8nIssues[$category] = [
+                    'missing' => $missingModels,
+                    'format_issues' => array_unique($formatIssues),
+                ];
+            }
+        }
+
+        if (count($n8nIssues) > 0) {
+            $issueDetails = [];
+            foreach ($n8nIssues as $cat => $issues) {
+                $parts = [];
+                if (count($issues['missing']) > 0) {
+                    $parts[] = "missing: " . implode(', ', array_slice($issues['missing'], 0, 5)) . (count($issues['missing']) > 5 ? '...' : '');
+                }
+                if (count($issues['format_issues']) > 0) {
+                    $parts[] = "format: " . implode(', ', array_slice($issues['format_issues'], 0, 3));
+                }
+                $issueDetails[] = ucfirst($cat) . " (" . implode('; ', $parts) . ")";
+            }
+
+            $errors[] = [
+                'id' => 'ERR-N8N-MISMATCH',
+                'name' => 'Catalogue vs n8n Model Mismatch',
+                'severity' => 'critical',
+                'details' => "Catalogue models don't match n8n AI expected models: " . implode('. ', $issueDetails),
+                'fix' => 'Update catalogue to match n8n model format (use leading zeros like 007, 016) or update n8n AI prompt',
+                'categories_affected' => array_keys($n8nIssues),
+                'full_issues' => $n8nIssues,
+            ];
+        } else {
+            $checks[] = [
+                'name' => 'n8n Model Parity',
+                'status' => 'pass',
+                'details' => 'All catalogue models match n8n AI expected models'
+            ];
+        }
+
         // === Compute Badge ===
         $criticalErrors = collect($errors)->where('severity', 'critical')->count();
         $badge = $criticalErrors === 0 && count($errors) === 0 ? 'CONNECTED' : 'NOT CONNECTED';
