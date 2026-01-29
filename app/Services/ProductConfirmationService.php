@@ -93,6 +93,72 @@ class ProductConfirmationService
     }
 
     /**
+     * Split combined values in confirmations into separate entries
+     * e.g., {"category": "Profile handles, Knob handles"} becomes 2 separate confirmations
+     */
+    protected function splitMultiValueConfirmations(array $confirmations): array
+    {
+        $expanded = [];
+
+        // Fields that commonly have multi-value inputs
+        $splitableFields = ['category', 'product', 'product_type', 'model', 'size', 'finish'];
+
+        // Patterns to split by (or, and, aur, ya, comma)
+        $splitPattern = '/\s*(?:,|\s+or\s+|\s+and\s+|\s+aur\s+|\s+ya\s+|\s+&\s+)\s*/i';
+
+        foreach ($confirmations as $confirmation) {
+            if (!is_array($confirmation)) {
+                $expanded[] = $confirmation;
+                continue;
+            }
+
+            // Check each field for multi-values
+            $needsSplit = false;
+            $splitField = null;
+            $splitValues = [];
+
+            foreach ($splitableFields as $field) {
+                if (isset($confirmation[$field]) && is_string($confirmation[$field])) {
+                    $value = trim($confirmation[$field]);
+
+                    // Check if value contains split patterns
+                    if (preg_match($splitPattern, $value)) {
+                        $parts = preg_split($splitPattern, $value);
+                        $parts = array_filter(array_map('trim', $parts));
+
+                        if (count($parts) > 1) {
+                            $needsSplit = true;
+                            $splitField = $field;
+                            $splitValues = $parts;
+                            break; // Only split on first field with multi-values
+                        }
+                    }
+                }
+            }
+
+            if ($needsSplit && $splitField && count($splitValues) > 1) {
+                // Create separate confirmation for each value
+                foreach ($splitValues as $splitValue) {
+                    $newConfirmation = $confirmation;
+                    $newConfirmation[$splitField] = $this->normalizeValue($splitField, $splitValue);
+                    $expanded[] = $newConfirmation;
+
+                    Log::debug('ProductConfirmationService: Split multi-value', [
+                        'field' => $splitField,
+                        'original' => $confirmation[$splitField],
+                        'split_to' => $newConfirmation[$splitField],
+                    ]);
+                }
+            } else {
+                // No split needed, keep original
+                $expanded[] = $confirmation;
+            }
+        }
+
+        return $expanded;
+    }
+
+    /**
      * Process AI confirmations - CREATE, UPDATE, or SKIP
      */
     public function processConfirmations(Lead $lead, array $confirmations): array
@@ -102,6 +168,14 @@ class ProductConfirmationService
 
         Log::debug('ProductConfirmationService: Processing confirmations', [
             'lead_id' => $lead->id,
+            'count' => count($confirmations),
+        ]);
+
+        // PRE-PROCESS: Split combined values into separate confirmations
+        // e.g., {"category": "Profile handles, Knob handles"} becomes 2 separate entries
+        $confirmations = $this->splitMultiValueConfirmations($confirmations);
+
+        Log::debug('ProductConfirmationService: After splitting multi-values', [
             'count' => count($confirmations),
         ]);
 
