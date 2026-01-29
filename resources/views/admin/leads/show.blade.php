@@ -23,9 +23,9 @@
                 <div class="flex items-center gap-3">
                     <!-- Lead Quality Badge -->
                     <div class="flex items-center gap-2 px-4 py-2 rounded-xl 
-                                                                @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
-                                                                @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
-                                                                @else bg-blue-500/20 border border-blue-500/30 @endif">
+                                                                    @if($lead->lead_quality === 'hot') bg-red-500/20 border border-red-500/30
+                                                                    @elseif($lead->lead_quality === 'warm') bg-yellow-500/20 border border-yellow-500/30
+                                                                    @else bg-blue-500/20 border border-blue-500/30 @endif">
                         <span class="text-xl">
                             @if($lead->lead_quality === 'hot') 🔥
                             @elseif($lead->lead_quality === 'warm') ☀️
@@ -95,7 +95,7 @@
                             </span>
                             <span
                                 class="px-2 py-1 text-xs rounded-full 
-                                                                        {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
+                                                                            {{ ($lead->customer->bot_enabled ?? true) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                 {{ ($lead->customer->bot_enabled ?? true) ? '✓ Active' : '✗ Disabled' }}
                             </span>
                         </div>
@@ -172,15 +172,15 @@
                     <div class="space-y-2">
                         @foreach(['New Lead' => 'yellow', 'Qualified' => 'blue', 'Confirm' => 'green', 'Lose' => 'red'] as $stageOption => $color)
                                         <button onclick="updateStage('{{ $stageOption }}')" class="w-full flex items-center p-3 rounded-xl transition-all
-                                                                                                                                                                                                                                                        {{ $lead->stage === $stageOption
+                                                                                                                                                                                                                                                                            {{ $lead->stage === $stageOption
                             ? 'bg-' . $color . '-500/20 border-2 border-' . $color . '-500/50 text-' . $color . '-400'
                             : 'bg-white/5 border-2 border-transparent hover:bg-white/10 text-gray-400' }}">
                                             <span
                                                 class="w-3 h-3 rounded-full mr-3 
-                                                                                                                                                                                                                                                        @if($stageOption === 'New Lead') bg-yellow-500
-                                                                                                                                                                                                                                                        @elseif($stageOption === 'Qualified') bg-blue-500
-                                                                                                                                                                                                                                                        @elseif($stageOption === 'Confirm') bg-green-500
-                                                                                                                                                                                                                                                        @else bg-red-500 @endif"></span>
+                                                                                                                                                                                                                                                                            @if($stageOption === 'New Lead') bg-yellow-500
+                                                                                                                                                                                                                                                                            @elseif($stageOption === 'Qualified') bg-blue-500
+                                                                                                                                                                                                                                                                            @elseif($stageOption === 'Confirm') bg-green-500
+                                                                                                                                                                                                                                                                            @else bg-red-500 @endif"></span>
                                             <span class="font-medium">{{ $stageOption }}</span>
                                             @if($lead->stage === $stageOption)
                                                 <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,15 +305,42 @@
                         if (!empty($workflowQ)) {
                             // Only add if it has meaningful product data (category or model)
                             if (isset($workflowQ['category']) || isset($workflowQ['model'])) {
-                                // Check if this data is already in allProducts
-                                $isDuplicate = $allProducts->contains(function ($p) use ($workflowQ) {
-                                    return ($p['category'] ?? '') === ($workflowQ['category'] ?? '') &&
-                                        ($p['model'] ?? '') === ($workflowQ['model'] ?? '');
-                                });
-                                if (!$isDuplicate) {
-                                    $workflowQ['_source'] = 'workflow';
-                                    $workflowQ['_id'] = 'workflow';
-                                    $allProducts->push($workflowQ);
+
+                                // SPLIT COMBINED VALUES: Check if category has comma/or separator
+                                $category = $workflowQ['category'] ?? '';
+                                $splitPattern = '/\s*(?:,|\s+or\s+|\s+and\s+|\s+aur\s+)\s*/i';
+
+                                if (preg_match($splitPattern, $category)) {
+                                    // Split into multiple products
+                                    $categories = preg_split($splitPattern, $category);
+                                    $categories = array_filter(array_map('trim', $categories));
+
+                                    foreach ($categories as $idx => $singleCategory) {
+                                        $singleProduct = $workflowQ;
+                                        $singleProduct['category'] = $singleCategory;
+                                        $singleProduct['_source'] = 'workflow';
+                                        $singleProduct['_id'] = 'workflow_' . $idx;
+
+                                        // Check for duplicate
+                                        $isDuplicate = $allProducts->contains(function ($p) use ($singleCategory) {
+                                            return strtolower($p['category'] ?? '') === strtolower($singleCategory);
+                                        });
+
+                                        if (!$isDuplicate) {
+                                            $allProducts->push($singleProduct);
+                                        }
+                                    }
+                                } else {
+                                    // Single category - add as before
+                                    $isDuplicate = $allProducts->contains(function ($p) use ($workflowQ) {
+                                        return ($p['category'] ?? '') === ($workflowQ['category'] ?? '') &&
+                                            ($p['model'] ?? '') === ($workflowQ['model'] ?? '');
+                                    });
+                                    if (!$isDuplicate) {
+                                        $workflowQ['_source'] = 'workflow';
+                                        $workflowQ['_id'] = 'workflow';
+                                        $allProducts->push($workflowQ);
+                                    }
                                 }
                             }
                         }
@@ -575,7 +602,7 @@
                                         @endphp
                                         <div class="flex {{ $role === 'user' ? 'justify-start' : 'justify-end' }}">
                                             <div class="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl
-                                                                                                                                                                                                                                                        {{ $role === 'user'
+                                                                                                                                                                                                                                                                            {{ $role === 'user'
                             ? 'bg-white/10 text-white rounded-bl-none'
                             : 'bg-gradient-to-r from-primary-500 to-purple-500 text-white rounded-br-none' }}">
                                                 <p class="text-sm">{{ $content }}</p>
@@ -756,10 +783,10 @@
 
                     const fieldDiv = document.createElement('div');
                     fieldDiv.innerHTML = `
-                                                <label class="block text-sm font-medium text-gray-300 mb-1">${displayName}</label>
-                                                <input type="text" name="${fieldName}" value="${value}"
-                                                    class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                                            `;
+                                                        <label class="block text-sm font-medium text-gray-300 mb-1">${displayName}</label>
+                                                        <input type="text" name="${fieldName}" value="${value}"
+                                                            class="w-full px-4 py-3 rounded-xl bg-dark-300 border border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                                    `;
                     fieldsContainer.appendChild(fieldDiv);
                 });
 
@@ -896,10 +923,10 @@
                     })
                     .catch(error => {
                         document.getElementById('debugContent').innerHTML = `
-                                    <div class="p-4 bg-red-500/20 border border-red-500/50 rounded-xl">
-                                        <p class="text-red-400">Error loading debug data: ${error.message}</p>
-                                    </div>
-                                `;
+                                            <div class="p-4 bg-red-500/20 border border-red-500/50 rounded-xl">
+                                                <p class="text-red-400">Error loading debug data: ${error.message}</p>
+                                            </div>
+                                        `;
                     });
             }
 
@@ -912,62 +939,62 @@
                 const diagnosisTextClass = diagnosis.status?.includes('✅') ? 'text-green-400' : 'text-red-400';
 
                 let html = `
-                            <!-- Diagnosis -->
-                            <div class="p-4 ${diagnosisClass} border rounded-xl">
-                                <h4 class="font-bold ${diagnosisTextClass} mb-2">📋 Diagnosis</h4>
-                                <p class="${diagnosisTextClass}">${diagnosis.status || 'No diagnosis'}</p>
-                                ${diagnosis.issues?.length > 0 ? `
-                                    <ul class="mt-2 space-y-1">
-                                        ${diagnosis.issues.map(issue => `<li class="text-sm text-red-300">• ${issue}</li>`).join('')}
-                                    </ul>
-                                ` : ''}
-                                ${diagnosis.recommendation ? `<p class="mt-2 text-yellow-300 text-sm">💡 ${diagnosis.recommendation}</p>` : ''}
-                            </div>
+                                    <!-- Diagnosis -->
+                                    <div class="p-4 ${diagnosisClass} border rounded-xl">
+                                        <h4 class="font-bold ${diagnosisTextClass} mb-2">📋 Diagnosis</h4>
+                                        <p class="${diagnosisTextClass}">${diagnosis.status || 'No diagnosis'}</p>
+                                        ${diagnosis.issues?.length > 0 ? `
+                                            <ul class="mt-2 space-y-1">
+                                                ${diagnosis.issues.map(issue => `<li class="text-sm text-red-300">• ${issue}</li>`).join('')}
+                                            </ul>
+                                        ` : ''}
+                                        ${diagnosis.recommendation ? `<p class="mt-2 text-yellow-300 text-sm">💡 ${diagnosis.recommendation}</p>` : ''}
+                                    </div>
 
-                            <!-- workflow_questions -->
-                            <div class="p-4 bg-blue-500/20 border border-blue-500/50 rounded-xl">
-                                <h4 class="font-bold text-blue-400 mb-2">1️⃣ workflow_questions (flowchart progress)</h4>
-                                <p class="text-gray-400 text-xs mb-2">${data['1_workflow_questions']?.description || ''}</p>
-                                <pre class="text-sm text-white bg-black/30 p-3 rounded-lg overflow-x-auto">${JSON.stringify(data['1_workflow_questions']?.data || {}, null, 2)}</pre>
-                            </div>
+                                    <!-- workflow_questions -->
+                                    <div class="p-4 bg-blue-500/20 border border-blue-500/50 rounded-xl">
+                                        <h4 class="font-bold text-blue-400 mb-2">1️⃣ workflow_questions (flowchart progress)</h4>
+                                        <p class="text-gray-400 text-xs mb-2">${data['1_workflow_questions']?.description || ''}</p>
+                                        <pre class="text-sm text-white bg-black/30 p-3 rounded-lg overflow-x-auto">${JSON.stringify(data['1_workflow_questions']?.data || {}, null, 2)}</pre>
+                                    </div>
 
-                            <!-- product_confirmations -->
-                            <div class="p-4 bg-purple-500/20 border border-purple-500/50 rounded-xl">
-                                <h4 class="font-bold text-purple-400 mb-2">2️⃣ product_confirmations (AI output) - ${data['2_product_confirmations']?.count || 0} items</h4>
-                                <p class="text-gray-400 text-xs mb-2">${data['2_product_confirmations']?.description || ''}</p>
-                                <pre class="text-sm text-white bg-black/30 p-3 rounded-lg overflow-x-auto max-h-48">${JSON.stringify(data['2_product_confirmations']?.data || [], null, 2)}</pre>
-                            </div>
+                                    <!-- product_confirmations -->
+                                    <div class="p-4 bg-purple-500/20 border border-purple-500/50 rounded-xl">
+                                        <h4 class="font-bold text-purple-400 mb-2">2️⃣ product_confirmations (AI output) - ${data['2_product_confirmations']?.count || 0} items</h4>
+                                        <p class="text-gray-400 text-xs mb-2">${data['2_product_confirmations']?.description || ''}</p>
+                                        <pre class="text-sm text-white bg-black/30 p-3 rounded-lg overflow-x-auto max-h-48">${JSON.stringify(data['2_product_confirmations']?.data || [], null, 2)}</pre>
+                                    </div>
 
-                            <!-- LeadProducts -->
-                            <div class="p-4 bg-green-500/20 border border-green-500/50 rounded-xl">
-                                <h4 class="font-bold text-green-400 mb-2">3️⃣ lead_products (Product Quotation) - ${data['3_current_lead_products']?.count || 0} rows</h4>
-                                <p class="text-gray-400 text-xs mb-2">${data['3_current_lead_products']?.description || ''}</p>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-sm text-white">
-                                        <thead class="border-b border-white/20">
-                                            <tr>
-                                                <th class="py-2 px-2 text-left">ID</th>
-                                                <th class="py-2 px-2 text-left">Category</th>
-                                                <th class="py-2 px-2 text-left">Model</th>
-                                                <th class="py-2 px-2 text-left">Size</th>
-                                                <th class="py-2 px-2 text-left">Finish</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${(data['3_current_lead_products']?.data || []).map(p => `
-                                                <tr class="border-b border-white/10">
-                                                    <td class="py-2 px-2">${p.id}</td>
-                                                    <td class="py-2 px-2 ${p.category?.includes(',') ? 'text-red-400 font-bold' : ''}">${p.category || '-'}</td>
-                                                    <td class="py-2 px-2">${p.model || '-'}</td>
-                                                    <td class="py-2 px-2">${p.size || '-'}</td>
-                                                    <td class="py-2 px-2">${p.finish || '-'}</td>
-                                                </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        `;
+                                    <!-- LeadProducts -->
+                                    <div class="p-4 bg-green-500/20 border border-green-500/50 rounded-xl">
+                                        <h4 class="font-bold text-green-400 mb-2">3️⃣ lead_products (Product Quotation) - ${data['3_current_lead_products']?.count || 0} rows</h4>
+                                        <p class="text-gray-400 text-xs mb-2">${data['3_current_lead_products']?.description || ''}</p>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-sm text-white">
+                                                <thead class="border-b border-white/20">
+                                                    <tr>
+                                                        <th class="py-2 px-2 text-left">ID</th>
+                                                        <th class="py-2 px-2 text-left">Category</th>
+                                                        <th class="py-2 px-2 text-left">Model</th>
+                                                        <th class="py-2 px-2 text-left">Size</th>
+                                                        <th class="py-2 px-2 text-left">Finish</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${(data['3_current_lead_products']?.data || []).map(p => `
+                                                        <tr class="border-b border-white/10">
+                                                            <td class="py-2 px-2">${p.id}</td>
+                                                            <td class="py-2 px-2 ${p.category?.includes(',') ? 'text-red-400 font-bold' : ''}">${p.category || '-'}</td>
+                                                            <td class="py-2 px-2">${p.model || '-'}</td>
+                                                            <td class="py-2 px-2">${p.size || '-'}</td>
+                                                            <td class="py-2 px-2">${p.finish || '-'}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                `;
 
                 content.innerHTML = html;
             }
