@@ -1423,6 +1423,13 @@ PROMPT;
                 $values = preg_split($splitPattern, $value);
                 $values = array_filter(array_map('trim', $values));
                 
+                Log::debug('getFieldOptionsFromCatalogue: Processing filter', [
+                    'field' => $key,
+                    'original_value' => $value,
+                    'split_values' => $values,
+                    'count' => count($values),
+                ]);
+                
                 if (count($values) > 1) {
                     // Multiple values - use OR conditions
                     $query->where(function ($q) use ($key, $values) {
@@ -1447,6 +1454,13 @@ PROMPT;
 
         // Get catalogue items
         $items = $query->get();
+
+        Log::debug('getFieldOptionsFromCatalogue: Query results', [
+            'admin_id' => $adminId,
+            'field_requested' => $fieldName,
+            'workflow_answers' => $workflowAnswers,
+            'items_found' => $items->count(),
+        ]);
 
         if ($items->isEmpty()) {
             return [];
