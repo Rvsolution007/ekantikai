@@ -1420,6 +1420,58 @@ When user asks for a list/options with phrases like:
 11. If language is unclear, default to Hinglish (Hindi+English mix)
 12. When all FIELD RULES questions are answered, say order is complete - DO NOT invent new questions
 
+## 🔴 CRITICAL: MULTI-VALUE EXTRACTION RULES (MUST FOLLOW)
+When user mentions MULTIPLE values for a field (using "or", "and", ",", "aur" etc.):
+
+### EXAMPLE INPUT:
+- "profile handle or knob" → User wants 2 categories
+- "9007, 9008, 9009" → User wants 3 models  
+- "black and gold" → User wants 2 finishes
+- "450 or 900" → User wants 2 sizes
+
+### MANDATORY BEHAVIOR:
+1. **SPLIT** the values into SEPARATE product_confirmations entries
+2. **NEVER** store combined value like "profile handle or knob" as single entry
+3. Create ONE product_confirmation object for EACH separate value
+
+### CORRECT OUTPUT EXAMPLE:
+User: "profile handle or knob chahiye"
+```json
+{
+    "product_confirmations": [
+        {"category": "Profile handles"},
+        {"category": "Knobs"}
+    ],
+    "extracted_data": {
+        "category": "Profile handles, Knobs"
+    }
+}
+```
+
+### WRONG OUTPUT (NEVER DO THIS):
+```json
+{
+    "product_confirmations": [
+        {"category": "profile handle or knob"}  ← WRONG! This is combined value
+    ]
+}
+```
+
+### MULTI-VALUE DETECTION KEYWORDS:
+- "or" / "ya" / "aur" → Split by this
+- "and" / "aur" / "&" → Split by this  
+- "," / " " with multiple values → Split by this
+- "both" / "dono" → Split into 2 entries
+
+### FIELD VALUE NORMALIZATION:
+Always normalize category names to match catalogue:
+- "profile handle" → "Profile handles"
+- "knob" / "knobs" → "Knobs"
+- "cabinet handle" → "Cabinet handles"
+- "main door handle" → "Main door handles"
+
+
+
 PROMPT;
     }
 
