@@ -166,8 +166,41 @@ class DebugController extends Controller
         // Delete existing LeadProducts
         $deleted = LeadProduct::where('lead_id', $leadId)->delete();
 
-        // Get product_confirmations and reprocess
+        // Get product_confirmations
         $productConfirmations = $lead->product_confirmations ?? [];
+
+        // FALLBACK: If product_confirmations is empty, generate from workflow_questions
+        if (empty($productConfirmations)) {
+            $workflowQ = $lead->collected_data['workflow_questions'] ?? [];
+
+            if (!empty($workflowQ['category'])) {
+                $category = $workflowQ['category'];
+                $splitPattern = '/\s*(?:,|\s+or\s+|\s+and\s+|\s+aur\s+)\s*/i';
+
+                // Check if combined value
+                if (preg_match($splitPattern, $category)) {
+                    $categories = preg_split($splitPattern, $category);
+                    $categories = array_filter(array_map('trim', $categories));
+
+                    foreach ($categories as $singleCategory) {
+                        $confirmation = $workflowQ;
+                        $confirmation['category'] = $singleCategory;
+                        $productConfirmations[] = $confirmation;
+                    }
+                } else {
+                    $productConfirmations[] = $workflowQ;
+                }
+
+                // Save the generated confirmations back to lead
+                $lead->product_confirmations = $productConfirmations;
+                $lead->save();
+
+                Log::info('Force Recreate: Generated product_confirmations from workflow_questions', [
+                    'lead_id' => $leadId,
+                    'generated' => $productConfirmations,
+                ]);
+            }
+        }
 
         $service = app(ProductConfirmationService::class);
         $results = $service->processConfirmations($lead, $productConfirmations);
@@ -185,6 +218,7 @@ class DebugController extends Controller
                 'category' => $p->category,
             ]),
             'processing_results' => $results,
+            'source' => empty($lead->product_confirmations) ? 'workflow_questions (fallback)' : 'product_confirmations',
         ]);
     }
 }
