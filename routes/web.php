@@ -259,5 +259,8 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
     Route::get('/debug', [\App\Http\Controllers\SuperAdmin\DebugController::class, 'index'])->name('debug.index');
     Route::get('/debug/{admin}', [\App\Http\Controllers\SuperAdmin\DebugController::class, 'show'])->name('debug.show');
     Route::post('/debug/{admin}/scan', [\App\Http\Controllers\SuperAdmin\DebugController::class, 'scan'])->name('debug.scan');
+
+    // Project Structure
+    Route::get('/project-structure', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'index'])->name('project-structure.index');
 });
 
