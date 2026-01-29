@@ -1418,11 +1418,30 @@ PROMPT;
         // Apply progressive filters based on already-answered fields
         foreach ($workflowAnswers as $key => $value) {
             if (!empty($value)) {
-                // Try to filter by this field in JSON data
-                $query->where(function ($q) use ($key, $value) {
-                    $jsonPath = '$.\"' . $key . '\"';
-                    $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$value}%"]);
-                });
+                // Split combined values (e.g., "Knob handles, Profile handles")
+                $splitPattern = '/\s*(?:,|\s+or\s+|\s+and\s+|\s+aur\s+)\s*/i';
+                $values = preg_split($splitPattern, $value);
+                $values = array_filter(array_map('trim', $values));
+                
+                if (count($values) > 1) {
+                    // Multiple values - use OR conditions
+                    $query->where(function ($q) use ($key, $values) {
+                        $jsonPath = '$."' . $key . '"' . '';
+                        foreach ($values as $idx => $singleValue) {
+                            if ($idx === 0) {
+                                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$singleValue}%"]);
+                            } else {
+                                $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$singleValue}%"]);
+                            }
+                        }
+                    });
+                } else {
+                    // Single value
+                    $query->where(function ($q) use ($key, $value) {
+                        $jsonPath = '$."' . $key . '"' . '';
+                        $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$value}%"]);
+                    });
+                }
             }
         }
 
