@@ -262,5 +262,7 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
 
     // Project Structure
     Route::get('/project-structure', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'index'])->name('project-structure.index');
+    Route::get('/project-structure/{module}', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'show'])->name('project-structure.show');
+    Route::get('/project-structure/{module}/{submodule}', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'showSub'])->name('project-structure.sub');
 });
 
