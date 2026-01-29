@@ -639,18 +639,21 @@ class WebhookController extends Controller
         // Determine result
         if (empty($invalidItems)) {
             // All items are valid
+            // Use ' or ' as separator so syncWorkflowToLeadProduct can split properly
+            // The split pattern handles: or, and, aur, comma
             return [
                 'valid' => true,
-                'value' => implode(', ', $validItems),
+                'value' => count($validItems) > 1 ? implode(' or ', $validItems) : ($validItems[0] ?? ''),
                 'valid_items' => $validItems,
                 'invalid_items' => [],
                 'available_options' => array_values($availableOptions),
             ];
         } elseif (!empty($validItems)) {
             // Some valid, some invalid - save valid ones and warn about invalid
+            // Use ' or ' as separator so syncWorkflowToLeadProduct can split properly
             return [
                 'valid' => false, // Mark as invalid to show warning
-                'value' => implode(', ', $validItems),
+                'value' => count($validItems) > 1 ? implode(' or ', $validItems) : ($validItems[0] ?? ''),
                 'valid_items' => $validItems,
                 'invalid_items' => $invalidItems,
                 'available_options' => array_values($availableOptions),
