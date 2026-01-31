@@ -802,13 +802,10 @@ class AIService
                     'values' => $uniqueValues,
                 ];
 
-                // Try to identify category/product_type/model fields
+                // Try to identify category/product_type fields only (NOT models - extracted after filtering)
                 $keyLower = strtolower($fieldKey);
                 if (str_contains($keyLower, 'category') || str_contains($keyLower, 'product_type') || str_contains($keyLower, 'type')) {
                     $productTypes = array_merge($productTypes, $uniqueValues);
-                }
-                if (str_contains($keyLower, 'model') || str_contains($keyLower, 'code') || str_contains($keyLower, 'number')) {
-                    $sampleModels = array_merge($sampleModels, array_slice($uniqueValues, 0, 20));
                 }
             }
         }
@@ -851,6 +848,20 @@ class AIService
                 'filters' => $workflowFilters,
             ]);
         }
+
+        // CRITICAL: Extract model numbers from FILTERED items only
+        // This ensures AI shows only models from selected categories
+        foreach ($catalogueFields as $field) {
+            $fieldKey = $field->field_key;
+            $keyLower = strtolower($fieldKey);
+            if (str_contains($keyLower, 'model') || str_contains($keyLower, 'code') || str_contains($keyLower, 'number')) {
+                $filteredModels = $filteredItems->map(function ($item) use ($fieldKey) {
+                    return $item->data[$fieldKey] ?? null;
+                })->filter()->unique()->values()->toArray();
+                $sampleModels = array_merge($sampleModels, $filteredModels);
+            }
+        }
+        $sampleModels = array_unique($sampleModels);
 
         // Get sample products with ALL their data (first 15 from FILTERED items)
         $sampleProducts = $filteredItems->take(15)->map(function ($item) {
