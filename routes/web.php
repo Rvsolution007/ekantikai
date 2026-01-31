@@ -262,6 +262,15 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin.auth']
 
     // Project Structure
     Route::get('/project-structure', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'index'])->name('project-structure.index');
+
+    // Specific routes FIRST (before wildcard routes)
+    Route::get('/project-structure/admins/workflow/product-questions', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'showProductQuestions'])->name('project-structure.product-questions');
+    Route::get('/project-structure/admins/workflow/global-questions', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'showGlobalQuestions'])->name('project-structure.global-questions');
+    Route::get('/project-structure/admins/workflow/flowchart', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'showFlowchart'])->name('project-structure.flowchart');
+    Route::get('/project-structure/admins/catalogue', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'showCatalogue'])->name('project-structure.catalogue');
+    Route::get('/project-structure/admins/leads', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'showLeads'])->name('project-structure.leads');
+
+    // Generic wildcard routes LAST
     Route::get('/project-structure/{module}', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'show'])->name('project-structure.show');
     Route::get('/project-structure/{module}/{submodule}', [\App\Http\Controllers\SuperAdmin\ProjectStructureController::class, 'showSub'])->name('project-structure.sub');
 });

@@ -20,20 +20,60 @@
             <!-- Sub Items List -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 @foreach($subItems as $item)
-                    <div class="glass-card p-6 rounded-2xl cursor-not-allowed opacity-75">
-                        <div class="flex items-center space-x-4">
-                            <div
-                                class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                                @include('superadmin.project-structure.partials.icon', ['icon' => $item['icon']])
+                    @php
+                        // Special routes for certain items
+                        $specialRoute = match ($item['slug'] ?? '') {
+                            'catalogue' => 'superadmin.project-structure.catalogue',
+                            'leads' => 'superadmin.project-structure.leads',
+                            default => null
+                        };
+                    @endphp
+
+                    @if($specialRoute)
+                        {{-- Items with special dedicated pages --}}
+                        <a href="{{ route($specialRoute) }}"
+                            class="glass-card p-6 rounded-2xl hover:border-emerald-500/50 transition-all group cursor-pointer">
+                            <div class="flex items-center space-x-4">
+                                <div
+                                    class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center group-hover:from-emerald-500/30 group-hover:to-teal-500/30 transition-all">
+                                    @include('superadmin.project-structure.partials.icon', ['icon' => $item['icon']])
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">{{ $item['name'] }}</h3>
+                                    <p class="text-xs text-emerald-400">✅ Connected →</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="text-white font-semibold">{{ $item['name'] }}</h3>
-                                @if(isset($item['parent']))
-                                    <p class="text-xs text-gray-500">Sub-item of {{ $item['parent'] }}</p>
-                                @endif
+                        </a>
+                    @elseif(isset($item['hasSubItems']) && $item['hasSubItems'])
+                        <a href="{{ route('superadmin.project-structure.sub', ['module' => $currentModule['slug'], 'submodule' => $item['slug']]) }}"
+                            class="glass-card p-6 rounded-2xl hover:border-purple-500/50 transition-all group cursor-pointer">
+                            <div class="flex items-center space-x-4">
+                                <div
+                                    class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all">
+                                    @include('superadmin.project-structure.partials.icon', ['icon' => $item['icon']])
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">{{ $item['name'] }}</h3>
+                                    <p class="text-xs text-green-400">Has sub-items →</p>
+                                </div>
+                            </div>
+                        </a>
+                    @else
+                        <div class="glass-card p-6 rounded-2xl cursor-not-allowed opacity-75">
+                            <div class="flex items-center space-x-4">
+                                <div
+                                    class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                                    @include('superadmin.project-structure.partials.icon', ['icon' => $item['icon']])
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">{{ $item['name'] }}</h3>
+                                    @if(isset($item['parent']))
+                                        <p class="text-xs text-gray-500">Sub-item of {{ $item['parent'] }}</p>
+                                    @endif
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
                 @endforeach
             </div>
         @else
