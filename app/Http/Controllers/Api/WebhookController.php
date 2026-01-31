@@ -413,6 +413,29 @@ class WebhookController extends Controller
 
             // Send response (now always has a message due to fallback)
             if (!empty($responseMessage)) {
+                // SAFETY CHECK: If responseMessage looks like JSON, extract only the message part
+                if (is_string($responseMessage) && (str_starts_with(trim($responseMessage), '{') || str_starts_with(trim($responseMessage), '['))) {
+                    try {
+                        $decoded = json_decode($responseMessage, true);
+                        if (is_array($decoded) && isset($decoded['response_message'])) {
+                            Log::warning('responseMessage was JSON, extracting response_message field', [
+                                'phone' => $messageData['phone'],
+                                'original_length' => strlen($responseMessage),
+                            ]);
+                            $responseMessage = $decoded['response_message'];
+                        } elseif (is_array($decoded)) {
+                            // JSON but no response_message - create a fallback
+                            Log::error('responseMessage was JSON without response_message field', [
+                                'phone' => $messageData['phone'],
+                                'keys' => array_keys($decoded),
+                            ]);
+                            $responseMessage = 'Ji, aapki request process ho rahi hai. Thoda intezaar karein.';
+                        }
+                    } catch (\Exception $e) {
+                        // Not valid JSON, use as-is
+                    }
+                }
+                
                 // Send catalogue image first if available
                 if ($catalogueMedia && !empty($catalogueMedia['image_url'])) {
                     $this->sendImageResponse($tenant, $messageData['phone'], $catalogueMedia['image_url']);
