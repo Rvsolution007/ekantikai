@@ -251,6 +251,42 @@ class WebhookController extends Controller
             // Get response message from AI
             $responseMessage = $aiResponse['response_message'] ?? '';
             $detectedLang = $aiResponse['detected_language'] ?? 'hi';
+            
+            // EARLY QUESTION-TYPE DETECTION: Check if user is asking for options
+            // This runs REGARDLESS of AI response to ensure options are shown
+            if ($this->isQuestionTypeResponse($messageData['content'])) {
+                $currentPending = $this->getNextPendingQuestion($tenant->id, $lead);
+                if ($currentPending) {
+                    $availableOptions = $this->getFieldOptionsFromCatalogue(
+                        $tenant->id,
+                        $currentPending['field_name'],
+                        $lead
+                    );
+                    
+                    Log::info('EARLY: Detected question-type response, showing options', [
+                        'field' => $currentPending['field_name'],
+                        'user_message' => $messageData['content'],
+                        'options_count' => count($availableOptions),
+                    ]);
+                    
+                    if (!empty($availableOptions)) {
+                        $optionsList = implode(', ', array_slice($availableOptions, 0, 20));
+                        $fieldName = $currentPending['display_name'] ?? $currentPending['field_name'] ?? 'options';
+                        
+                        // Override AI response with options list
+                        $responseMessage = match ($detectedLang) {
+                            'en' => "Here are the available {$fieldName} options: {$optionsList}. Which one would you like?",
+                            'hi', 'hinglish' => "Ji, {$fieldName} me ye options available hain: {$optionsList}. Kaunsa chahiye?",
+                            default => "{$fieldName} me ye options hain: {$optionsList}. Kaunsa chahiye?",
+                        };
+                        
+                        Log::info('EARLY: Options response generated', [
+                            'field' => $currentPending['field_name'],
+                            'response_length' => strlen($responseMessage),
+                        ]);
+                    }
+                }
+            }
 
             // DEBUG: Log when response is empty
             if (empty($responseMessage)) {
