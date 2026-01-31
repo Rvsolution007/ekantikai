@@ -623,7 +623,28 @@ class ProjectStructureController extends Controller
                     'logic' => 'Poora flowchart delete kar deta hai - nodes aur connections dono.',
                 ],
             ],
+            'question_order_priority' => [
+                [
+                    'service' => 'WebhookController::getFlowchartQuestionOrder',
+                    'file' => 'app/Http/Controllers/Api/WebhookController.php',
+                    'ui_reference' => 'Bot Question Order',
+                    'logic' => 'Start node se shuru hokar connections follow karta hai. Question nodes ko order mein collect karta hai.',
+                ],
+                [
+                    'service' => 'WebhookController::getNextPendingQuestion',
+                    'file' => 'app/Http/Controllers/Api/WebhookController.php',
+                    'ui_reference' => 'Bot Question Order',
+                    'logic' => 'Flowchart order follow karta hai. Required questions pehle complete hone chahiye, tabhi next pe jayega.',
+                ],
+                [
+                    'service' => 'QuestionnaireNode::getNextNode',
+                    'file' => 'app/Models/QuestionnaireNode.php',
+                    'ui_reference' => 'Bot Conversation Flow',
+                    'logic' => 'outgoingConnections() se next connected node dhundta hai. Priority based routing support hai.',
+                ],
+            ],
         ];
+
 
         // Demo Node Properties - Right sidebar mein jo fields dikhte hain jab node select karo
         $demoNodeProperties = [

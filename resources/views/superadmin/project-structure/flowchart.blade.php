@@ -254,6 +254,63 @@
             </div>
         </div>
 
+        <!-- Question Order Priority References - NEW -->
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="p-4 border-b border-white/10 bg-gradient-to-r from-yellow-500/10 to-amber-500/10">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <span
+                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-500 to-amber-500 flex items-center justify-center">📋</span>
+                    Question Order Priority - Bot Kaise Order Follow Karta Hai
+                </h2>
+                <p class="text-sm text-gray-400 mt-1">Bot flowchart connections ke hisaab se questions puchta hai,
+                    ProductQuestion.sort_order nahi dekhta</p>
+            </div>
+            <div class="p-4 bg-gradient-to-r from-yellow-500/5 to-amber-500/5">
+                <div class="flex items-center gap-2 text-sm text-amber-400 mb-4">
+                    <span class="text-lg">⚡</span>
+                    <strong>IMPORTANT:</strong> Flowchart Builder mein jo order set karo, bot wahi order follow karega!
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="bg-white/5 p-3 rounded-lg">
+                        <div class="text-green-400 font-medium mb-2">✅ Correct Flow:</div>
+                        <code class="text-gray-300">Start → Category → Model → Size → Finish → End</code>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-lg">
+                        <div class="text-blue-400 font-medium mb-2">📦 Data Source:</div>
+                        <code class="text-gray-300">questionnaire_connections table (source → target)</code>
+                    </div>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left">
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Service</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">File</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">UI Reference</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Logic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($references['question_order_priority'] as $ref)
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="px-4 py-3 text-white font-medium">{{ $ref['service'] }}</td>
+                                <td class="px-4 py-3">
+                                    <code class="px-2 py-1 bg-white/10 rounded text-xs text-gray-300">{{ $ref['file'] }}</code>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span
+                                        class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">{{ $ref['ui_reference'] }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-gray-300 text-sm">{{ $ref['logic'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
         <!-- Node Properties Demo -->
         <div class="glass-card rounded-2xl overflow-hidden">
             <div class="p-4 border-b border-white/10 bg-gradient-to-r from-rose-500/10 to-pink-500/10">
@@ -327,7 +384,8 @@
                         @foreach($nodePropertiesReferences as $ref)
                             <tr class="border-b border-white/5 hover:bg-white/5">
                                 <td class="px-4 py-3">
-                                    <span class="px-2 py-1 bg-rose-500/20 text-rose-400 rounded text-xs font-medium">{{ $ref['field'] }}</span>
+                                    <span
+                                        class="px-2 py-1 bg-rose-500/20 text-rose-400 rounded text-xs font-medium">{{ $ref['field'] }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-white font-medium text-sm">{{ $ref['service'] }}</td>
                                 <td class="px-4 py-3">
