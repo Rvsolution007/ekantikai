@@ -229,14 +229,27 @@ class WebhookController extends Controller
                             $validItems = $validationResult['valid_items'] ?? [$validationResult['value']];
 
                             if (count($validItems) > 1) {
-                                // MULTIPLE VALUES: Skip workflow_questions, let AI's product_confirmations handle it
-                                // ProductConfirmationService.splitMultiValueConfirmations will create separate rows
-                                Log::info('Multi-value detected, skipping workflow_questions save - AI product_confirmations will handle', [
-                                    'field' => $currentPending['field_name'],
-                                    'values' => $validItems,
-                                    'lead_id' => $lead->id,
-                                ]);
-                                // AI already processed and created product_confirmations earlier
+                                // FIX: For category/product_type, ALWAYS save even multi-value
+                                $alwaysSaveFields = ['category', 'product_type', 'product'];
+                                $fieldNameLower = strtolower($currentPending['field_name']);
+                                
+                                if (in_array($fieldNameLower, $alwaysSaveFields)) {
+                                    // CATEGORY MULTI-VALUE: Save joined value
+                                    $lead->addCollectedData($currentPending['field_name'], implode(', ', $validItems), 'workflow_questions');
+                                    $lead->refresh();
+                                    Log::info('Saved multi-value category to workflow_questions', [
+                                        'field' => $currentPending['field_name'],
+                                        'values' => $validItems,
+                                        'lead_id' => $lead->id,
+                                    ]);
+                                } else {
+                                    // MULTIPLE VALUES (non-category): Skip workflow_questions, let AI's product_confirmations handle it
+                                    Log::info('Multi-value detected, skipping workflow_questions save - AI product_confirmations will handle', [
+                                        'field' => $currentPending['field_name'],
+                                        'values' => $validItems,
+                                        'lead_id' => $lead->id,
+                                    ]);
+                                }
                             } else {
                                 // SINGLE VALUE: Save to workflow_questions for fast sync
                                 $lead->addCollectedData($currentPending['field_name'], $validItems[0] ?? $validationResult['value'], 'workflow_questions');
@@ -398,9 +411,20 @@ class WebhookController extends Controller
                                 // MULTI-VALUE FIX: Check if AI extracted multiple values
                                 $validItems = $validationResult['valid_items'] ?? [$validationResult['value']];
 
-                                if (count($validItems) > 1) {
-                                    // MULTIPLE VALUES: Skip workflow_questions, let product_confirmations handle
+                                // FIX: For category/product_type, ALWAYS save even multi-value
+                                $alwaysSaveFields = ['category', 'product_type', 'product'];
+                                
+                                if (count($validItems) > 1 && !in_array($fieldKey, $alwaysSaveFields)) {
+                                    // MULTIPLE VALUES (non-category): Skip workflow_questions, let product_confirmations handle
                                     Log::info('AI extracted multi-value, skipping workflow_questions - product_confirmations will handle', [
+                                        'field' => $key,
+                                        'values' => $validItems,
+                                        'lead_id' => $lead->id,
+                                    ]);
+                                } elseif (count($validItems) > 1) {
+                                    // CATEGORY MULTI-VALUE: Save joined value to workflow_questions
+                                    $lead->addCollectedData($key, implode(', ', $validItems), 'workflow_questions');
+                                    Log::info('Saved multi-value category to workflow_questions', [
                                         'field' => $key,
                                         'values' => $validItems,
                                         'lead_id' => $lead->id,
@@ -427,11 +451,44 @@ class WebhookController extends Controller
                                 ]);
                             }
                         } else {
-                            Log::info('Skipping out-of-order AI extraction to preserve flowchart', [
-                                'extracted_field' => $fieldKey,
-                                'pending_field' => $pendingFieldName,
-                                'value' => $value,
-                            ]);
+                            // FIX: Allow out-of-order extraction for category (first/important fields)
+                            // Because users often mention category naturally before being asked
+                            $allowOutOfOrderFields = ['category', 'product_type', 'product'];
+                            
+                            if (in_array($fieldKey, $allowOutOfOrderFields)) {
+                                // Validate and save category even if out of order
+                                $validationResult = $this->validateUserAnswerWithCatalogue(
+                                    $tenant->id,
+                                    $key,
+                                    $value,
+                                    $lead
+                                );
+                                
+                                if ($validationResult['valid']) {
+                                    $validItems = $validationResult['valid_items'] ?? [$validationResult['value']];
+                                    $valueToSave = count($validItems) > 1 
+                                        ? implode(', ', $validItems) 
+                                        : ($validItems[0] ?? $validationResult['value']);
+                                    
+                                    $lead->addCollectedData($key, $valueToSave, 'workflow_questions');
+                                    Log::info('Saved out-of-order category/product extraction', [
+                                        'field' => $key,
+                                        'value' => $valueToSave,
+                                        'lead_id' => $lead->id,
+                                    ]);
+                                    
+                                    // Update pending field for next iteration
+                                    $lead->refresh();
+                                    $currentPending = $this->getNextPendingQuestion($tenant->id, $lead);
+                                    $pendingFieldName = $currentPending ? strtolower($currentPending['field_name']) : null;
+                                }
+                            } else {
+                                Log::info('Skipping out-of-order AI extraction to preserve flowchart', [
+                                    'extracted_field' => $fieldKey,
+                                    'pending_field' => $pendingFieldName,
+                                    'value' => $value,
+                                ]);
+                            }
                         }
                     } else {
                         // Global field (city, purpose, etc.) - save directly to global_questions
