@@ -245,40 +245,115 @@
             </div>
         </div>
 
-        <!-- References -->
+        <!-- Field Mapping - ProductQuestion to LeadProduct -->
         <div class="glass-card rounded-2xl overflow-hidden">
             <div class="p-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 cursor-pointer hover:bg-white/5 transition-colors"
-                 onclick="toggleSection('ref-section')">
+                 onclick="toggleSection('field-mapping')">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">📁</span>
-                        References - Code Files
+                        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">🔗</span>
+                        Field Mapping: ProductQuestion → LeadProduct
                     </h2>
-                    <svg id="ref-section-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg id="field-mapping-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-300 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                 </div>
-                <p class="text-sm text-gray-400 mt-1">Click to see: Connection logic kahan handle hota hai</p>
+                <p class="text-sm text-gray-400 mt-1">ProductQuestion fields kaise LeadProduct columns mein save hote hain</p>
             </div>
-            <div id="ref-section" class="hidden overflow-x-auto">
+            <div id="field-mapping" class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b border-white/10 text-left">
-                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Service</th>
-                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">File</th>
-                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Connected To</th>
-                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Logic</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">ProductQuestion Field</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Display Name</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase text-center">→</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">LeadProduct Column</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Storage Type</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($references as $ref)
+                        @foreach($fieldMapping as $map)
                             <tr class="border-b border-white/5 hover:bg-white/5">
-                                <td class="px-4 py-3 text-white font-medium text-sm">{{ $ref['service'] }}</td>
                                 <td class="px-4 py-3">
-                                    <code class="px-2 py-1 bg-white/10 rounded text-xs text-gray-300">{{ $ref['file'] }}</code>
+                                    <code class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">{{ $map['product_question_field'] }}</code>
                                 </td>
-                                <td class="px-4 py-3 text-green-400 text-sm">{{ $ref['connected_to'] }}</td>
-                                <td class="px-4 py-3 text-gray-300 text-sm">{{ $ref['logic'] }}</td>
+                                <td class="px-4 py-3 text-white font-medium text-sm">{{ $map['display_name'] }}</td>
+                                <td class="px-4 py-3 text-center text-cyan-400 font-bold">→</td>
+                                <td class="px-4 py-3">
+                                    <code class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">{{ $map['lead_product_column'] }}</code>
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if($map['storage_type'] === 'JSON Storage')
+                                        <span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">{{ $map['storage_type'] }}</span>
+                                    @else
+                                        <span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs">{{ $map['storage_type'] }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-green-400 text-sm">{{ $map['connection'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Dummy Product Quotation Data - Demo Table -->
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="p-4 border-b border-white/10 bg-gradient-to-r from-green-500/10 to-emerald-500/10 cursor-pointer hover:bg-white/5 transition-colors"
+                 onclick="toggleSection('dummy-data')">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">📊</span>
+                        Product Quotation Demo Data (lead_products table)
+                    </h2>
+                    <svg id="dummy-data-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-300 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </div>
+                <p class="text-sm text-gray-400 mt-1">12 demo rows - Bot se save hone ke baad data aise dikhta hai</p>
+            </div>
+            <div id="dummy-data" class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left">
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">ID</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Lead ID</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Category</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Model</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Size</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Finish</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Qty</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Unique Key</th>
+                            <th class="px-3 py-3 text-xs font-medium text-gray-400 uppercase">Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($dummyProductQuotation as $product)
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="px-3 py-2 text-gray-400 text-sm">{{ $product['id'] }}</td>
+                                <td class="px-3 py-2">
+                                    <span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">{{ $product['lead_id'] }}</span>
+                                </td>
+                                <td class="px-3 py-2 text-white text-sm">{{ $product['category'] }}</td>
+                                <td class="px-3 py-2">
+                                    <span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-mono">{{ $product['model'] }}</span>
+                                </td>
+                                <td class="px-3 py-2 text-gray-300 text-sm">{{ $product['size'] }}</td>
+                                <td class="px-3 py-2 text-gray-300 text-sm">{{ $product['finish'] }}</td>
+                                <td class="px-3 py-2 text-emerald-400 text-sm font-bold">{{ $product['qty'] }}</td>
+                                <td class="px-3 py-2">
+                                    <code class="px-1 py-0.5 bg-white/10 rounded text-xs text-gray-400">{{ $product['unique_key'] }}</code>
+                                </td>
+                                <td class="px-3 py-2">
+                                    @if($product['source'] === 'bot')
+                                        <span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">🤖 bot</span>
+                                    @elseif($product['source'] === 'manual')
+                                        <span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">✏️ manual</span>
+                                    @else
+                                        <span class="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs">📥 import</span>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

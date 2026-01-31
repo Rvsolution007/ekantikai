@@ -712,9 +712,181 @@ class QuestionnaireService
      */
     public function processResponseSmart(string $fieldName, string $value): array
     {
+        // NEW: Check for removal intent first (e.g., "9008 nahi chahiye", "black hatado")
+        $removalResult = $this->handleRemovalIntent($value);
+        if ($removalResult) {
+            return $removalResult;
+        }
+
         if ($this->hasFlowchartNodes()) {
             return $this->processFlowchartResponse($value);
         }
         return $this->processResponse($fieldName, $value);
+    }
+
+    // ================================================
+    // REMOVAL INTENT HANDLING (NEW)
+    // ================================================
+
+    /**
+     * Handle removal intent from user message
+     * "9008 nahi chahiye" → DELETE product (unique field)
+     * "black nahi chahiye" → UPDATE finish=null (non-unique field)
+     */
+    public function handleRemovalIntent(string $message): ?array
+    {
+        // Step 1: Check for removal keywords
+        if (!$this->containsRemovalIntent($message)) {
+            return null; // Not a removal request
+        }
+
+        // Make sure we have a lead
+        if (!$this->lead) {
+            return null;
+        }
+
+        // Step 2: Extract the value to remove from message
+        $extractedValue = $this->extractValueFromRemovalMessage($message);
+        if (empty($extractedValue)) {
+            return null;
+        }
+
+        // Step 3: Check if it's a unique field value (e.g., model number like 9008)
+        // If any product matches by unique field, DELETE it
+        if ($this->lead->matchesAnyProductByUniqueField($extractedValue)) {
+            $deletedProduct = $this->lead->removeProductByUniqueField($extractedValue);
+
+            if ($deletedProduct) {
+                return [
+                    'action' => 'product_deleted',
+                    'value' => $extractedValue,
+                    'message' => "✅ {$extractedValue} remove kar diya",
+                    'deleted_product_id' => $deletedProduct->id,
+                ];
+            }
+        }
+
+        // Step 4: It's a non-unique field value (e.g., "black", "4 inch")
+        // Find which product and field contains this value, then clear it
+        $fieldInfo = $this->findFieldByValueInProducts($extractedValue);
+        if ($fieldInfo) {
+            $this->lead->clearProductField($fieldInfo['unique_value'], $fieldInfo['field_name']);
+
+            return [
+                'action' => 'field_cleared',
+                'field' => $fieldInfo['field_name'],
+                'value' => $extractedValue,
+                'message' => "✅ {$fieldInfo['field_name']} clear kar diya",
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if message contains removal intent keywords
+     */
+    protected function containsRemovalIntent(string $message): bool
+    {
+        $removalKeywords = [
+            'nahi chahiye',
+            'nhi chahiye',
+            'nahin chahiye',
+            'nahi chaiye',
+            'hatao',
+            'hata do',
+            'nikal do',
+            'nikalo',
+            'remove',
+            'delete',
+            'cancel',
+            'mat do',
+            'mat dena',
+        ];
+
+        $lowerMessage = mb_strtolower($message);
+
+        foreach ($removalKeywords as $keyword) {
+            if (mb_strpos($lowerMessage, $keyword) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract the value to remove from removal message
+     * "9008 nahi chahiye" → "9008"
+     * "black nahi chahiye" → "black"
+     */
+    protected function extractValueFromRemovalMessage(string $message): ?string
+    {
+        $removalKeywords = [
+            'nahi chahiye',
+            'nhi chahiye',
+            'nahin chahiye',
+            'nahi chaiye',
+            'hatao',
+            'hata do',
+            'nikal do',
+            'nikalo',
+            'remove',
+            'delete',
+            'cancel',
+            'mat do',
+            'mat dena',
+        ];
+
+        $cleanMessage = mb_strtolower(trim($message));
+
+        // Remove the removal keyword to get the value
+        foreach ($removalKeywords as $keyword) {
+            $cleanMessage = str_ireplace($keyword, '', $cleanMessage);
+        }
+
+        // Clean up extra spaces and trim
+        $cleanMessage = preg_replace('/\s+/', ' ', $cleanMessage);
+        $value = trim($cleanMessage);
+
+        // If value contains "me" or "mein" at the end (e.g., "9008 me"), remove it
+        $value = preg_replace('/\s+(me|mein|mai)$/i', '', $value);
+
+        return !empty($value) ? $value : null;
+    }
+
+    /**
+     * Find which field in which product contains the given value
+     * Returns: ['unique_value' => '9007', 'field_name' => 'finish', 'product_id' => 1]
+     */
+    protected function findFieldByValueInProducts(string $searchValue): ?array
+    {
+        if (!$this->lead) {
+            return null;
+        }
+
+        $leadProducts = $this->lead->leadProducts()->get();
+        $lowerSearchValue = mb_strtolower($searchValue);
+
+        foreach ($leadProducts as $product) {
+            // Get all field values for this product
+            $fieldValues = $product->toProductArray();
+
+            foreach ($fieldValues as $fieldName => $fieldValue) {
+                if ($fieldValue && mb_strtolower((string) $fieldValue) === $lowerSearchValue) {
+                    // Found matching field - get unique field value for this product
+                    $uniqueValue = $product->getUniqueFieldValue();
+                    if ($uniqueValue) {
+                        return [
+                            'unique_value' => $uniqueValue,
+                            'field_name' => $fieldName,
+                            'product_id' => $product->id,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }

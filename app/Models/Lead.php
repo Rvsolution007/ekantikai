@@ -463,6 +463,17 @@ class Lead extends Model
     }
 
     /**
+     * Check if any product matches by unique field value
+     * Used to determine if "9008 nahi chahiye" should DELETE or UPDATE
+     */
+    public function matchesAnyProductByUniqueField(string $value): bool
+    {
+        return $this->leadProducts()
+            ->get()
+            ->contains(fn($p) => $p->matchesUniqueField($value));
+    }
+
+    /**
      * Clear a field in product by unique identifier
      * User says: "9038 me black nahi chahiye" → Find product 9038, set finish=null
      */

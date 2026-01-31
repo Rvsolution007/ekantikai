@@ -114,6 +114,23 @@ class LeadProduct extends Model
     }
 
     /**
+     * Get the unique field value for this product (e.g., model number)
+     * Used when we need to identify which product to update
+     */
+    public function getUniqueFieldValue(): ?string
+    {
+        $uniqueField = ProductQuestion::where('admin_id', $this->admin_id)
+            ->where('is_unique_field', true)
+            ->first();
+
+        if (!$uniqueField) {
+            return null;
+        }
+
+        return $this->getFieldValue($uniqueField->field_name);
+    }
+
+    /**
      * Generate unique key from unique key fields
      */
     public function generateUniqueKey(): string
