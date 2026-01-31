@@ -728,76 +728,140 @@ class WebhookController extends Controller
 
     /**
      * Get the next pending (unanswered) question from flowchart
-     * ORDER PRIORITY: Required questions must be answered in sequence.
-     * Optional questions: Ask once, then skip (tracked in questions_asked).
+     * FLOWCHART ORDER: Traverse nodes from Start following connections.
+     * This respects the visual order in Flowchart Builder.
      */
     protected function getNextPendingQuestion(int $adminId, Lead $lead): ?array
     {
-        // Get all workflow questions in ORDER
-        $questions = \App\Models\ProductQuestion::where('admin_id', $adminId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get();
-
-        if ($questions->isEmpty()) {
-            return null;
-        }
-
         // Get collected data
         $collectedData = $lead->collected_data ?? [];
         $workflowAnswers = $collectedData['workflow_questions'] ?? [];
         $globalAnswers = $collectedData['global_questions'] ?? [];
-        $questionsAsked = $collectedData['questions_asked'] ?? []; // Track optional questions
+        $questionsAsked = $collectedData['questions_asked'] ?? [];
 
-        // Merge all answered fields
+        // Merge all answered fields (lowercase for comparison)
         $allAnswered = array_merge(
             array_change_key_case($workflowAnswers, CASE_LOWER),
             array_change_key_case($globalAnswers, CASE_LOWER)
         );
 
-        // ORDER PRIORITY: Process questions in sequence
-        foreach ($questions as $question) {
-            $fieldName = strtolower($question->field_name);
+        // Get flowchart question order by traversing from Start node
+        $orderedNodes = $this->getFlowchartQuestionOrder($adminId);
+        
+        Log::debug('FLOWCHART ORDER: Traversing nodes', [
+            'admin_id' => $adminId,
+            'nodes_count' => count($orderedNodes),
+            'answered_fields' => array_keys($allAnswered),
+        ]);
+
+        // Find first unanswered question following flowchart order
+        foreach ($orderedNodes as $node) {
+            // Skip non-question nodes
+            if ($node['node_type'] !== 'question') {
+                continue;
+            }
+
+            $fieldName = strtolower($node['field_name'] ?? '');
+            if (empty($fieldName)) {
+                continue;
+            }
+
             $isAnswered = isset($allAnswered[$fieldName]) && !empty($allAnswered[$fieldName]);
+            $isRequired = $node['is_required'] ?? true;
             
-            if ($question->is_required) {
-                // REQUIRED QUESTION: Must be answered before moving to next
+            if ($isRequired) {
+                // REQUIRED: Must be answered before next
                 if (!$isAnswered) {
-                    Log::debug('ORDER PRIORITY: Required question not answered, asking again', [
-                        'field' => $question->field_name,
-                        'order' => $question->sort_order,
+                    Log::debug('FLOWCHART ORDER: Found pending required question', [
+                        'field' => $fieldName,
+                        'node_id' => $node['node_id'],
                     ]);
                     return [
-                        'field_name' => $question->field_name,
-                        'display_name' => $question->display_name,
+                        'field_name' => $node['field_name'],
+                        'display_name' => $node['display_name'] ?? $node['field_name'],
                         'is_required' => true,
-                        'question_template' => $question->question_template,
+                        'question_template' => $node['question_template'] ?? null,
                     ];
                 }
-                // Required question answered - continue to next
             } else {
-                // OPTIONAL QUESTION: Ask once, then skip
+                // OPTIONAL: Ask once only
                 $wasAsked = $questionsAsked[$fieldName] ?? false;
-                
                 if (!$isAnswered && !$wasAsked) {
-                    // Not answered AND not asked yet - ask now
-                    Log::debug('ORDER PRIORITY: Optional question not asked yet, asking once', [
-                        'field' => $question->field_name,
-                        'order' => $question->sort_order,
+                    Log::debug('FLOWCHART ORDER: Found pending optional question', [
+                        'field' => $fieldName,
+                        'node_id' => $node['node_id'],
                     ]);
                     return [
-                        'field_name' => $question->field_name,
-                        'display_name' => $question->display_name,
+                        'field_name' => $node['field_name'],
+                        'display_name' => $node['display_name'] ?? $node['field_name'],
                         'is_required' => false,
-                        'question_template' => $question->question_template,
-                        'mark_as_asked' => true, // Signal to mark as asked after sending
+                        'question_template' => $node['question_template'] ?? null,
+                        'mark_as_asked' => true,
                     ];
                 }
-                // Optional question either answered or already asked - skip
             }
         }
 
         return null; // All questions complete
+    }
+
+    /**
+     * Get question nodes in flowchart order by traversing from Start node
+     * Returns array of node info following the connection path
+     */
+    protected function getFlowchartQuestionOrder(int $adminId): array
+    {
+        $orderedNodes = [];
+        $visited = []; // Prevent infinite loops
+        
+        // Get start node
+        $startNode = \App\Models\QuestionnaireNode::getStartNode($adminId);
+        if (!$startNode) {
+            Log::warning('FLOWCHART ORDER: No start node found', ['admin_id' => $adminId]);
+            return [];
+        }
+        
+        // Traverse from start
+        $currentNode = $startNode;
+        $maxIterations = 100; // Safety limit
+        $iterations = 0;
+        
+        while ($currentNode && $iterations < $maxIterations) {
+            $iterations++;
+            
+            // Prevent infinite loop
+            if (in_array($currentNode->id, $visited)) {
+                Log::warning('FLOWCHART ORDER: Loop detected, stopping', ['node_id' => $currentNode->id]);
+                break;
+            }
+            $visited[] = $currentNode->id;
+            
+            // If this is a question node, add to ordered list
+            if ($currentNode->node_type === \App\Models\QuestionnaireNode::TYPE_QUESTION) {
+                $field = $currentNode->questionnaireField;
+                if ($field) {
+                    $orderedNodes[] = [
+                        'node_id' => $currentNode->id,
+                        'node_type' => $currentNode->node_type,
+                        'field_name' => $field->field_name,
+                        'display_name' => $field->display_name,
+                        'is_required' => $field->is_required,
+                        'question_template' => $field->question_template,
+                    ];
+                }
+            }
+            
+            // Move to next node (follow default connection)
+            $currentNode = $currentNode->getNextNode();
+        }
+        
+        Log::debug('FLOWCHART ORDER: Traversal complete', [
+            'admin_id' => $adminId,
+            'nodes_found' => count($orderedNodes),
+            'fields' => array_column($orderedNodes, 'field_name'),
+        ]);
+        
+        return $orderedNodes;
     }
 
     /**
