@@ -93,12 +93,27 @@ class WebhookController extends Controller
             // DEDUPLICATION: Skip if message already processed
             $cacheKey = 'processed_msg_' . ($messageData['messageId'] ?? md5($messageData['phone'] . $messageData['content'] . $messageData['timestamp']));
             if (Cache::has($cacheKey)) {
+                Log::debug('BLOCKED: Duplicate message detected', [
+                    'phone' => $messageData['phone'],
+                    'content' => substr($messageData['content'], 0, 50),
+                    'cache_key' => $cacheKey,
+                ]);
                 return response()->json(['status' => 'ignored', 'reason' => 'duplicate message']);
             }
+            
+            // LOG: Message passed dedup check
+            Log::info('MESSAGE PROCESSING: Passed dedup check', [
+                'phone' => $messageData['phone'],
+                'content' => substr($messageData['content'], 0, 50),
+            ]);
             Cache::put($cacheKey, true, 60);
 
             // Skip if message matches bot's greeting patterns (self-reply prevention)
             if ($this->isBotMessage($messageData['content'])) {
+                Log::debug('BLOCKED: Bot message pattern detected', [
+                    'phone' => $messageData['phone'],
+                    'content' => substr($messageData['content'], 0, 100),
+                ]);
                 return response()->json(['status' => 'ignored', 'reason' => 'bot message pattern detected']);
             }
 
@@ -121,9 +136,20 @@ class WebhookController extends Controller
 
             // Get or create customer
             $customer = $this->getOrCreateCustomer($tenant->id, $messageData['phone'], $messageData['name']);
+            
+            Log::info('MESSAGE PROCESSING: Customer retrieved/created', [
+                'phone' => $messageData['phone'],
+                'customer_id' => $customer->id,
+                'bot_enabled' => $customer->bot_enabled,
+                'bot_stopped_by_user' => $customer->bot_stopped_by_user,
+            ]);
 
             // CHECK IF BOT IS STOPPED (Point 2)
             if ($customer->isBotStopped()) {
+                Log::debug('BLOCKED: Bot stopped for this user', [
+                    'phone' => $messageData['phone'],
+                    'customer_id' => $customer->id,
+                ]);
                 // Still save message to database but don't respond
                 $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
                 return response()->json(['status' => 'ignored', 'reason' => 'bot stopped for this user']);
@@ -131,9 +157,19 @@ class WebhookController extends Controller
 
             // Get or create lead based on timeout setting
             $lead = $customer->getOrCreateLead();
+            
+            Log::info('MESSAGE PROCESSING: Lead retrieved/created', [
+                'phone' => $messageData['phone'],
+                'lead_id' => $lead->id,
+                'bot_active' => $lead->bot_active,
+            ]);
 
             // CHECK IF BOT IS ACTIVE FOR THIS LEAD (Point 7)
             if (!$lead->bot_active) {
+                Log::debug('BLOCKED: Bot inactive for this lead', [
+                    'phone' => $messageData['phone'],
+                    'lead_id' => $lead->id,
+                ]);
                 $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
                 return response()->json(['status' => 'ignored', 'reason' => 'bot inactive for this lead']);
             }
@@ -147,6 +183,11 @@ class WebhookController extends Controller
             $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
 
             // PROCESS WITH AI (Point 8)
+            Log::info('MESSAGE PROCESSING: Starting AI processing', [
+                'phone' => $messageData['phone'],
+                'content' => substr($messageData['content'], 0, 50),
+            ]);
+            
             $aiService = new AIService();
             $aiResponse = $aiService->processMessageEnhanced(
                 $tenant,
