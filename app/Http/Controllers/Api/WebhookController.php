@@ -187,12 +187,41 @@ class WebhookController extends Controller
             }
 
             // Detect language (Point 8.4)
-            $detectedLanguage = $this->languageService->detect($messageData['content']);
-            $customer->setLanguage($detectedLanguage);
-            $lead->update(['detected_language' => $detectedLanguage]);
+            try {
+                Log::info('MESSAGE PROCESSING: Detecting language', [
+                    'phone' => $messageData['phone'],
+                ]);
+                $detectedLanguage = $this->languageService->detect($messageData['content']);
+                $customer->setLanguage($detectedLanguage);
+                $lead->update(['detected_language' => $detectedLanguage]);
+                Log::info('MESSAGE PROCESSING: Language detected', [
+                    'phone' => $messageData['phone'],
+                    'language' => $detectedLanguage,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('MESSAGE PROCESSING: Language detection failed', [
+                    'phone' => $messageData['phone'],
+                    'error' => $e->getMessage(),
+                ]);
+                $detectedLanguage = 'hi'; // Default to Hindi
+            }
 
             // Save incoming message with reply info (Point 4 & 5)
-            $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
+            try {
+                Log::info('MESSAGE PROCESSING: Saving incoming message', [
+                    'phone' => $messageData['phone'],
+                ]);
+                $this->saveMessage($tenant->id, $customer->id, 'user', $messageData['content'], $messageData);
+                Log::info('MESSAGE PROCESSING: Message saved successfully', [
+                    'phone' => $messageData['phone'],
+                ]);
+            } catch (\Exception $e) {
+                Log::error('MESSAGE PROCESSING: Failed to save message', [
+                    'phone' => $messageData['phone'],
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue processing even if save fails
+            }
 
             // PROCESS WITH AI (Point 8)
             Log::info('MESSAGE PROCESSING: Starting AI processing', [
