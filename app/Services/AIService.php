@@ -1099,6 +1099,13 @@ class AIService
             $fieldRules .= "- Ask: \"Kaunsa chahiye? [option1], [option2], [option3]...\"\n";
             $fieldRules .= "- Wait for user to select one option\n\n";
 
+            $fieldRules .= "### 🎯 CRITICAL: WHEN USER ASKS FOR MODEL OPTIONS:\n";
+            $fieldRules .= "If user asks 'konse model he', 'kaunse model hain', 'model dikhao', 'model list do':\n";
+            $fieldRules .= "- SHOW the sample_models from catalogue context\n";
+            $fieldRules .= "- Format: 'Ji! Available models: [model1], [model2], [model3]...'\n";
+            $fieldRules .= "- DO NOT skip to next question!\n";
+            $fieldRules .= "- DO NOT ask without showing options!\n\n";
+
             $fieldRules .= "**[📦 QTY - ASK INPUT] - For is_qty_field=true fields:**\n";
             $fieldRules .= "- Always ASK user for quantity input\n";
             $fieldRules .= "- Ask: \"Kitni qty chahiye?\" or \"Quantity batao\"\n";
@@ -1380,24 +1387,24 @@ These rules are MANDATORY and apply to ALL admins:
 ## 🔴 CRITICAL: LIST REQUEST HANDLING (MUST FOLLOW)
 When user asks for a list/options with phrases like:
 - "konsi size he", "size list", "size batao", "which sizes available"
-- "kaunse model hain", "model list do", "available models", "konse konse model he", "konse model he", "model batao", "model dikhao", "models bata do"
+- "kaunse model hain", "model list do", "available models"
 - "finish options", "color list", "finish batao"
 - "options kya hain", "list de do", "batao kya kya hai"
 - "kitne type", "list bhejo", "all options"
 
 ### MANDATORY BEHAVIOR FOR LIST REQUESTS:
-1. **DETECT** if user is asking for available options/list for ANY field (especially MODEL)
-2. **RESPOND FIRST** with the complete list from AVAILABLE OPTIONS or Sample Model Codes section above
+1. **DETECT** if user is asking for available options/list for ANY field
+2. **RESPOND FIRST** with the complete list from AVAILABLE OPTIONS section above
 3. **DO NOT SKIP** to the next question without giving the list
-4. **FORMAT FOR MODELS**: "Ji, model ke options ye hain: [USE SAMPLE MODEL CODES FROM CATALOGUE ABOVE]. Kaunsa model chahiye?"
+4. **FORMAT**: "Ji, {field} ke options ye hain: {list from catalogue}. Kaunsa chahiye?"
 
 ### WRONG BEHAVIOR (NEVER DO THIS):
-- User: "konse konse model he"
-- Bot: "Ji zaroor! Ab aapka Size kya hai?" ← WRONG! User asked for MODEL LIST!
+- User: "konsi size he"
+- Bot: "Got it! Now, what finish would you like?" ← WRONG! User asked for SIZE LIST!
 
 ### CORRECT BEHAVIOR:
-- User: "konse konse model he"
-- Bot: "Ji! Model ke options ye hain: {USE SAMPLE MODEL CODES FROM YOUR PRODUCT CATALOGUE SECTION}. Kaunsa model chahiye?" ← CORRECT!
+- User: "konsi size he"
+- Bot: "Ji, size ke options ye hain: 32mm, 64mm, 96mm, 160mm, 224mm, 288mm, 450mm, 600mm, 900mm, 1200mm. Kaunsi size chahiye?" ← CORRECT!
 
 ### PRIORITY ORDER:
 1. If user asks for a list → SHOW THE LIST FIRST (from Available Options above)
