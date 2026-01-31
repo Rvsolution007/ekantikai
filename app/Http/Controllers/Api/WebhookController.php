@@ -1634,9 +1634,9 @@ PROMPT;
                         $jsonPath = '$."' . $key . '"' . '';
                         foreach ($values as $idx => $singleValue) {
                             if ($idx === 0) {
-                                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$singleValue}%"]);
+                                $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, ?))) LIKE LOWER(?)", [$jsonPath, "%{$singleValue}%"]);
                             } else {
-                                $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(data, ?)) LIKE ?", [$jsonPath, "%{$singleValue}%"]);
+                                $q->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, ?))) LIKE LOWER(?)", [$jsonPath, "%{$singleValue}%"]);
                             }
                         }
                     });
