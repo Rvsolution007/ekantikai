@@ -91,7 +91,17 @@ class WebhookController extends Controller
             }
 
             // DEDUPLICATION: Skip if message already processed
-            $cacheKey = 'processed_msg_' . ($messageData['messageId'] ?? md5($messageData['phone'] . $messageData['content'] . $messageData['timestamp']));
+            // FIX: Use messageId IF available, but ALWAYS include phone as prefix for safety
+            // This prevents false positives when Evolution API reuses messageIds
+            $messageId = $messageData['messageId'] ?? null;
+            if ($messageId) {
+                // messageId exists - use it with phone prefix for uniqueness
+                $cacheKey = 'processed_msg_' . $messageData['phone'] . '_' . $messageId;
+            } else {
+                // No messageId - use content hash with timestamp
+                $cacheKey = 'processed_msg_' . md5($messageData['phone'] . $messageData['content'] . time());
+            }
+            
             if (Cache::has($cacheKey)) {
                 Log::debug('BLOCKED: Duplicate message detected', [
                     'phone' => $messageData['phone'],
@@ -105,8 +115,10 @@ class WebhookController extends Controller
             Log::info('MESSAGE PROCESSING: Passed dedup check', [
                 'phone' => $messageData['phone'],
                 'content' => substr($messageData['content'], 0, 50),
+                'cache_key' => $cacheKey,
             ]);
-            Cache::put($cacheKey, true, 60);
+            // Cache for 30 seconds instead of 60 (reduced to prevent stale cache issues)
+            Cache::put($cacheKey, true, 30);
 
             // Skip if message matches bot's greeting patterns (self-reply prevention)
             if ($this->isBotMessage($messageData['content'])) {
