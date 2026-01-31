@@ -310,6 +310,53 @@
             </div>
         </div>
 
+        <!-- Catalogue Filtering References - NEW -->
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="p-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/10 to-teal-500/10">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <span
+                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center">🔍</span>
+                    Catalogue Filtering - Category Wise Models
+                </h2>
+                <p class="text-sm text-gray-400 mt-1">User ki selected category ke hisaab se AI ko sirf wahi models dikhte
+                    hain</p>
+            </div>
+            <div class="p-4 bg-gradient-to-r from-cyan-500/5 to-teal-500/5">
+                <div class="flex items-center gap-2 text-sm text-cyan-400 mb-4">
+                    <span class="text-lg">🎯</span>
+                    <strong>Example:</strong> User ne "Knob handles" select kiya → AI sirf Knob ke models suggest karega,
+                    Wardrobe nahi!
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left">
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Service</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">File</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">UI Reference</th>
+                            <th class="px-4 py-3 text-xs font-medium text-gray-400 uppercase">Logic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($references['catalogue_filtering'] as $ref)
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="px-4 py-3 text-white font-medium">{{ $ref['service'] }}</td>
+                                <td class="px-4 py-3">
+                                    <code class="px-2 py-1 bg-white/10 rounded text-xs text-gray-300">{{ $ref['file'] }}</code>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span
+                                        class="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs">{{ $ref['ui_reference'] }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-gray-300 text-sm">{{ $ref['logic'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
 
         <!-- Node Properties Demo -->
         <div class="glass-card rounded-2xl overflow-hidden">

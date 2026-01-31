@@ -643,6 +643,20 @@ class ProjectStructureController extends Controller
                     'logic' => 'outgoingConnections() se next connected node dhundta hai. Priority based routing support hai.',
                 ],
             ],
+            'catalogue_filtering' => [
+                [
+                    'service' => 'AIService::getCatalogueContext',
+                    'file' => 'app/Services/AIService.php',
+                    'ui_reference' => 'Bot Model Response',
+                    'logic' => 'Catalogue products ko workflow_questions ke answers se filter karta hai. Agar user ne "Knob handles" select kiya to sirf Knob models AI ko dikhte hain.',
+                ],
+                [
+                    'service' => 'AIService::buildEnhancedContext',
+                    'file' => 'app/Services/AIService.php',
+                    'ui_reference' => 'AI Context Building',
+                    'logic' => 'workflow_questions ka data getCatalogueContext ko pass karta hai taaki filtered sample_products AI ko mile.',
+                ],
+            ],
         ];
 
 
