@@ -428,6 +428,11 @@ class WebhookController extends Controller
                         'hi', 'hinglish' => "Ji zaroor! Ab aapka " . $pendingQuestion['display_name'] . " kya hai?",
                         default => "Ji, aapka " . $pendingQuestion['display_name'] . " bataiye?",
                     };
+                    
+                    // Mark optional question as asked (so it won't repeat)
+                    if (!empty($pendingQuestion['mark_as_asked'])) {
+                        $this->markQuestionAsAsked($lead, $pendingQuestion['field_name']);
+                    }
                 } else {
                     // No pending questions - all answered, confirm order
                     $responseMessage = match ($detectedLang) {
@@ -723,10 +728,12 @@ class WebhookController extends Controller
 
     /**
      * Get the next pending (unanswered) question from flowchart
+     * ORDER PRIORITY: Required questions must be answered in sequence.
+     * Optional questions: Ask once, then skip (tracked in questions_asked).
      */
     protected function getNextPendingQuestion(int $adminId, Lead $lead): ?array
     {
-        // Get all workflow questions
+        // Get all workflow questions in ORDER
         $questions = \App\Models\ProductQuestion::where('admin_id', $adminId)
             ->where('is_active', true)
             ->orderBy('sort_order')
@@ -740,6 +747,7 @@ class WebhookController extends Controller
         $collectedData = $lead->collected_data ?? [];
         $workflowAnswers = $collectedData['workflow_questions'] ?? [];
         $globalAnswers = $collectedData['global_questions'] ?? [];
+        $questionsAsked = $collectedData['questions_asked'] ?? []; // Track optional questions
 
         // Merge all answered fields
         $allAnswered = array_merge(
@@ -747,20 +755,67 @@ class WebhookController extends Controller
             array_change_key_case($globalAnswers, CASE_LOWER)
         );
 
-        // Find first unanswered question
+        // ORDER PRIORITY: Process questions in sequence
         foreach ($questions as $question) {
             $fieldName = strtolower($question->field_name);
-            if (!isset($allAnswered[$fieldName]) || empty($allAnswered[$fieldName])) {
-                return [
-                    'field_name' => $question->field_name,
-                    'display_name' => $question->display_name,
-                    'is_required' => $question->is_required,
-                    'question_template' => $question->question_template, // Ask Question Format from flowchart
-                ];
+            $isAnswered = isset($allAnswered[$fieldName]) && !empty($allAnswered[$fieldName]);
+            
+            if ($question->is_required) {
+                // REQUIRED QUESTION: Must be answered before moving to next
+                if (!$isAnswered) {
+                    Log::debug('ORDER PRIORITY: Required question not answered, asking again', [
+                        'field' => $question->field_name,
+                        'order' => $question->sort_order,
+                    ]);
+                    return [
+                        'field_name' => $question->field_name,
+                        'display_name' => $question->display_name,
+                        'is_required' => true,
+                        'question_template' => $question->question_template,
+                    ];
+                }
+                // Required question answered - continue to next
+            } else {
+                // OPTIONAL QUESTION: Ask once, then skip
+                $wasAsked = $questionsAsked[$fieldName] ?? false;
+                
+                if (!$isAnswered && !$wasAsked) {
+                    // Not answered AND not asked yet - ask now
+                    Log::debug('ORDER PRIORITY: Optional question not asked yet, asking once', [
+                        'field' => $question->field_name,
+                        'order' => $question->sort_order,
+                    ]);
+                    return [
+                        'field_name' => $question->field_name,
+                        'display_name' => $question->display_name,
+                        'is_required' => false,
+                        'question_template' => $question->question_template,
+                        'mark_as_asked' => true, // Signal to mark as asked after sending
+                    ];
+                }
+                // Optional question either answered or already asked - skip
             }
         }
 
-        return null; // All questions answered
+        return null; // All questions complete
+    }
+
+    /**
+     * Mark an optional question as asked (so it won't be repeated)
+     * Used for optional questions that should only be asked once.
+     */
+    protected function markQuestionAsAsked(Lead $lead, string $fieldName): void
+    {
+        $collectedData = $lead->collected_data ?? [];
+        $questionsAsked = $collectedData['questions_asked'] ?? [];
+        $questionsAsked[strtolower($fieldName)] = true;
+        $collectedData['questions_asked'] = $questionsAsked;
+        $lead->update(['collected_data' => $collectedData]);
+        
+        Log::debug('Marked optional question as asked', [
+            'field' => $fieldName,
+            'lead_id' => $lead->id,
+        ]);
     }
 
     /**
