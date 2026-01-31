@@ -207,8 +207,9 @@ class AIService
         // Customer global fields
         $context['customer_fields'] = $customer->global_fields ?? [];
 
-        // *** Get actual catalogue data for this admin ***
-        $context['catalogue'] = $this->getCatalogueContext($admin->id);
+        // *** Get actual catalogue data for this admin (FILTERED by workflow answers) ***
+        $workflowFilters = $context['collected_data']['workflow_questions'] ?? [];
+        $context['catalogue'] = $this->getCatalogueContext($admin->id, $workflowFilters);
 
         // *** NEW: Find mentioned model from message or collected_data and fetch exact product ***
         $mentionedModels = $this->findMentionedModels($admin->id, $message, $context);
@@ -755,7 +756,7 @@ class AIService
      * Get catalogue context for AI (product categories, types, sample models)
      * UPDATED: Now reads from dynamic JSON 'data' field instead of static columns
      */
-    protected function getCatalogueContext(int $adminId): array
+    protected function getCatalogueContext(int $adminId, ?array $workflowFilters = []): array
     {
         // Get all catalogue items with data
         $catalogueItems = Catalogue::where('admin_id', $adminId)
@@ -815,8 +816,44 @@ class AIService
         $productTypes = array_unique($productTypes);
         $sampleModels = array_unique($sampleModels);
 
-        // Get sample products with ALL their data (first 15)
-        $sampleProducts = $catalogueItems->take(15)->map(function ($item) {
+        // Filter catalogue items by workflow answers if provided
+        $filteredItems = $catalogueItems;
+        if (!empty($workflowFilters)) {
+            $filteredItems = $catalogueItems->filter(function ($item) use ($workflowFilters) {
+                foreach ($workflowFilters as $key => $value) {
+                    if (empty($value))
+                        continue;
+
+                    $itemValue = $item->data[$key] ?? '';
+
+                    // Handle multiple values (e.g., "Knob handles, Profile handles")
+                    $filterValues = preg_split('/\s*(?:,|\s+or\s+|\s+and\s+|\s+aur\s+)\s*/i', $value);
+                    $filterValues = array_filter(array_map('trim', $filterValues));
+
+                    $matched = false;
+                    foreach ($filterValues as $filterVal) {
+                        if (stripos($itemValue, $filterVal) !== false) {
+                            $matched = true;
+                            break;
+                        }
+                    }
+
+                    if (!$matched) {
+                        return false; // Item doesn't match this filter
+                    }
+                }
+                return true; // Item matches all filters
+            });
+
+            Log::debug('getCatalogueContext: Filtered by workflow', [
+                'original_count' => $catalogueItems->count(),
+                'filtered_count' => $filteredItems->count(),
+                'filters' => $workflowFilters,
+            ]);
+        }
+
+        // Get sample products with ALL their data (first 15 from FILTERED items)
+        $sampleProducts = $filteredItems->take(15)->map(function ($item) {
             return $item->data ?? [];
         })->toArray();
 
